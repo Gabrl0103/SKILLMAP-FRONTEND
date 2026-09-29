@@ -3,13 +3,18 @@
 
 const NODE_SIZE = 112;      // diámetro de cada nodo (px)
 const NODE_GAP = 36;        // separación mínima entre nodos vecinos de un mismo cluster
-const CLUSTER_GAP = 90;     // separación mínima entre clusters vecinos
-const STAGE_PADDING = 40;   // margen alrededor del grafo dentro del stage
+const CLUSTER_GAP = 40;     // separación mínima entre los bordes de dos clusters
+const STAGE_PADDING = 8;    // margen alrededor del grafo dentro del stage (sombras y hover)
+const LABEL_OFFSET = 10;    // distancia entre el borde del cluster y su etiqueta de categoría
+const LABEL_CHAR_W = 8.5, LABEL_HEIGHT = 14; // tamaño estimado de la etiqueta (11px, mayúsculas, tracking .12em)
 const ZOOM_STEP = 0.1, ZOOM_MIN = 0.5, ZOOM_MAX = 2;
+const FIT_MARGIN = 24;      // margen entre el grafo ajustado y los bordes / controles
+const FIT_MIN = 0.75, FIT_MAX = 1.25; // límites del zoom automático para que los nombres sigan legibles
+const WHEEL_SPEED = 0.0015; // sensibilidad de la rueda (factor exponencial por px de delta)
 
 // Íconos inline (viewBox 24x24, trazo con currentColor). Sin librerías externas.
 const ICONS = {
-  js: `<rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" stroke="none"/><text x="18.5" y="18.5" text-anchor="end" font-size="8.5" font-weight="800" fill="var(--mapa-node-bg)" stroke="none" font-family="ui-sans-serif, system-ui, sans-serif">JS</text>`,
+  js: `<rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" stroke="none"/><text x="18.5" y="18.5" text-anchor="end" font-size="8.5" font-weight="800" fill="var(--mapa-node-bg)" stroke="none" font-family="inherit">JS</text>`,
   atom: `<circle cx="12" cy="12" r="1.6" fill="currentColor"/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>`,
   bolt: `<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" fill="currentColor"/>`,
   gauge: `<circle cx="12" cy="12" r="9.5" fill="currentColor" stroke="none"/><path d="M12 12l4-4" stroke="var(--mapa-node-bg)" stroke-width="2.2"/><path d="M6.5 13.5a5.5 5.5 0 0 1 11 0" stroke="var(--mapa-node-bg)" stroke-width="1.6" stroke-dasharray="1.5 2"/>`,
@@ -85,7 +90,76 @@ function ringRadius(n, chord) {
   return n <= 1 ? 0 : chord / (2 * Math.sin(Math.PI / n));
 }
 
-// Layout automático: clusters en círculo alrededor del centro y habilidades en círculo alrededor de su cluster.
+// Ángulo de cada cluster en la órbita: cada tramo entre vecinos es proporcional a lo que ambos ocupan,
+// así un cluster pequeño no reserva el mismo arco que uno grande.
+function ringAngles(ring) {
+  const start = ring.length === 2 ? Math.PI : -Math.PI / 2; // dos clusters: lado a lado
+  const spans = ring.map((c, i) => c.extent + ring[(i + 1) % ring.length].extent + CLUSTER_GAP);
+  const total = spans.reduce((sum, s) => sum + s, 0);
+  let angle = start;
+  return spans.map(span => {
+    const current = angle;
+    angle += (2 * Math.PI * span) / total;
+    return current;
+  });
+}
+
+// Radio mínimo de la órbita para que ningún par de clusters se toque (distancia entre centros ≥ eᵢ + eⱼ + gap).
+function orbitRadius(ring, angles) {
+  let orbit = 0;
+  for (let i = 0; i < ring.length; i++) {
+    for (let j = i + 1; j < ring.length; j++) {
+      const chord = 2 * Math.sin(Math.abs(angles[i] - angles[j]) / 2);
+      orbit = Math.max(orbit, (ring[i].extent + ring[j].extent + CLUSTER_GAP) / chord);
+    }
+  }
+  return orbit;
+}
+
+// Posiciona los clusters lo más juntos posible. Si el hueco central del anillo deja espacio para el cluster
+// más grande, ese va al centro y el resto lo rodea, para no dejar vacío en medio.
+function placeClusters(clusters) {
+  let ring = clusters;
+  if (clusters.length >= 4) {
+    const hub = clusters.reduce((a, b) => (b.extent > a.extent ? b : a));
+    const rest = clusters.filter(c => c !== hub);
+    const orbit = orbitRadius(rest, ringAngles(rest));
+    if (rest.every(c => orbit - c.extent >= hub.extent + CLUSTER_GAP)) {
+      Object.assign(hub, { x: 0, y: 0, angle: -Math.PI / 2 });
+      ring = rest;
+    }
+  }
+  if (ring.length === 1) {
+    Object.assign(ring[0], { x: 0, y: 0, angle: -Math.PI / 2 });
+    return;
+  }
+  const angles = ringAngles(ring);
+  const orbit = orbitRadius(ring, angles);
+  ring.forEach((c, i) => Object.assign(c, { x: orbit * Math.cos(angles[i]), y: orbit * Math.sin(angles[i]), angle: angles[i] }));
+}
+
+// Etiqueta de categoría por fuera del cluster, en la dirección opuesta al centro del grafo.
+// alignX/alignY (en %) anclan el texto para que crezca hacia afuera y nunca tape sus nodos.
+function clusterLabel(cluster) {
+  const cos = Math.cos(cluster.angle), sin = Math.sin(cluster.angle);
+  const dist = cluster.extent + LABEL_OFFSET;
+  return {
+    category: cluster.category,
+    x: cluster.x + dist * cos,
+    y: cluster.y + dist * sin,
+    alignX: cos > 0.35 ? 0 : cos < -0.35 ? -100 : -50,
+    alignY: sin > 0.35 ? 0 : sin < -0.35 ? -100 : -50,
+  };
+}
+
+// Caja estimada de una etiqueta, para incluirla en el tamaño del stage y en el ajuste automático.
+function labelBox(label) {
+  const w = label.category.length * LABEL_CHAR_W;
+  const left = label.x + (w * label.alignX) / 100, top = label.y + (LABEL_HEIGHT * label.alignY) / 100;
+  return { left, top, right: left + w, bottom: top + LABEL_HEIGHT };
+}
+
+// Layout automático: clusters compactos alrededor del centro y habilidades en círculo alrededor de su cluster.
 function layoutGraph(skills) {
   const clusters = [...groupByCategory(skills)].map(([category, items]) => {
     const sorted = [...items].sort((a, b) => b.demandPercentage - a.demandPercentage);
@@ -95,29 +169,30 @@ function layoutGraph(skills) {
     return { category, items: sorted, radius, extent: radius + NODE_SIZE / 2 };
   });
 
-  const maxExtent = Math.max(...clusters.map(c => c.extent));
-  const orbit = ringRadius(clusters.length, 2 * maxExtent + CLUSTER_GAP);
+  placeClusters(clusters);
 
   const nodes = [];
-  clusters.forEach((cluster, i) => {
-    const clusterAngle = -Math.PI / 2 + (2 * Math.PI * i) / clusters.length;
-    const cx = orbit * Math.cos(clusterAngle);
-    const cy = orbit * Math.sin(clusterAngle);
+  for (const cluster of clusters) {
     cluster.nodes = cluster.items.map((skill, j) => {
       const angle = -Math.PI / 2 + (2 * Math.PI * j) / cluster.items.length;
-      const node = { skill, category: cluster.category, x: cx + cluster.radius * Math.cos(angle), y: cy + cluster.radius * Math.sin(angle) };
+      const node = { skill, category: cluster.category, x: cluster.x + cluster.radius * Math.cos(angle), y: cluster.y + cluster.radius * Math.sin(angle) };
       nodes.push(node);
       return node;
     });
-  });
+  }
+  const labels = clusters.map(clusterLabel);
 
-  // Desplaza todo para que el grafo empiece en (STAGE_PADDING, STAGE_PADDING).
+  // Caja que envuelve nodos y etiquetas; se desplaza todo para que empiece en (STAGE_PADDING, STAGE_PADDING).
   const half = NODE_SIZE / 2;
-  const minX = Math.min(...nodes.map(n => n.x)) - half, maxX = Math.max(...nodes.map(n => n.x)) + half;
-  const minY = Math.min(...nodes.map(n => n.y)) - half, maxY = Math.max(...nodes.map(n => n.y)) + half;
-  for (const n of nodes) {
-    n.x += STAGE_PADDING - minX;
-    n.y += STAGE_PADDING - minY;
+  const boxes = [
+    ...nodes.map(n => ({ left: n.x - half, top: n.y - half, right: n.x + half, bottom: n.y + half })),
+    ...labels.map(labelBox),
+  ];
+  const minX = Math.min(...boxes.map(b => b.left)), maxX = Math.max(...boxes.map(b => b.right));
+  const minY = Math.min(...boxes.map(b => b.top)), maxY = Math.max(...boxes.map(b => b.bottom));
+  for (const p of [...nodes, ...labels]) {
+    p.x += STAGE_PADDING - minX;
+    p.y += STAGE_PADDING - minY;
   }
 
   // Conexiones: anillo entre habilidades vecinas de la misma categoría.
@@ -128,7 +203,7 @@ function layoutGraph(skills) {
     for (let j = 0; j < count; j++) links.push([ring[j], ring[(j + 1) % ring.length]]);
   }
 
-  return { nodes, links, width: maxX - minX + 2 * STAGE_PADDING, height: maxY - minY + 2 * STAGE_PADDING };
+  return { nodes, links, labels, width: maxX - minX + 2 * STAGE_PADDING, height: maxY - minY + 2 * STAGE_PADDING };
 }
 
 const STATUS_CLASS = { MASTERED: "mastered", IN_PROGRESS: "progress", PENDING: "pending" };
@@ -146,11 +221,15 @@ function renderNode({ skill, category, x, y }) {
     </div>`;
 }
 
+function renderClusterLabel({ category, x, y, alignX, alignY }) {
+  return `<span class="mapa-cluster-label" style="left:${x}px; top:${y}px; transform:translate(${alignX}%, ${alignY}%);">${escapeHtml(category)}</span>`;
+}
+
 function renderMapa(skills) {
   if (skills.length === 0) {
-    return `<p class="text-sm text-gray-400">No hay habilidades registradas en la API.</p>`;
+    return `<p class="mapa-status text-sm text-gray-400">No hay habilidades registradas en la API.</p>`;
   }
-  const { nodes, links, width, height } = layoutGraph(skills);
+  const { nodes, links, labels, width, height } = layoutGraph(skills);
   const lines = links
     .map(([a, b]) => `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`)
     .join("");
@@ -160,6 +239,7 @@ function renderMapa(skills) {
     <div class="mapa-viewport" id="mapa-viewport">
       <div class="mapa-stage" id="mapa-stage" style="width:${width}px; height:${height}px;">
         <svg class="mapa-links" width="${width}" height="${height}" aria-hidden="true">${lines}</svg>
+        ${labels.map(renderClusterLabel).join("")}
         ${nodes.map(renderNode).join("")}
       </div>
 
@@ -189,42 +269,102 @@ const PAN_MARGIN = 80; // px del grafo que siempre quedan visibles al arrastrar
 
 let mapaZoom = 1;
 let mapaPan = { x: 0, y: 0 }; // desplazamiento (px de pantalla) respecto a la posición centrada
+let mapaNeedsFit = true;      // el ajuste automático se calcula en cuanto el viewport sea visible
 
-// Limita el arrastre para que el grafo no pueda sacarse por completo del área visible.
-function clampMapaPan(viewport, stage) {
-  const maxX = Math.max(0, (viewport.clientWidth + stage.offsetWidth * mapaZoom) / 2 - PAN_MARGIN);
-  const maxY = Math.max(0, (viewport.clientHeight + stage.offsetHeight * mapaZoom) / 2 - PAN_MARGIN);
-  mapaPan.x = Math.min(maxX, Math.max(-maxX, mapaPan.x));
-  mapaPan.y = Math.min(maxY, Math.max(-maxY, mapaPan.y));
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+// Área libre del viewport, simétrica para que el grafo quede centrado en el lienzo:
+// la columna de controles se descuenta a ambos lados y la franja de la leyenda arriba y abajo.
+function mapaSafeArea(viewport) {
+  const controls = viewport.querySelector(".mapa-controls");
+  const legend = viewport.querySelector(".mapa-legend");
+  const insetX = controls.offsetLeft + controls.offsetWidth + FIT_MARGIN;
+  const insetY = viewport.clientHeight - legend.offsetTop + FIT_MARGIN;
+  return {
+    left: insetX,
+    top: insetY,
+    width: Math.max(0, viewport.clientWidth - 2 * insetX),
+    height: Math.max(0, viewport.clientHeight - 2 * insetY),
+  };
 }
 
-// Centra el stage en el área visible del viewport con el zoom actual, más el desplazamiento del arrastre.
+// Translate que deja el stage centrado en el área libre con el zoom dado (sin arrastre).
+function mapaBaseOffset(viewport, stage, zoom) {
+  const area = mapaSafeArea(viewport);
+  return {
+    x: area.left + (area.width - stage.offsetWidth * zoom) / 2,
+    y: area.top + (area.height - stage.offsetHeight * zoom) / 2,
+  };
+}
+
+// Zoom que hace caber todo el grafo en el área libre, dentro de límites que mantienen los nombres legibles.
+function mapaFitZoom(viewport, stage) {
+  const area = mapaSafeArea(viewport);
+  return clamp(Math.min(area.width / stage.offsetWidth, area.height / stage.offsetHeight), FIT_MIN, FIT_MAX);
+}
+
+// Aplica zoom + arrastre al stage. El arrastre se limita para que el grafo no salga por completo de la vista.
 function applyMapaTransform() {
   const viewport = document.getElementById("mapa-viewport");
   const stage = document.getElementById("mapa-stage");
-  if (!viewport || !stage || viewport.clientWidth === 0) return; // vista oculta: se centra al volver a mostrarse
-  clampMapaPan(viewport, stage);
-  const tx = (viewport.clientWidth - stage.offsetWidth * mapaZoom) / 2 + mapaPan.x;
-  const ty = (viewport.clientHeight - stage.offsetHeight * mapaZoom) / 2 + mapaPan.y;
+  if (!viewport || !stage || viewport.clientWidth === 0) return; // vista oculta: se ajusta al volver a mostrarse
+  if (mapaNeedsFit) {
+    mapaZoom = mapaFitZoom(viewport, stage);
+    mapaPan = { x: 0, y: 0 };
+    mapaNeedsFit = false;
+  }
+  const base = mapaBaseOffset(viewport, stage, mapaZoom);
+  const w = stage.offsetWidth * mapaZoom, h = stage.offsetHeight * mapaZoom;
+  const tx = clamp(base.x + mapaPan.x, PAN_MARGIN - w, viewport.clientWidth - PAN_MARGIN);
+  const ty = clamp(base.y + mapaPan.y, PAN_MARGIN - h, viewport.clientHeight - PAN_MARGIN);
+  mapaPan = { x: tx - base.x, y: ty - base.y };
   stage.style.transform = `translate(${tx}px, ${ty}px) scale(${mapaZoom})`;
   // La transición se activa después del primer centrado para no animar desde la esquina al cargar.
   requestAnimationFrame(() => stage.classList.add("is-ready"));
-  viewport.querySelector('[data-zoom="in"]').disabled = mapaZoom >= ZOOM_MAX;
-  viewport.querySelector('[data-zoom="out"]').disabled = mapaZoom <= ZOOM_MIN;
+  viewport.querySelector('[data-zoom="in"]').disabled = mapaZoom >= ZOOM_MAX - 1e-6;
+  viewport.querySelector('[data-zoom="out"]').disabled = mapaZoom <= ZOOM_MIN + 1e-6;
+}
+
+// Cambia el zoom manteniendo fijo el punto del grafo que está bajo (px, py) (coordenadas del viewport).
+function zoomMapaAt(nextZoom, px, py) {
+  const viewport = document.getElementById("mapa-viewport");
+  const stage = document.getElementById("mapa-stage");
+  const zoom = clamp(nextZoom, ZOOM_MIN, ZOOM_MAX);
+  if (!viewport || !stage || zoom === mapaZoom) return;
+  const before = mapaBaseOffset(viewport, stage, mapaZoom);
+  const sx = (px - before.x - mapaPan.x) / mapaZoom; // punto del stage bajo el cursor
+  const sy = (py - before.y - mapaPan.y) / mapaZoom;
+  const after = mapaBaseOffset(viewport, stage, zoom);
+  mapaPan = { x: px - sx * zoom - after.x, y: py - sy * zoom - after.y };
+  mapaZoom = zoom;
+  applyMapaTransform();
 }
 
 function setMapaZoom(action) {
   if (action === "center") {
-    mapaZoom = 1;
-    mapaPan = { x: 0, y: 0 };
-  } else {
-    const next = mapaZoom + (action === "in" ? ZOOM_STEP : -ZOOM_STEP);
-    const zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(next * 10) / 10));
-    // Escala el desplazamiento para que el punto en el centro de la vista siga ahí tras el zoom.
-    mapaPan = { x: mapaPan.x * zoom / mapaZoom, y: mapaPan.y * zoom / mapaZoom };
-    mapaZoom = zoom;
+    mapaNeedsFit = true; // "Centrar" vuelve al ajuste automático y sin arrastre
+    applyMapaTransform();
+    return;
   }
-  applyMapaTransform();
+  const viewport = document.getElementById("mapa-viewport");
+  const area = mapaSafeArea(viewport);
+  const next = Math.round((mapaZoom + (action === "in" ? ZOOM_STEP : -ZOOM_STEP)) * 10) / 10;
+  zoomMapaAt(next, area.left + area.width / 2, area.top + area.height / 2);
+}
+
+// Rueda del mouse: zoom centrado en el cursor. preventDefault evita el scroll de la página sobre el mapa.
+function bindMapaWheel(viewport) {
+  let wheelTimer = null;
+  viewport.addEventListener("wheel", e => {
+    e.preventDefault();
+    const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY; // Firefox puede reportar líneas en vez de px
+    const rect = viewport.getBoundingClientRect();
+    // Sin transición mientras se gira la rueda, para que el zoom siga al gesto sin retraso.
+    viewport.classList.add("is-wheeling");
+    clearTimeout(wheelTimer);
+    wheelTimer = setTimeout(() => viewport.classList.remove("is-wheeling"), 150);
+    zoomMapaAt(mapaZoom * Math.exp(-delta * WHEEL_SPEED), e.clientX - rect.left, e.clientY - rect.top);
+  }, { passive: false });
 }
 
 // Arrastre con el mouse (pointer events: también funciona con touch).
@@ -265,6 +405,7 @@ function bindMapaEvents() {
   });
 
   bindMapaDrag(viewport, tooltip);
+  bindMapaWheel(viewport);
 
   // El tooltip vive fuera del stage para que no escale con el zoom.
   viewport.addEventListener("mousemove", e => {
@@ -288,20 +429,19 @@ let mapaRequest = null; // se reutiliza para no volver a pedir /api/skills en ca
 function loadMapa() {
   if (mapaRequest) return mapaRequest;
   const container = document.getElementById("mapa-content");
-  container.innerHTML = `<p class="text-sm text-gray-400">Cargando mapa de habilidades desde la API…</p>`;
+  container.innerHTML = `<p class="mapa-status text-sm text-gray-400">Cargando mapa de habilidades desde la API…</p>`;
 
   mapaRequest = (async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/skills`);
       if (!res.ok) throw new Error("La API respondió " + res.status);
       container.innerHTML = renderMapa(await res.json());
-      mapaZoom = 1;
-      mapaPan = { x: 0, y: 0 };
+      mapaNeedsFit = true;
       bindMapaEvents();
       applyMapaTransform();
     } catch (err) {
       mapaRequest = null; // si falla, se reintenta la próxima vez que se abra la vista
-      container.innerHTML = renderApiError(err);
+      container.innerHTML = `<div class="mapa-status">${renderApiError(err)}</div>`;
     }
   })();
   return mapaRequest;
@@ -318,6 +458,8 @@ function showView(view) {
     if (isActive) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
   });
+  // El mapa ocupa todo el ancho a la derecha del sidebar: solo en esta vista se quita el ancho máximo y el padding.
+  document.querySelector(".app-shell").classList.toggle("is-mapa", view === "mapa");
   // Si la carga terminó mientras la vista estaba oculta, se centra al volver a mostrarla.
   if (view === "mapa") loadMapa().then(applyMapaTransform);
 }
