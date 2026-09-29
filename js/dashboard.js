@@ -166,11 +166,14 @@ function renderTrend() {
         <li><span class="legend-key legend-key--nivel"></span>Tu Nivel</li>
         <li><span class="legend-key legend-key--demanda"></span>Demanda del mercado</li>
       </ul>
-      <table class="sr-only">
-        <caption>Tendencia de habilidades (datos de ejemplo)</caption>
-        <thead><tr><th scope="col">Mes</th><th scope="col">Tu nivel</th><th scope="col">Demanda del mercado</th></tr></thead>
-        <tbody>${tableRows}</tbody>
-      </table>
+      <!-- sr-only va en un div: una <table> ignora width:1px y su ancho real desbordaba la página en pantallas angostas -->
+      <div class="sr-only">
+        <table>
+          <caption>Tendencia de habilidades (datos de ejemplo)</caption>
+          <thead><tr><th scope="col">Mes</th><th scope="col">Tu nivel</th><th scope="col">Demanda del mercado</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
     </article>`;
 }
 

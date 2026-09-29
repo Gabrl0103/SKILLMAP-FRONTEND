@@ -1,13 +1,27 @@
 :root {
   --pink:#D95F8E; --pink-soft:#FCE8EF; --mint:#5FD9AA;
   --ink:#1F1F24; --ink-2:#3F3F46; --muted:#8A8792; --faint:#F2EEF1; --page:#FCF5F7;
+  --sidebar-w:14rem;
 }
+/* Respaldo: nada debe desbordar en horizontal, pero si algo lo hace no aparece scroll lateral */
+html, body { overflow-x:hidden; overflow-x:clip; }
 body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif; background:var(--page); color:var(--ink); }
 .card { background: #fff; border-radius: 0.9rem; box-shadow: 0 1px 2px rgba(16,16,20,0.05), 0 1px 6px rgba(16,16,20,0.04); }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 
 /* ---------- Sidebar ---------- */
-.sidebar { background:#fff; }
+/* Fijo al borde izquierdo y a alto completo en todas las vistas; el contenido deja su ancho como margen */
+.sidebar { position:fixed; top:0; left:0; z-index:20; width:var(--sidebar-w); height:100vh; height:100dvh; overflow-y:auto; background:#fff; }
+.app-main { margin-left:var(--sidebar-w); }
+#view-dashboard { max-width:876px; margin-inline:auto; } /* mismo ancho de contenido que tenía Mi Ruta */
+/* Pantallas angostas: sidebar solo con íconos; los textos quedan disponibles para lectores de pantalla */
+@media (max-width:639px) {
+  :root { --sidebar-w:4.5rem; }
+  .sidebar { padding-inline:.6rem; }
+  .sidebar-brand { justify-content:center; padding-inline:0; }
+  .sidebar .nav-item { justify-content:center; padding-inline:0; }
+  .sidebar-text { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+}
 .logo-mark { width:36px; height:36px; border-radius:11px; display:flex; align-items:center; justify-content:center; background:var(--pink); color:#fff;
   box-shadow:0 6px 14px rgba(217,95,142,.3); }
 .nav-item { display:flex; align-items:center; gap:.85rem; padding:.85rem 1.1rem; border-radius:1.1rem; font-size:.9rem; font-weight:600; color:var(--muted);
@@ -22,7 +36,7 @@ button.nav-item:focus-visible { outline:2px solid var(--pink); outline-offset:2p
 /* ---------- Mi Ruta ---------- */
 .ruta-eyebrow { display:block; width:fit-content; padding:4px 10px; border-radius:9999px; background:var(--pink-soft); color:var(--pink);
   font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; }
-.goal-select { appearance:none; background:transparent; border:0; padding:0 1.75rem 0 0; font-size:1.9rem; font-weight:500; letter-spacing:-.02em;
+.goal-select { max-width:100%; text-overflow:ellipsis; appearance:none; background:transparent; border:0; padding:0 1.75rem 0 0; font-size:1.9rem; font-weight:500; letter-spacing:-.02em;
   color:var(--ink); cursor:pointer; }
 .goal-select:focus { outline:none; }
 .goal-select:focus-visible { text-decoration:underline; text-decoration-color:var(--pink); }
@@ -72,7 +86,7 @@ button.nav-item:focus-visible { outline:2px solid var(--pink); outline-offset:2p
 /* Brechas */
 .gap-list { display:flex; flex-direction:column; gap:1.6rem; }
 .gap-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:.7rem; }
-.gap-name { display:flex; align-items:center; gap:.75rem; font-size:.9rem; font-weight:600; color:var(--ink); }
+.gap-name { display:flex; align-items:center; gap:.75rem; min-width:0; overflow-wrap:anywhere; font-size:.9rem; font-weight:600; color:var(--ink); }
 .gap-name::before { content:""; width:6px; height:6px; border-radius:9999px; background:var(--pink); flex-shrink:0; }
 .gap-badge { flex-shrink:0; padding:3px 8px; border-radius:5px; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; }
 .gap-badge--hot { background:var(--pink-soft); color:#B8406E; }
@@ -119,8 +133,7 @@ button.nav-item:focus-visible { outline:2px solid var(--pink); outline-offset:2p
 .trend-tooltip .legend-key { width:14px; }
 
 /* ---------- Mapa Visual ---------- */
-/* En esta vista el lienzo llena todo a la derecha del sidebar: sin ancho máximo, sin padding y a alto completo */
-.app-shell.is-mapa { max-width:none; margin:0; }
+/* En esta vista el lienzo llena todo a la derecha del sidebar: sin padding y a alto completo */
 .app-shell.is-mapa > main { padding:0; }
 .mapa-status { padding:2.5rem; } /* carga / error / vacío: sin el padding de main */
 .mapa-viewport { position:relative; overflow:hidden; height:100vh; height:100dvh; background:#FBEFF3; }
