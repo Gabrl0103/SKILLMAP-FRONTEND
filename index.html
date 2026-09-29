@@ -23,14 +23,14 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/></svg>
           Objetivo
         </div>
-        <div class="nav-item active">
+        <button type="button" class="nav-item active" data-view="dashboard" aria-current="page">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h4l10-10-4-4L4 15v4z"/></svg>
           Mi Ruta
-        </div>
-        <div class="nav-item disabled" title="Próximamente">
+        </button>
+        <button type="button" class="nav-item" data-view="mapa">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="10" r="2.4"/><circle cx="9" cy="18" r="2.4"/></svg>
           Mapa Visual
-        </div>
+        </button>
         <div class="nav-item disabled" title="Próximamente">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v12H8l-4 4V4z"/></svg>
           Analizador
@@ -46,27 +46,43 @@
 
   <!-- MAIN -->
   <main class="flex-1 p-8">
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <label for="goal-selector" class="block text-[11px] text-gray-400 mb-0.5">OBJETIVO ACTUAL</label>
-        <div class="relative inline-flex items-center">
-          <select id="goal-selector" disabled
-            class="appearance-none bg-transparent border-0 p-0 pr-6 text-xl font-semibold text-gray-800 cursor-pointer focus:outline-none focus-visible:underline disabled:cursor-wait">
-            <option>Cargando…</option>
-          </select>
-          <svg class="pointer-events-none absolute right-0 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    <section id="view-dashboard">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <label for="goal-selector" class="block text-[11px] text-gray-400 mb-0.5">OBJETIVO ACTUAL</label>
+          <div class="relative inline-flex items-center">
+            <select id="goal-selector" disabled
+              class="appearance-none bg-transparent border-0 p-0 pr-6 text-xl font-semibold text-gray-800 cursor-pointer focus:outline-none focus-visible:underline disabled:cursor-wait">
+              <option>Cargando…</option>
+            </select>
+            <svg class="pointer-events-none absolute right-0 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+        <span class="text-xs font-medium px-3 py-1 rounded-full" style="background:#EAFBF3; color:#1f7a54;">● Alta Demanda</span>
+      </div>
+
+      <div id="app-content" class="grid md:grid-cols-2 gap-5">
+        <p class="text-sm text-gray-400 col-span-2">Cargando habilidades desde la API…</p>
+      </div>
+    </section>
+
+    <section id="view-mapa" class="hidden">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <p class="text-[11px] text-gray-400 mb-0.5">VISTA</p>
+          <h1 class="text-xl font-semibold text-gray-800">Mapa Visual</h1>
+          <p class="text-xs text-gray-400 mt-0.5">Todas las habilidades del sistema, sin importar el objetivo activo.</p>
         </div>
       </div>
-      <span class="text-xs font-medium px-3 py-1 rounded-full" style="background:#EAFBF3; color:#1f7a54;">● Alta Demanda</span>
-    </div>
 
-    <div id="app-content" class="grid md:grid-cols-2 gap-5">
-      <p class="text-sm text-gray-400 col-span-2">Cargando habilidades desde la API…</p>
-    </div>
+      <!-- Lo llena js/mapa.js la primera vez que se abre la vista -->
+      <div id="mapa-content"></div>
+    </section>
   </main>
 </div>
 
 <script src="js/skill-card.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/mapa.js"></script>
 </body>
 </html>

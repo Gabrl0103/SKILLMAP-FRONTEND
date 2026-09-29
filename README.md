@@ -9,18 +9,24 @@ Hecho con HTML, [Tailwind CSS (CDN)](https://tailwindcss.com/docs/installation/p
 - **Nivel de preparación**: gauge con el % de habilidades dominadas para el objetivo.
 - **Brechas prioritarias**: top 5 habilidades pendientes ordenadas por demanda (`<skill-card>`).
 - **Próxima acción recomendada**: la brecha con mayor demanda en el mercado.
-- **GoalSelector**: selector en el encabezado para cambiar de objetivo; carga la lista desde `GET /api/goals` y recarga el dashboard con el readiness del objetivo elegido.
+- **GoalSelector**: selector en el encabezado de "Mi Ruta" para cambiar de objetivo; carga la lista desde `GET /api/goals` y recarga el dashboard con el readiness del objetivo elegido.
+- **Mapa Visual**: vista accesible desde el sidebar con **todas** las habilidades del sistema (`GET /api/skills`), dibujadas como un grafo de nodos circulares sobre fondo rosa pálido. Cada categoría es un cluster ubicado en círculo alrededor del centro y sus habilidades se reparten en círculo alrededor del cluster (layout automático, sin coordenadas fijas), unidas por líneas grises. Color por estado: menta = dominada, rosa = en desarrollo, blanco punteado = por aprender. Incluye zoom +/− (0.5x–2x), arrastre con el mouse para mover el mapa, botón para centrar, leyenda y tooltip con la demanda de cada habilidad. Se carga la primera vez que se abre y no depende del objetivo seleccionado en el GoalSelector.
+
+### Navegación
+
+Sin framework de routing: cada vista es una `<section id="view-*">` en `index.html` y el sidebar muestra/oculta la sección elegida (clase `hidden`) y mueve el estado activo del item. Vistas actuales: `view-dashboard` (Mi Ruta) y `view-mapa` (Mapa Visual).
 
 ## Estructura
 
 ```
 SKILLMAP-FRONTEND/
-├── index.html          # Estructura HTML del dashboard
+├── index.html          # Estructura HTML (sidebar + una <section> por vista)
 ├── css/
 │   └── styles.css      # Estilos personalizados (cards, sidebar, gauge)
 └── js/
     ├── skill-card.js   # Web Component <skill-card>
-    └── dashboard.js    # Fetch a la API y renderizado del dashboard
+    ├── dashboard.js    # Fetch a la API y renderizado del dashboard
+    └── mapa.js         # Vista Mapa Visual y navegación entre vistas
 ```
 
 ## Requisitos
