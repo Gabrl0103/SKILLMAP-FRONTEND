@@ -46,28 +46,68 @@ function renderCta(topGap) {
     </div>`;
 }
 
-async function loadDashboard() {
+function renderApiError(err) {
+  return `
+    <div class="card p-6 md:col-span-2 border border-dashed" style="border-color:#D95F8E;">
+      <p class="text-sm font-medium text-gray-700">No se pudo conectar con la API</p>
+      <p class="text-xs text-gray-400 mt-1">Verifica que el backend esté corriendo en <code>${API_BASE_URL}</code>
+      (<code>./mvnw spring-boot:run</code> desde skillmap-api).</p>
+      <p class="text-xs text-gray-300 mt-2">Detalle técnico: ${err.message}</p>
+    </div>`;
+}
+
+// Llena el <select id="goal-selector"> con los objetivos de la API y deja el primero seleccionado.
+async function loadGoals() {
+  const selector = document.getElementById("goal-selector");
+  const res = await fetch(`${API_BASE_URL}/api/goals`);
+  if (!res.ok) throw new Error("La API respondió " + res.status);
+  const goals = await res.json();
+
+  selector.innerHTML = goals.map(g => `<option value="${g.id}">${g.title}</option>`).join("");
+  selector.disabled = goals.length === 0;
+  return goals;
+}
+
+let latestRequest = 0; // evita que una respuesta vieja pise la del objetivo recién elegido
+
+async function loadDashboard(goalId) {
   const container = document.getElementById("app-content");
+  const requestId = ++latestRequest;
+  container.innerHTML = `<p class="text-sm text-gray-400 col-span-2">Cargando habilidades desde la API…</p>`;
   try {
-    const goalId = 1; // por ahora fijo; luego lo elegirá el GoalSelector
     const res = await fetch(`${API_BASE_URL}/api/goals/${goalId}/readiness`);
     if (!res.ok) throw new Error("La API respondió " + res.status);
     const r = await res.json();
+    if (requestId !== latestRequest) return;
 
-    document.getElementById("goal-title").textContent = r.goalTitle;
     container.innerHTML =
       renderGauge(r.readinessPercentage, r.masteredCount, r.totalCount) +
       renderBrechas(r.gaps) +
       renderCta(r.gaps[0]);
   } catch (err) {
-    container.innerHTML = `
-      <div class="card p-6 md:col-span-2 border border-dashed" style="border-color:#D95F8E;">
-        <p class="text-sm font-medium text-gray-700">No se pudo conectar con la API</p>
-        <p class="text-xs text-gray-400 mt-1">Verifica que el backend esté corriendo en <code>${API_BASE_URL}</code>
-        (<code>./mvnw spring-boot:run</code> desde skillmap-api).</p>
-        <p class="text-xs text-gray-300 mt-2">Detalle técnico: ${err.message}</p>
-      </div>`;
+    if (requestId !== latestRequest) return;
+    container.innerHTML = renderApiError(err);
   }
 }
 
-loadDashboard();
+async function init() {
+  const selector = document.getElementById("goal-selector");
+  const container = document.getElementById("app-content");
+
+  selector.addEventListener("change", () => loadDashboard(selector.value));
+
+  try {
+    const goals = await loadGoals();
+    if (goals.length === 0) {
+      selector.innerHTML = `<option>Sin objetivos</option>`;
+      container.innerHTML = `<p class="text-sm text-gray-400 col-span-2">No hay objetivos registrados en la API.</p>`;
+      return;
+    }
+    await loadDashboard(selector.value);
+  } catch (err) {
+    selector.innerHTML = `<option>Sin conexión</option>`;
+    container.innerHTML = renderApiError(err);
+  }
+}
+
+init();

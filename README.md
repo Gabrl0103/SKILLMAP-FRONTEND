@@ -4,6 +4,13 @@ Repositorio del frontend de SKILLMAP: un dashboard que muestra el nivel de prepa
 
 Hecho con HTML, [Tailwind CSS (CDN)](https://tailwindcss.com/docs/installation/play-cdn), JavaScript vanilla y un Web Component (`<skill-card>`). No requiere build ni `npm install`.
 
+## Features
+
+- **Nivel de preparación**: gauge con el % de habilidades dominadas para el objetivo.
+- **Brechas prioritarias**: top 5 habilidades pendientes ordenadas por demanda (`<skill-card>`).
+- **Próxima acción recomendada**: la brecha con mayor demanda en el mercado.
+- **GoalSelector**: selector en el encabezado para cambiar de objetivo; carga la lista desde `GET /api/goals` y recarga el dashboard con el readiness del objetivo elegido.
+
 ## Estructura
 
 ```

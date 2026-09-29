@@ -48,8 +48,14 @@
   <main class="flex-1 p-8">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <p class="text-[11px] text-gray-400 mb-0.5">OBJETIVO ACTUAL</p>
-        <h1 id="goal-title" class="text-xl font-semibold text-gray-800">Cargando…</h1>
+        <label for="goal-selector" class="block text-[11px] text-gray-400 mb-0.5">OBJETIVO ACTUAL</label>
+        <div class="relative inline-flex items-center">
+          <select id="goal-selector" disabled
+            class="appearance-none bg-transparent border-0 p-0 pr-6 text-xl font-semibold text-gray-800 cursor-pointer focus:outline-none focus-visible:underline disabled:cursor-wait">
+            <option>Cargando…</option>
+          </select>
+          <svg class="pointer-events-none absolute right-0 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
       </div>
       <span class="text-xs font-medium px-3 py-1 rounded-full" style="background:#EAFBF3; color:#1f7a54;">● Alta Demanda</span>
     </div>
