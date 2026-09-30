@@ -146,8 +146,14 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
   font-size:.72rem; font-weight:600; color:#7C7884; }
 .perfil-header-actions { display:flex; flex-direction:column; gap:.75rem; }
 .perfil-header-actions .btn-pill { min-width:9.5rem; padding:.8rem 1.4rem; font-size:.82rem; }
-.perfil-header-actions .btn-pill[aria-disabled="true"]:hover { transform:none; }
 .btn-pill.perfil-btn-outline, .btn-pill.perfil-btn-outline:hover { background:#fff; color:#8A8792; border:1.5px solid #EDE7EB; box-shadow:none; }
+/* Editar Perfil y Exportar CV aún no existen: el hover solo aclara el tono (sin elevarse, para no prometer una
+   acción) y al presionar el botón hace un "no" lateral corto */
+@keyframes btn-nope { 25% { translate:-3px 0; } 50% { translate:3px 0; } 75% { translate:-2px 0; } }
+.perfil-header-actions .btn-pill[aria-disabled="true"] { transition:background-color .15s ease, border-color .15s ease; }
+.perfil-header-actions .btn-pill[aria-disabled="true"]:hover { transform:none; background:#E0739C; box-shadow:0 10px 22px rgba(217,95,142,.3); }
+.perfil-header-actions .btn-pill.perfil-btn-outline[aria-disabled="true"]:hover { background:#fff; border-color:#F1CCDA; box-shadow:none; }
+.perfil-header-actions .btn-pill[aria-disabled="true"]:active { animation:btn-nope 220ms ease-out; }
 @media (max-width:767px) { .perfil-header-actions { flex-direction:row; flex-wrap:wrap; } }
 
 /* Grilla */
@@ -173,17 +179,25 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .perfil-skill--mastered svg { color:#34B583; }
 .perfil-skill--learning { --mapa-node-bg:#FDEEF4; background:#FDEEF4; border:1px solid #F8DAE6; }
 .perfil-skill--learning svg { color:var(--pink); }
+/* Hover sutil: el chip sube 1px y su borde se intensifica en su tono (no son clicables: sin cambio de cursor) */
+.perfil-skill { transition:transform .2s cubic-bezier(.16,1,.3,1), border-color .2s ease, box-shadow .2s ease; }
+.perfil-skill:hover { transform:translateY(-1px); }
+.perfil-skill--mastered:hover { border-color:#A9E6CC; box-shadow:0 6px 14px rgba(95,217,170,.18); }
+.perfil-skill--learning:hover { border-color:#F1BCD1; box-shadow:0 6px 14px rgba(217,95,142,.14); }
 
 /* Proyectos */
 .perfil-add { margin-left:auto; font-size:.75rem; font-weight:700; color:var(--pink); }
 .perfil-projects > li + li { margin-top:1.4rem; padding-top:1.4rem; border-top:1px solid var(--faint); }
 .perfil-project { display:flex; gap:1.25rem; align-items:flex-start; }
-.perfil-project-thumb { flex-shrink:0; width:4.25rem; height:4.25rem; border-radius:.9rem; }
+.perfil-project-thumb { flex-shrink:0; width:4.25rem; height:4.25rem; border-radius:.9rem;
+  transition:transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s ease; }
+.perfil-project:hover .perfil-project-thumb { transform:translateY(-2px); box-shadow:0 10px 20px rgba(31,29,35,.18); }
 .perfil-project-title { font-size:.95rem; font-weight:700; color:var(--ink); }
 .perfil-project-desc { margin-top:.3rem; font-size:.78rem; line-height:1.55; color:var(--muted); }
 .perfil-project-tags { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.6rem; }
 .perfil-project-tags li { padding:2px 7px; border-radius:5px; border:1px solid #EEE8EC; font-size:.6rem; font-weight:600; letter-spacing:.06em;
-  text-transform:uppercase; color:#A19DA6; }
+  text-transform:uppercase; color:#A19DA6; transition:border-color .2s ease, color .2s ease; }
+.perfil-project:hover .perfil-project-tags li { border-color:#E0D6DC; color:#8A8792; }
 
 /* Estadísticas de Carrera (tarjeta oscura) */
 .perfil-stats { padding:1.6rem 1.5rem; border-radius:1.6rem; background:#1F1D23; color:#fff; box-shadow:0 18px 36px rgba(31,29,35,.25); }
@@ -192,13 +206,15 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .perfil-stat-head { display:flex; justify-content:space-between; gap:1rem; margin-bottom:.45rem; font-size:.78rem; color:#CAC6CE; }
 .perfil-stat-head strong { color:#fff; font-weight:700; }
 .perfil-stat-bar { height:6px; border-radius:9999px; background:#3A3740; overflow:hidden; }
-.perfil-stat-bar span { display:block; height:100%; border-radius:9999px; transition:width .8s ease; }
+.perfil-stat-bar span { display:block; height:100%; border-radius:9999px; }
 .perfil-stat-bar--mint span { background:var(--mint); }
 .perfil-stat-bar--pink span { background:var(--pink); }
 .perfil-stats-divider { margin:1.4rem 0 1.2rem; border:0; border-top:1px solid #37343C; }
 .perfil-stats-eyebrow { font-size:.64rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#8E8A94; }
 .perfil-achievements { display:flex; gap:.6rem; margin-top:.8rem; }
-.perfil-achievement { display:flex; align-items:center; justify-content:center; width:2.3rem; height:2.3rem; border-radius:.65rem; background:#302D36; }
+.perfil-achievement { display:flex; align-items:center; justify-content:center; width:2.3rem; height:2.3rem; border-radius:.65rem; background:#302D36;
+  transition:transform .2s cubic-bezier(.16,1,.3,1), background-color .2s ease; }
+.perfil-achievement:hover { transform:translateY(-2px); background:#3C3843; }
 .perfil-achievement--mint { color:var(--mint); }
 .perfil-achievement--pink { color:#F07AA8; }
 .perfil-achievement--blue { color:#6FA8F7; }
@@ -211,12 +227,40 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .perfil-pref { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.75rem .9rem .75rem 1rem; border-radius:1rem;
   background:#F8F5F7; font-size:.8rem; font-weight:600; color:var(--ink); }
 .perfil-switch { position:relative; flex-shrink:0; width:2.5rem; height:1.4rem; border-radius:9999px; background:#D9D3D7; cursor:pointer;
-  transition:background .2s ease; }
+  transition:background-color .25s ease; }
+/* Perilla: se desliza con salida suave (translate) y al presionar se estira hacia el lado al que va (scale desde
+   su borde contrario) */
 .perfil-switch::after { content:""; position:absolute; top:3px; left:3px; width:calc(1.4rem - 6px); height:calc(1.4rem - 6px); border-radius:9999px;
-  background:#fff; box-shadow:0 1px 3px rgba(16,16,20,.2); transition:transform .2s ease; }
+  background:#fff; box-shadow:0 1px 3px rgba(16,16,20,.2); transform-origin:left center;
+  transition:translate .3s cubic-bezier(.16,1,.3,1), scale .15s ease; }
 .perfil-switch[aria-checked="true"] { background:var(--mint); }
-.perfil-switch[aria-checked="true"]::after { transform:translateX(1.1rem); }
+.perfil-switch[aria-checked="true"]::after { translate:1.1rem 0; transform-origin:right center; }
+.perfil-switch:not([aria-checked="true"]):hover { background:#CCC5CA; }
+.perfil-switch[aria-checked="true"]:hover { background:#4FCF9E; }
+.perfil-switch:active::after { scale:1.25 1; }
 .perfil-switch:focus-visible, .perfil-photo-edit:focus-visible, .perfil-add:focus-visible { outline:2px solid var(--pink); outline-offset:2px; }
+
+/* Perfil: entrada. Tarjetas en orden de lectura (cabecera, habilidades, estadísticas, proyectos, preferencias) y
+   las barras de estadísticas se llenan al aparecer su tarjeta. translate suelto para no chocar con transform.
+   renderPerfil continúa estas animaciones (keyframes perfil-*) al repintar con los datos de la API. */
+@keyframes perfil-card-in { from { opacity:0; translate:0 12px; } }
+@keyframes perfil-bar-fill { from { clip-path:inset(0 100% 0 0 round 9999px); } to { clip-path:inset(0 0 0 0 round 9999px); } }
+#perfil-content > .perfil-header, .perfil-col > * { animation:perfil-card-in 420ms cubic-bezier(.16,1,.3,1) backwards; }
+.perfil-col:nth-child(1) > :nth-child(1) { animation-delay:60ms; }
+.perfil-col:nth-child(2) > :nth-child(1) { animation-delay:110ms; }
+.perfil-col:nth-child(1) > :nth-child(2) { animation-delay:160ms; }
+.perfil-col:nth-child(2) > :nth-child(2) { animation-delay:210ms; }
+.perfil-stat-bar span { animation:perfil-bar-fill 700ms cubic-bezier(.16,1,.3,1) 280ms backwards; }
+.perfil-stat + .perfil-stat .perfil-stat-bar span { animation-delay:360ms; }
+
+/* Menos movimiento: sin entrada, llenado, elevación, estiramiento ni "no" lateral. Quedan color, borde y sombra. */
+@media (prefers-reduced-motion: reduce) {
+  #perfil-content > .perfil-header, .perfil-col > *, .perfil-stat-bar span { animation:none; }
+  .perfil-header-actions .btn-pill[aria-disabled="true"]:active { animation:none; }
+  .perfil-skill:hover, .perfil-project:hover .perfil-project-thumb, .perfil-achievement:hover { transform:none; }
+  .perfil-switch::after { transition:none; }
+  .perfil-switch:active::after { scale:none; }
+}
 
 /* ---------- Analizador ---------- */
 .analizador-card { background:#fff; border-radius:1.6rem; padding:1.75rem; border:1px solid #F7EBF0;

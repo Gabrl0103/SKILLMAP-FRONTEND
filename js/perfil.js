@@ -208,14 +208,25 @@ function renderPreferencesCard(p) {
 
 const perfilState = { profile: sampleProfileData(), skills: { skills: null, error: null }, loading: false };
 
+// Animaciones de entrada de la vista (keyframes perfil-* en styles.css).
+const perfilEntrance = container => container.getAnimations({ subtree: true })
+  .filter(a => a instanceof CSSAnimation && a.animationName.startsWith("perfil-"));
+
 function renderPerfil() {
   const p = perfilState.profile;
-  document.getElementById("perfil-content").innerHTML = `
+  const container = document.getElementById("perfil-content");
+  // Al repintar con las habilidades, la entrada no se reinicia: las tarjetas nuevas siguen desde donde iba
+  // y, si ya había terminado, aparecen quietas. Con la vista oculta no hay nada que continuar.
+  const wasShown = container.childElementCount > 0 && container.offsetParent !== null;
+  const elapsed = perfilEntrance(container).find(a => a.playState === "running")?.currentTime;
+  container.innerHTML = `
     ${renderPerfilHeader(p)}
     <div class="perfil-grid">
       <div class="perfil-col">${renderSkillsCard(perfilState.skills)}${renderProjectsCard(p)}</div>
       <div class="perfil-col">${renderStatsCard(p, perfilState.skills)}${renderPreferencesCard(p)}</div>
     </div>`;
+  if (!wasShown) return;
+  perfilEntrance(container).forEach(a => { if (elapsed != null) a.currentTime = elapsed; else a.finish(); });
 }
 
 async function openPerfil() {
