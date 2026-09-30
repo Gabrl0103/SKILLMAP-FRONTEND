@@ -13,7 +13,7 @@ body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
 /* Fijo al borde izquierdo y a alto completo en todas las vistas; el contenido deja su ancho como margen */
 .sidebar { position:fixed; top:0; left:0; z-index:20; width:var(--sidebar-w); height:100vh; height:100dvh; overflow-y:auto; background:#fff; }
 .app-main { margin-left:var(--sidebar-w); }
-#view-dashboard { max-width:876px; margin-inline:auto; } /* mismo ancho de contenido que tenía Mi Ruta */
+#view-dashboard, #view-objetivo { max-width:876px; margin-inline:auto; } /* mismo ancho de contenido que tenía Mi Ruta */
 /* Pantallas angostas: sidebar solo con íconos; los textos quedan disponibles para lectores de pantalla */
 @media (max-width:639px) {
   :root { --sidebar-w:4.5rem; }
@@ -32,6 +32,55 @@ button.nav-item:not(.active):hover { background:var(--pink-soft); color:var(--pi
 button.nav-item:focus-visible { outline:2px solid var(--pink); outline-offset:2px; }
 .nav-item.active { background:var(--pink); color:#fff; box-shadow:0 10px 22px rgba(217,95,142,.32); }
 .nav-item.disabled { opacity:.6; cursor:not-allowed; }
+
+/* ---------- Objetivo ---------- */
+.objetivo-title { font-size:1.9rem; font-weight:500; line-height:1.2; letter-spacing:-.02em; color:var(--ink); }
+.objetivo-subtitle { margin-top:.7rem; font-size:.9rem; line-height:1.6; color:var(--muted); }
+
+.objetivo-search { display:flex; align-items:center; gap:.9rem; padding:0 1.4rem; height:3.4rem; margin-bottom:2.25rem; border-radius:1.1rem; background:#fff;
+  color:#A19DA6; box-shadow:0 1px 2px rgba(217,95,142,.04), 0 10px 26px rgba(217,95,142,.05); cursor:text; }
+.objetivo-search:focus-within { box-shadow:0 0 0 2px var(--pink), 0 10px 26px rgba(217,95,142,.08); }
+.objetivo-search svg { flex-shrink:0; }
+.objetivo-search input { flex:1; min-width:0; height:100%; border:0; background:transparent; font:inherit; font-size:.9rem; color:var(--ink); }
+.objetivo-search input:focus { outline:none; }
+.objetivo-search input::placeholder { color:#A19DA6; text-overflow:ellipsis; }
+
+.objetivo-empty { margin-bottom:1.25rem; font-size:.85rem; color:var(--muted); }
+.objetivo-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:1.1rem; }
+@media (min-width:640px) { .objetivo-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (min-width:1024px) { .objetivo-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+.objetivo-radios { display:contents; }
+
+.objetivo-card { position:relative; display:flex; flex-direction:column; align-items:flex-start; min-height:12.5rem; padding:1.5rem 1.4rem 1.4rem; text-align:left;
+  border-radius:1.25rem; background:#fff; border:1.5px solid #F7EBF0; box-shadow:0 1px 2px rgba(217,95,142,.04), 0 14px 34px rgba(217,95,142,.05);
+  transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.objetivo-card[hidden] { display:none; }
+button.objetivo-card { cursor:pointer; }
+button.objetivo-card:hover { border-color:#F1CCDA; transform:translateY(-2px); }
+button.objetivo-card:focus { outline:none; }
+button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offset:3px; }
+.objetivo-card[aria-checked="true"] { border-color:var(--pink); box-shadow:0 14px 34px rgba(217,95,142,.14); }
+.objetivo-card-icon { display:flex; align-items:center; justify-content:center; width:2.6rem; height:2.6rem; border-radius:.8rem;
+  background:var(--goal-bg); color:var(--goal-color); }
+.objetivo-card-icon svg { width:1.35rem; height:1.35rem; }
+.objetivo-card-check { position:absolute; top:1.1rem; right:1.1rem; width:1.25rem; height:1.25rem; color:var(--pink); opacity:0; transform:scale(.6);
+  transition:opacity .15s ease, transform .15s ease; }
+.objetivo-card[aria-checked="true"] .objetivo-card-check { opacity:1; transform:none; }
+.objetivo-card-title { margin-top:1.3rem; font-size:1rem; font-weight:700; line-height:1.3; letter-spacing:-.01em; color:var(--ink); overflow-wrap:anywhere; }
+.objetivo-card-desc { margin-top:.55rem; font-size:.78rem; line-height:1.6; color:var(--muted); }
+.objetivo-card-count { display:inline-flex; align-items:center; gap:.4rem; margin-top:auto; padding-top:1.1rem; font-size:.74rem; font-weight:600; color:#A19DA6; }
+.objetivo-card[aria-checked="true"] .objetivo-card-count { color:var(--pink); }
+
+.objetivo-card--otro { align-items:center; justify-content:center; gap:.35rem; text-align:center; background:#F8F6F8; border:1.5px dashed #DCD4D9;
+  box-shadow:none; cursor:not-allowed; }
+.objetivo-otro-plus { display:flex; align-items:center; justify-content:center; width:2.6rem; height:2.6rem; margin-bottom:.6rem; border-radius:9999px;
+  background:#fff; color:#8A8792; box-shadow:0 4px 12px rgba(16,16,20,.06); }
+.objetivo-card--otro .objetivo-card-title { margin-top:0; }
+.objetivo-otro-text { font-size:.75rem; color:var(--muted); margin-bottom:.6rem; }
+
+.objetivo-actions { display:flex; justify-content:center; margin-top:2.75rem; }
+.objetivo-cta { padding:1rem 2.4rem; white-space:normal; text-align:center; }
+.objetivo-cta:disabled { opacity:.5; cursor:not-allowed; transform:none; }
 
 /* ---------- Mi Ruta ---------- */
 .ruta-eyebrow { display:block; width:fit-content; padding:4px 10px; border-radius:9999px; background:var(--pink-soft); color:var(--pink);

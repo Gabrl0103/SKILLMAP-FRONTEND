@@ -226,16 +226,51 @@ function showAllGaps() {
   card.focus({ preventScroll: true });
 }
 
-// Llena el <select id="goal-selector"> con los objetivos de la API y deja el primero seleccionado.
+// Objetivo elegido por el usuario. La API no guarda el objetivo activo, así que vive en el navegador.
+const GOAL_STORAGE_KEY = "skillmap.goalId";
+
+function readSavedGoalId() {
+  try { return localStorage.getItem(GOAL_STORAGE_KEY); } catch { return null; }
+}
+
+function saveGoalId(goalId) {
+  try { localStorage.setItem(GOAL_STORAGE_KEY, String(goalId)); } catch { /* sin storage: solo dura la sesión */ }
+}
+
+let goalsRequest = null; // compartida con la vista Objetivo para no pedir /api/goals dos veces
+
+function fetchGoals() {
+  if (!goalsRequest) {
+    goalsRequest = fetch(`${API_BASE_URL}/api/goals`)
+      .then(res => {
+        if (!res.ok) throw new Error("La API respondió " + res.status);
+        return res.json();
+      })
+      .catch(err => { goalsRequest = null; throw err; }); // si falla, se reintenta en la próxima llamada
+  }
+  return goalsRequest;
+}
+
+// Llena el <select id="goal-selector"> con los objetivos de la API y selecciona el guardado (o el primero).
 async function loadGoals() {
   const selector = document.getElementById("goal-selector");
-  const res = await fetch(`${API_BASE_URL}/api/goals`);
-  if (!res.ok) throw new Error("La API respondió " + res.status);
-  const goals = await res.json();
+  const goals = await fetchGoals();
 
   selector.innerHTML = goals.map(g => `<option value="${g.id}">${escapeHtml(g.title)}</option>`).join("");
   selector.disabled = goals.length === 0;
+  const saved = readSavedGoalId();
+  if (goals.some(g => String(g.id) === saved)) selector.value = saved;
   return goals;
+}
+
+// Cambia el objetivo activo: lo guarda, lo aplica al selector de Mi Ruta y recarga el dashboard.
+async function setActiveGoal(goalId) {
+  const selector = document.getElementById("goal-selector");
+  saveGoalId(goalId);
+  // Si el selector no cargó (p. ej. la API falló al abrir la app), se vuelve a llenar antes de elegir.
+  if (![...selector.options].some(o => o.value === String(goalId))) await loadGoals().catch(() => {});
+  selector.value = goalId;
+  loadDashboard(goalId);
 }
 
 let latestRequest = 0; // evita que una respuesta vieja pise la del objetivo recién elegido
@@ -268,7 +303,7 @@ async function init() {
   const selector = document.getElementById("goal-selector");
   const container = document.getElementById("app-content");
 
-  selector.addEventListener("change", () => loadDashboard(selector.value));
+  selector.addEventListener("change", () => setActiveGoal(selector.value));
   container.addEventListener("click", e => {
     const action = e.target.closest("[data-action]")?.dataset.action;
     if (action === "show-gaps") showAllGaps();

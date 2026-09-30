@@ -462,6 +462,7 @@ function showView(view) {
   document.querySelector(".app-shell").classList.toggle("is-mapa", view === "mapa");
   // Si la carga terminó mientras la vista estaba oculta, se centra al volver a mostrarla.
   if (view === "mapa") loadMapa().then(applyMapaTransform);
+  if (view === "objetivo") openObjetivo(); // definido en objetivo.js
 }
 
 document.querySelectorAll(".nav-item[data-view]").forEach(item => {

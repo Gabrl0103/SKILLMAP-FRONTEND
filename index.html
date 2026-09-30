@@ -24,10 +24,10 @@
         <span class="sidebar-text text-base font-medium text-gray-800 tracking-tight">SKILLMAP</span>
       </div>
       <nav class="flex flex-col gap-2">
-        <div class="nav-item disabled" title="Próximamente">
+        <button type="button" class="nav-item" data-view="objetivo">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>
           <span class="sidebar-text">Objetivo</span>
-        </div>
+        </button>
         <button type="button" class="nav-item active" data-view="dashboard" aria-current="page">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/></svg>
           <span class="sidebar-text">Mi Ruta</span>
@@ -51,6 +51,20 @@
 
   <!-- MAIN -->
   <main class="app-main min-w-0 px-5 py-8 md:px-10 md:py-10">
+    <section id="view-objetivo" class="hidden">
+      <header class="mb-9">
+        <h1 class="objetivo-title">¿Cuál es tu próximo gran salto?</h1>
+        <p class="objetivo-subtitle">Define tu objetivo profesional para que el GPS pueda trazar la ruta más eficiente hacia tu meta.</p>
+      </header>
+      <label class="objetivo-search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span class="sr-only">Buscar objetivo</span>
+        <input id="objetivo-search" type="search" autocomplete="off" placeholder="Busca un rol profesional (ej. Senior Frontend Engineer, UX Designer...)">
+      </label>
+      <!-- Lo llena js/objetivo.js la primera vez que se abre la vista -->
+      <div id="objetivo-content"></div>
+    </section>
+
     <section id="view-dashboard">
       <header class="flex flex-wrap items-start justify-between gap-4 mb-8">
         <div class="min-w-0 max-w-full">
@@ -81,5 +95,6 @@
 <script src="js/skill-card.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/mapa.js"></script>
+<script src="js/objetivo.js"></script>
 </body>
 </html>
