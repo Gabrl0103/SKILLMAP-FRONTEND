@@ -8,6 +8,15 @@ html, body { overflow-x:hidden; overflow-x:clip; }
 body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif; background:var(--page); color:var(--ink); }
 .card { background: #fff; border-radius: 0.9rem; box-shadow: 0 1px 2px rgba(16,16,20,0.05), 0 1px 6px rgba(16,16,20,0.04); }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+::selection { background:var(--pink-soft); color:var(--ink); }
+
+/* Cambio de vista: la sección que se muestra entra con un fundido corto. showView solo alterna .hidden
+   (display:none), así que la animación se repite cada vez que la vista vuelve a mostrarse. */
+@keyframes view-in { from { opacity:.35; transform:translateY(6px); } }
+@keyframes view-fade { from { opacity:.35; } }
+main > section:not(.hidden) { animation:view-in 200ms cubic-bezier(.16,1,.3,1) backwards; }
+/* El mapa solo se funde: un desplazamiento chocaría con su propio zoom y arrastre */
+main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 
 /* ---------- Sidebar ---------- */
 /* Fijo al borde izquierdo y a alto completo en todas las vistas; el contenido deja su ancho como margen */
@@ -232,8 +241,11 @@ button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offs
 .goal-select { max-width:100%; text-overflow:ellipsis; appearance:none; background:transparent; border:0; padding:0 1.75rem 0 0; font-size:1.9rem; font-weight:500; letter-spacing:-.02em;
   color:var(--ink); cursor:pointer; }
 .goal-select:focus { outline:none; }
-.goal-select:focus-visible { text-decoration:underline; text-decoration-color:var(--pink); }
+.goal-select:focus-visible { outline:2px solid var(--pink); outline-offset:4px; border-radius:.4rem; }
 .goal-select:disabled { cursor:wait; }
+/* Flecha del selector: rosa en hover y foco para anunciar que el título se puede cambiar */
+.goal-select + svg { transition:color .15s ease; }
+.goal-select:hover:not(:disabled) + svg, .goal-select:focus-visible + svg { color:var(--pink); }
 .market-demand { text-align:right; padding-top:.35rem; }
 .market-demand-label { font-size:.85rem; color:var(--muted); }
 .market-demand-value { display:flex; align-items:center; justify-content:flex-end; gap:.45rem; margin-top:.2rem; font-size:1.05rem; font-weight:700; }
@@ -262,8 +274,14 @@ button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offs
   background:var(--pink); color:#fff; font-size:.9rem; font-weight:700; box-shadow:0 10px 22px rgba(217,95,142,.3);
   transition:transform .15s ease, box-shadow .15s ease; }
 .btn-pill:hover { transform:translateY(-1px); box-shadow:0 14px 26px rgba(217,95,142,.36); }
+/* Al presionar: el botón baja y la sombra se acorta, respuesta inmediata al clic */
+.btn-pill:active { transform:translateY(0) scale(.98); box-shadow:0 6px 14px rgba(217,95,142,.28); transition-duration:.06s; }
+.btn-pill:disabled:active, .btn-pill[aria-disabled="true"]:active { transform:none; }
 .btn-pill:focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
 .btn-pill--light { background:#fff; color:var(--pink); padding:.7rem 1.25rem; border-radius:.7rem; box-shadow:0 8px 18px rgba(120,20,60,.18); }
+/* Sobre la tarjeta rosa una sombra rosa no se ve: el botón claro usa sombra oscura */
+.btn-pill--light:hover { box-shadow:0 12px 22px rgba(120,20,60,.26); }
+.btn-pill--light:active { box-shadow:0 4px 10px rgba(120,20,60,.2); }
 .btn-pill--light:focus-visible { outline-color:#fff; }
 
 /* Gauge */
@@ -273,7 +291,8 @@ button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offs
 .ruta-gauge-value { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:2.6rem; font-weight:300;
   letter-spacing:-.03em; color:var(--ink); }
 .ruta-gauge-value span { font-size:1.2rem; margin:.7rem 0 0 .1rem; }
-.ruta-gauge-text { max-width:15.5rem; font-size:.8rem; line-height:1.55; color:var(--muted); margin-bottom:1.6rem; }
+.ruta-gauge-text { max-width:15.5rem; font-size:.8rem; line-height:1.55; color:var(--muted); margin-bottom:1.6rem; text-wrap:pretty; }
+.ruta-gauge-value, .gap-meta, .trend-axis, .market-demand-note { font-variant-numeric:tabular-nums; }
 .gauge-track { stroke:var(--faint); }
 .gauge-fill { stroke:var(--pink); transition: stroke-dashoffset .8s ease; }
 
@@ -286,7 +305,7 @@ button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offs
 .gap-badge--hot { background:var(--pink-soft); color:#B8406E; }
 .gap-badge--neutral { background:var(--faint); color:#6E6A74; }
 .gap-bar { height:10px; border-radius:9999px; background:var(--faint); overflow:hidden; }
-.gap-bar span { display:block; height:100%; border-radius:9999px; background:var(--pink); transition:width .8s ease; }
+.gap-bar span { display:block; height:100%; border-radius:9999px; background:var(--pink); }
 .gap-meta { display:flex; justify-content:space-between; gap:1rem; margin-top:.45rem; font-size:.72rem; color:var(--muted); }
 .gap-status { color:var(--ink-2); font-weight:500; }
 .ruta-sample-note { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.6rem; padding-top:1.1rem; border-top:1px solid var(--faint);
@@ -299,8 +318,8 @@ button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offs
 .ruta-action-head { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; }
 .ruta-action-eyebrow { display:inline-block; padding:4px 10px; border-radius:6px; background:rgba(255,255,255,.2);
   font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
-.ruta-action-title { margin-top:1rem; font-size:1.3rem; font-weight:700; line-height:1.25; letter-spacing:-.01em; overflow-wrap:anywhere; }
-.ruta-action-text { margin:.75rem 0 1.5rem; font-size:.8rem; line-height:1.6; opacity:.92; }
+.ruta-action-title { margin-top:1rem; font-size:1.3rem; font-weight:700; line-height:1.25; letter-spacing:-.01em; overflow-wrap:anywhere; text-wrap:balance; }
+.ruta-action-text { margin:.75rem 0 1.5rem; font-size:.8rem; line-height:1.6; opacity:.92; text-wrap:pretty; }
 .ruta-action-bolt { position:absolute; right:-18px; bottom:-22px; width:110px; height:110px; color:#fff; opacity:.14; transform:rotate(18deg); }
 
 /* Tendencia */
@@ -326,6 +345,47 @@ button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offs
 .legend-key--nivel::after { content:""; position:absolute; left:50%; top:-5.25px; width:8px; height:8px; margin-left:-4px; border-radius:9999px; background:var(--pink); }
 .legend-key--demanda { border-top:2.5px dotted #B3ACB2; }
 .trend-tooltip .legend-key { width:14px; }
+
+/* Mi Ruta: entrada. Solo CSS: se repite al recargar datos o al volver a la vista. fill-mode backwards
+   para que al terminar no quede ningún transform aplicado. */
+@keyframes ruta-card-in { from { opacity:.4; transform:translateY(10px); } }
+@keyframes ruta-gauge-fill { from { stroke-dashoffset:389.56; } } /* 2π·62: circunferencia del anillo en dashboard.js */
+@keyframes ruta-bar-fill { from { clip-path:inset(0 100% 0 0 round 9999px); } to { clip-path:inset(0 0 0 0 round 9999px); } }
+@keyframes ruta-fade { from { opacity:0; } }
+/* Tarjetas en orden de lectura: preparación, brechas, siguiente acción, tendencia */
+.ruta-grid:not(.ruta-skeleton) > .ruta-col > * { animation:ruta-card-in 320ms cubic-bezier(.16,1,.3,1) backwards; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(1) { animation-delay:40ms; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(1) > :nth-child(2) { animation-delay:80ms; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(2) { animation-delay:120ms; }
+.ruta-gauge .gauge-fill { animation:ruta-gauge-fill 700ms cubic-bezier(.16,1,.3,1) 100ms backwards; }
+/* Barras una tras otra; las que aparecen con "Ver detalle de brechas" se llenan al mostrarse */
+.gap-bar span { animation:ruta-bar-fill 600ms cubic-bezier(.16,1,.3,1) 140ms backwards; }
+.gap-row:nth-child(2) .gap-bar span { animation-delay:200ms; }
+.gap-row:nth-child(3) .gap-bar span { animation-delay:260ms; }
+.market-demand:not([hidden]) { animation:ruta-fade 240ms ease-out backwards; }
+
+/* Mi Ruta: skeleton de carga con la misma grilla que la vista final, para que no salte el layout */
+@keyframes skel-pulse { from { opacity:1; } to { opacity:.5; } }
+.skel, .skel-action { display:block; border-radius:9999px; background:var(--faint); animation:skel-pulse 900ms ease-in-out infinite alternate; }
+.skel-line { height:.7rem; width:100%; }
+.skel-line + .skel-line { margin-top:.55rem; }
+.skel-line--title { height:.95rem; width:45%; }
+.skel-line--half { width:40%; }
+.skel-line--short { width:72%; }
+.skel-line--shorter { width:50%; }
+.skel-ring { width:142px; height:142px; margin:calc(1.75rem + 9px) 0 calc(1.5rem + 9px); background:none; border:18px solid var(--faint); }
+.skel-pill { width:11rem; height:2.9rem; margin-top:1.6rem; }
+.skel-bar { height:10px; margin-top:.7rem; }
+.skel-chart { height:13rem; border-radius:1rem; }
+.skel-action { height:14.5rem; border-radius:1.75rem; background:var(--pink-soft); }
+
+/* Menos movimiento: sin desplazamientos, escalonado ni pulso. Gauge y barras aparecen llenos y el cambio
+   de vista queda como un fundido breve, para no perder el aviso de que algo cambió. */
+@media (prefers-reduced-motion: reduce) {
+  main > section:not(.hidden) { animation-name:view-fade; animation-duration:120ms; }
+  .ruta-grid:not(.ruta-skeleton) > .ruta-col > *, .ruta-gauge .gauge-fill, .gap-bar span, .skel, .skel-action { animation:none; }
+  .btn-pill:hover, .btn-pill:active { transform:none; }
+}
 
 /* ---------- Mapa Visual ---------- */
 /* En esta vista el lienzo llena todo a la derecha del sidebar: sin padding y a alto completo */
@@ -383,3 +443,18 @@ button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offs
   background:#27272A; color:#fff; font-size:12px; box-shadow:0 6px 16px rgba(16,16,20,.18); }
 .mapa-tooltip[hidden] { display:none; }
 .mapa-tooltip-note { display:flex; align-items:center; gap:.5rem; margin-top:6px; font-size:11px; color:#CAC6CE; }
+
+/* Mapa: entrada. Se repite cada vez que la vista vuelve a mostrarse (sale de display:none). Usa las propiedades
+   scale/translate sueltas para no chocar con el transform del hover de los nodos ni con el zoom del stage.
+   Los nodos entran en orden de cluster (--i lo pone renderNode), con tope para que el total no pase de ~0.8s. */
+@keyframes mapa-node-in { from { opacity:0; scale:.7; } }
+@keyframes mapa-slide-x { from { opacity:0; translate:-10px 0; } }
+@keyframes mapa-slide-y { from { opacity:0; translate:0 10px; } }
+.mapa-node { animation:mapa-node-in 380ms cubic-bezier(.16,1,.3,1) backwards; animation-delay:calc(min(var(--i, 0), 24) * 14ms + 60ms); }
+.mapa-links { animation:ruta-fade 400ms ease-out backwards; }
+.mapa-cluster-label { animation:ruta-fade 300ms ease-out 260ms backwards; }
+.mapa-controls { animation:mapa-slide-x 320ms cubic-bezier(.16,1,.3,1) 120ms backwards; }
+.mapa-legend { animation:mapa-slide-y 320ms cubic-bezier(.16,1,.3,1) 160ms backwards; }
+@media (prefers-reduced-motion: reduce) {
+  .mapa-node, .mapa-links, .mapa-cluster-label, .mapa-controls, .mapa-legend { animation:none; }
+}

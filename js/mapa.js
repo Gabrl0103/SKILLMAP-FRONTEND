@@ -216,7 +216,7 @@ function renderNode({ skill, category, x, y }, index) {
     + `${skill.demandPercentage}% de demanda${DEMAND_IS_SAMPLE ? " (de ejemplo)" : ""}`;
   return `
     <div class="mapa-node mapa-node--${status}" tabindex="${index === 0 ? 0 : -1}" role="img"
-      style="left:${x - NODE_SIZE / 2}px; top:${y - NODE_SIZE / 2}px; width:${NODE_SIZE}px; height:${NODE_SIZE}px;"
+      style="left:${x - NODE_SIZE / 2}px; top:${y - NODE_SIZE / 2}px; width:${NODE_SIZE}px; height:${NODE_SIZE}px; --i:${index};"
       data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(label)}">
       <svg class="mapa-node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[pickIcon(skill.name, category)]}</svg>

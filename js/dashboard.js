@@ -221,6 +221,35 @@ function bindTrendHover(container) {
   plot.addEventListener("focusout", hide);
 }
 
+// Skeleton de carga: misma grilla y tarjetas que la vista final. El texto solo lo leen los lectores de pantalla.
+function renderRutaSkeleton() {
+  const gapRow = `<div><span class="skel skel-line skel-line--half"></span><span class="skel skel-bar"></span></div>`;
+  return `
+    <div class="ruta-grid ruta-skeleton" role="status">
+      <span class="sr-only">Cargando tu ruta…</span>
+      <div class="ruta-col" aria-hidden="true">
+        <div class="ruta-card ruta-gauge">
+          <span class="skel skel-line skel-line--title"></span>
+          <span class="skel skel-ring"></span>
+          <span class="skel skel-line skel-line--short"></span>
+          <span class="skel skel-line skel-line--shorter"></span>
+          <span class="skel skel-pill"></span>
+        </div>
+        <div class="skel-action"></div>
+      </div>
+      <div class="ruta-col" aria-hidden="true">
+        <div class="ruta-card">
+          <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span></div>
+          <div class="gap-list">${gapRow.repeat(3)}</div>
+        </div>
+        <div class="ruta-card">
+          <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span></div>
+          <span class="skel skel-chart"></span>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderApiError(err) {
   return `
     <div class="card p-6 md:col-span-2 border border-dashed" style="border-color:#D95F8E;">
@@ -236,7 +265,8 @@ function showAllGaps() {
   const card = document.getElementById("brechas-card");
   if (!card) return;
   card.querySelectorAll(".gap-row[data-extra]").forEach(row => { row.hidden = false; });
-  card.scrollIntoView({ behavior: "smooth", block: "start" });
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  card.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   card.focus({ preventScroll: true });
 }
 
@@ -307,7 +337,7 @@ async function loadDashboard(goalId) {
   const container = document.getElementById("app-content");
   const requestId = ++latestRequest;
   document.getElementById("market-demand").hidden = true;
-  container.innerHTML = `<p class="text-sm text-gray-400">Cargando tu ruta…</p>`;
+  container.innerHTML = renderRutaSkeleton();
   try {
     const res = await fetch(`${API_BASE_URL}/api/goals/${goalId}/readiness`);
     if (!res.ok) throw new Error("La API respondió " + res.status);
@@ -330,6 +360,7 @@ async function loadDashboard(goalId) {
 async function init() {
   const selector = document.getElementById("goal-selector");
   const container = document.getElementById("app-content");
+  container.innerHTML = renderRutaSkeleton(); // mientras llegan los objetivos
 
   selector.addEventListener("change", () => setActiveGoal(selector.value));
   container.addEventListener("click", e => {
