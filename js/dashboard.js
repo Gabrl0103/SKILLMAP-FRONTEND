@@ -27,6 +27,16 @@ function sampleTrendData() {
 
 const sampleTag = `<span class="sample-tag">Datos de ejemplo</span>`;
 
+// DATOS DE EJEMPLO: el backend todavía usa porcentajes de demanda sembrados. Cuando la demanda se calcule
+// a partir de vacantes reales, pasar a false: Mi Ruta, Mapa Visual y Perfil quitan la etiqueta solos.
+const DEMAND_IS_SAMPLE = true;
+const SAMPLE_DEMAND_TEXT = "Demanda de ejemplo: aún no proviene de vacantes reales";
+
+// Nota "Datos de ejemplo" + aviso de demanda, envuelta en un <p> con la clase dada. Vacía si la demanda es real.
+function sampleDemandNote(className) {
+  return DEMAND_IS_SAMPLE ? `<p class="${className}">${sampleTag} ${SAMPLE_DEMAND_TEXT}</p>` : "";
+}
+
 // ---------- Bloques de la vista ----------
 
 // "Mercado Laboral" del encabezado: demanda promedio real de las brechas del objetivo.
@@ -43,7 +53,8 @@ function renderMarketDemand(gaps) {
     <p class="market-demand-value market-demand-value--${level.tone}" title="Demanda promedio de tus brechas: ${avg}%">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${level.icon}"/></svg>
       ${level.label}
-    </p>`;
+    </p>
+    ${sampleDemandNote("market-demand-note")}`;
   el.hidden = false;
 }
 
@@ -94,7 +105,7 @@ function renderBrechas(gaps) {
 
   const body = gaps.length
     ? `<ul class="gap-list">${rows}</ul>
-       <p class="ruta-sample-note">${sampleTag} Los badges de urgencia son simulados: la API aún no los provee.</p>`
+       <p class="ruta-sample-note">${sampleTag} ${DEMAND_IS_SAMPLE ? `${SAMPLE_DEMAND_TEXT}. ` : ""}Los badges de urgencia son simulados: la API aún no los provee.</p>`
     : `<p class="text-sm text-gray-400">Sin brechas pendientes — todo dominado 🎉</p>`;
 
   return `
@@ -112,7 +123,10 @@ function renderNextAction(topGap, goalTitle) {
   const verb = topGap.status === "IN_PROGRESS" ? "Avanza en" : "Empieza con";
   return `
     <article class="ruta-action">
-      <span class="ruta-action-eyebrow">Siguiente acción</span>
+      <div class="ruta-action-head">
+        <span class="ruta-action-eyebrow">Siguiente acción</span>
+        ${DEMAND_IS_SAMPLE ? sampleTag : ""}
+      </div>
       <h2 class="ruta-action-title">${verb} ${escapeHtml(topGap.name)}</h2>
       <p class="ruta-action-text">Esta habilidad tiene un ${topGap.demandPercentage}% de demanda en vacantes de
         ${escapeHtml(goalTitle)} y es tu brecha con más demanda.</p>

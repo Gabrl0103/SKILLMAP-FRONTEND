@@ -1,5 +1,5 @@
 // Vista "Mapa Visual": todas las habilidades del sistema como grafo de nodos agrupados por categoría.
-// Usa API_BASE_URL y renderApiError definidos en dashboard.js.
+// Usa API_BASE_URL, renderApiError, STATUS_LABEL, DEMAND_IS_SAMPLE y sampleDemandNote definidos en dashboard.js.
 
 const NODE_SIZE = 112;      // diámetro de cada nodo (px)
 const NODE_GAP = 36;        // separación mínima entre nodos vecinos de un mismo cluster
@@ -208,13 +208,16 @@ function layoutGraph(skills) {
 
 const STATUS_CLASS = { MASTERED: "mastered", IN_PROGRESS: "progress", PENDING: "pending" };
 
-function renderNode({ skill, category, x, y }) {
+// Solo el primer nodo entra en el orden de tabulación; las flechas mueven el foco entre nodos (tabindex móvil).
+function renderNode({ skill, category, x, y }, index) {
   const status = STATUS_CLASS[skill.status] || "pending";
   const tooltip = `${skill.name} — ${skill.demandPercentage}% demanda`;
+  const label = `${skill.name}, ${category}, ${STATUS_LABEL[skill.status] || STATUS_LABEL.PENDING}, `
+    + `${skill.demandPercentage}% de demanda${DEMAND_IS_SAMPLE ? " (de ejemplo)" : ""}`;
   return `
-    <div class="mapa-node mapa-node--${status}" tabindex="0" role="img"
+    <div class="mapa-node mapa-node--${status}" tabindex="${index === 0 ? 0 : -1}" role="img"
       style="left:${x - NODE_SIZE / 2}px; top:${y - NODE_SIZE / 2}px; width:${NODE_SIZE}px; height:${NODE_SIZE}px;"
-      data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(tooltip)}">
+      data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(label)}">
       <svg class="mapa-node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[pickIcon(skill.name, category)]}</svg>
       <span class="mapa-node-label" lang="es">${escapeHtml(skill.name)}</span>
@@ -237,7 +240,8 @@ function renderMapa(skills) {
   // Líneas y nodos comparten el mismo stage: el zoom (transform) se aplica solo a él y ambos escalan juntos.
   return `
     <div class="mapa-viewport" id="mapa-viewport">
-      <div class="mapa-stage" id="mapa-stage" style="width:${width}px; height:${height}px;">
+      <div class="mapa-stage" id="mapa-stage" style="width:${width}px; height:${height}px;"
+        role="group" aria-label="Mapa de habilidades. Usa las flechas para recorrerlas.">
         <svg class="mapa-links" width="${width}" height="${height}" aria-hidden="true">${lines}</svg>
         ${labels.map(renderClusterLabel).join("")}
         ${nodes.map(renderNode).join("")}
@@ -261,7 +265,7 @@ function renderMapa(skills) {
         <span><i class="mapa-dot mapa-dot--pending"></i>Por Aprender</span>
       </div>
 
-      <div class="mapa-tooltip" id="mapa-tooltip" hidden></div>
+      <div class="mapa-tooltip" id="mapa-tooltip" aria-hidden="true" hidden></div>
     </div>`;
 }
 
@@ -352,11 +356,95 @@ function setMapaZoom(action) {
   zoomMapaAt(next, area.left + area.width / 2, area.top + area.height / 2);
 }
 
+const FOCUS_MARGIN = 16; // espacio mínimo entre un nodo enfocado con teclado y el borde del área libre
+
+// Posición en pantalla (px del viewport) del centro de un nodo y su radio, con el zoom y arrastre actuales.
+function mapaNodeScreen(viewport, stage, node) {
+  const base = mapaBaseOffset(viewport, stage, mapaZoom);
+  const half = NODE_SIZE / 2;
+  return {
+    x: base.x + mapaPan.x + (node.offsetLeft + half) * mapaZoom,
+    y: base.y + mapaPan.y + (node.offsetTop + half) * mapaZoom,
+    r: half * mapaZoom,
+  };
+}
+
+// Foco con teclado en un nodo fuera del área libre: se arrastra el mapa lo justo para mostrarlo.
+function panMapaToNode(node) {
+  const viewport = document.getElementById("mapa-viewport");
+  const stage = document.getElementById("mapa-stage");
+  const area = mapaSafeArea(viewport);
+  const { x, y, r } = mapaNodeScreen(viewport, stage, node);
+  const reach = r + FOCUS_MARGIN;
+  const shift = (center, start, size) =>
+    center - reach < start ? start - (center - reach) : center + reach > start + size ? start + size - (center + reach) : 0;
+  const dx = shift(x, area.left, area.width), dy = shift(y, area.top, area.height);
+  if (!dx && !dy) return;
+  mapaPan = { x: mapaPan.x + dx, y: mapaPan.y + dy };
+  applyMapaTransform();
+}
+
+// Contenido del tooltip: nombre y demanda, más la nota de demanda de ejemplo mientras sea sembrada.
+function fillMapaTooltip(tooltip, node) {
+  if (tooltip.dataset.node === node.dataset.tooltip) return;
+  tooltip.dataset.node = node.dataset.tooltip;
+  tooltip.innerHTML = `${escapeHtml(node.dataset.tooltip)}${sampleDemandNote("mapa-tooltip-note")}`;
+}
+
+// Ubica el tooltip dentro del viewport: preferencia (x, y) y, si no cabe antes de maxBottom, del otro lado
+// (flipX / flipY en px).
+function placeMapaTooltip(viewport, tooltip, x, y, flipX, flipY, maxBottom = viewport.clientHeight) {
+  tooltip.hidden = false;
+  const w = tooltip.offsetWidth, h = tooltip.offsetHeight;
+  const left = x + w > viewport.clientWidth ? flipX - w : x;
+  const top = y + h > maxBottom ? flipY - h : y;
+  tooltip.style.left = `${clamp(left, 8, viewport.clientWidth - w - 8)}px`;
+  tooltip.style.top = `${clamp(top, 8, viewport.clientHeight - h - 8)}px`;
+}
+
+// Tooltip de un nodo enfocado con teclado: centrado debajo del nodo, o encima si taparía la leyenda.
+function showMapaTooltipForNode(viewport, tooltip, node) {
+  const stage = document.getElementById("mapa-stage");
+  const { x, y, r } = mapaNodeScreen(viewport, stage, node);
+  const area = mapaSafeArea(viewport);
+  fillMapaTooltip(tooltip, node);
+  tooltip.hidden = false;
+  const w = tooltip.offsetWidth;
+  placeMapaTooltip(viewport, tooltip, x - w / 2, y + r + 10, x + w / 2, y - r - 10, area.top + area.height);
+}
+
+// Flechas / Inicio / Fin: mueven el foco entre nodos. Solo el nodo activo queda en el orden de tabulación.
+function bindMapaKeys(viewport, tooltip) {
+  const stage = document.getElementById("mapa-stage");
+  const nodes = [...stage.querySelectorAll(".mapa-node")];
+
+  stage.addEventListener("keydown", e => {
+    const i = nodes.indexOf(e.target);
+    if (i === -1) return;
+    const next = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: nodes.length - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    nodes[(next + nodes.length) % nodes.length].focus();
+  });
+
+  stage.addEventListener("focusin", e => {
+    const node = e.target.closest(".mapa-node");
+    if (!node) return;
+    nodes.forEach(n => { n.tabIndex = n === node ? 0 : -1; });
+    // Con el mouse el foco llega al empezar a arrastrar: ahí no se mueve el mapa ni se muestra el tooltip.
+    if (!node.matches(":focus-visible")) return;
+    panMapaToNode(node);
+    showMapaTooltipForNode(viewport, tooltip, node);
+  });
+  stage.addEventListener("focusout", () => { tooltip.hidden = true; });
+}
+
 // Rueda del mouse: zoom centrado en el cursor. preventDefault evita el scroll de la página sobre el mapa.
-function bindMapaWheel(viewport) {
+function bindMapaWheel(viewport, tooltip) {
   let wheelTimer = null;
   viewport.addEventListener("wheel", e => {
     e.preventDefault();
+    tooltip.hidden = true; // un tooltip anclado a un nodo quedaría fuera de lugar con el nuevo zoom
     const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY; // Firefox puede reportar líneas en vez de px
     const rect = viewport.getBoundingClientRect();
     // Sin transición mientras se gira la rueda, para que el zoom siga al gesto sin retraso.
@@ -367,32 +455,36 @@ function bindMapaWheel(viewport) {
   }, { passive: false });
 }
 
-// Arrastre con el mouse (pointer events: también funciona con touch).
+// Arrastre con el mouse (pointer events: también funciona con touch). Sigue a un solo puntero:
+// un segundo dedo o puntero a mitad del gesto se ignora en vez de hacer saltar el mapa.
 function bindMapaDrag(viewport, tooltip) {
   let drag = null;
 
   viewport.addEventListener("pointerdown", e => {
-    if (e.button !== 0 || e.target.closest(".mapa-controls, .mapa-legend")) return;
-    drag = { startX: e.clientX, startY: e.clientY, panX: mapaPan.x, panY: mapaPan.y };
+    if (drag || e.button !== 0 || e.target.closest(".mapa-controls, .mapa-legend")) return;
+    drag = { id: e.pointerId, startX: e.clientX, startY: e.clientY, panX: mapaPan.x, panY: mapaPan.y };
     viewport.setPointerCapture(e.pointerId);
     viewport.classList.add("is-dragging");
     tooltip.hidden = true;
   });
 
   viewport.addEventListener("pointermove", e => {
-    if (!drag) return;
+    if (!drag || e.pointerId !== drag.id) return;
     mapaPan = { x: drag.panX + e.clientX - drag.startX, y: drag.panY + e.clientY - drag.startY };
     applyMapaTransform();
   });
 
+  // Fin del gesto: soltar, cancelación del navegador, captura perdida o la ventana pierde el foco.
   const endDrag = e => {
-    if (!drag) return;
+    if (!drag || (e.pointerId !== undefined && e.pointerId !== drag.id)) return;
+    if (viewport.hasPointerCapture(drag.id)) viewport.releasePointerCapture(drag.id);
     drag = null;
-    viewport.releasePointerCapture(e.pointerId);
     viewport.classList.remove("is-dragging");
   };
   viewport.addEventListener("pointerup", endDrag);
   viewport.addEventListener("pointercancel", endDrag);
+  viewport.addEventListener("lostpointercapture", endDrag);
+  window.addEventListener("blur", endDrag);
 }
 
 function bindMapaEvents() {
@@ -404,20 +496,23 @@ function bindMapaEvents() {
     btn.addEventListener("click", () => setMapaZoom(btn.dataset.zoom));
   });
 
+  // El viewport usa overflow:clip (styles.css) para que el foco no lo desplace y los controles no se muevan.
+  // Respaldo para navegadores sin clip: cualquier scroll vuelve a 0.
+  viewport.addEventListener("scroll", () => { viewport.scrollLeft = 0; viewport.scrollTop = 0; });
+
   bindMapaDrag(viewport, tooltip);
-  bindMapaWheel(viewport);
+  bindMapaWheel(viewport, tooltip);
+  bindMapaKeys(viewport, tooltip);
 
   // El tooltip vive fuera del stage para que no escale con el zoom.
   viewport.addEventListener("mousemove", e => {
     const node = e.target.closest(".mapa-node");
     if (!node || viewport.classList.contains("is-dragging")) { tooltip.hidden = true; return; }
     const rect = viewport.getBoundingClientRect();
-    tooltip.textContent = node.dataset.tooltip;
-    tooltip.hidden = false;
-    // Si no cabe a la derecha del cursor, se muestra a la izquierda.
-    const x = e.clientX - rect.left + 14;
-    tooltip.style.left = `${x + tooltip.offsetWidth > rect.width ? x - tooltip.offsetWidth - 28 : x}px`;
-    tooltip.style.top = `${e.clientY - rect.top + 14}px`;
+    fillMapaTooltip(tooltip, node);
+    // Abajo a la derecha del cursor; si no cabe, a la izquierda o encima.
+    const x = e.clientX - rect.left, y = e.clientY - rect.top;
+    placeMapaTooltip(viewport, tooltip, x + 14, y + 14, x - 14, y - 14);
   });
   viewport.addEventListener("mouseleave", () => { tooltip.hidden = true; });
 }
