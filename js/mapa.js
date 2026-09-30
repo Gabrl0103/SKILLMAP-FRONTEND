@@ -433,9 +433,7 @@ function loadMapa() {
 
   mapaRequest = (async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/skills`);
-      if (!res.ok) throw new Error("La API respondió " + res.status);
-      container.innerHTML = renderMapa(await res.json());
+      container.innerHTML = renderMapa(await fetchSkills());
       mapaNeedsFit = true;
       bindMapaEvents();
       applyMapaTransform();
@@ -463,6 +461,7 @@ function showView(view) {
   // Si la carga terminó mientras la vista estaba oculta, se centra al volver a mostrarla.
   if (view === "mapa") loadMapa().then(applyMapaTransform);
   if (view === "objetivo") openObjetivo(); // definido en objetivo.js
+  if (view === "perfil") openPerfil();     // definido en perfil.js
 }
 
 document.querySelectorAll(".nav-item[data-view]").forEach(item => {

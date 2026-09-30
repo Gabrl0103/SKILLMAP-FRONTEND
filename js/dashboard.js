@@ -251,6 +251,20 @@ function fetchGoals() {
   return goalsRequest;
 }
 
+let skillsRequest = null; // compartida entre Mapa Visual y Perfil para no pedir /api/skills dos veces
+
+function fetchSkills() {
+  if (!skillsRequest) {
+    skillsRequest = fetch(`${API_BASE_URL}/api/skills`)
+      .then(res => {
+        if (!res.ok) throw new Error("La API respondió " + res.status);
+        return res.json();
+      })
+      .catch(err => { skillsRequest = null; throw err; }); // si falla, se reintenta en la próxima llamada
+  }
+  return skillsRequest;
+}
+
 // Llena el <select id="goal-selector"> con los objetivos de la API y selecciona el guardado (o el primero).
 async function loadGoals() {
   const selector = document.getElementById("goal-selector");
