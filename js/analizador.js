@@ -44,17 +44,17 @@ function renderMatch(pct) {
   const radius = 62;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (pct / 100) * circumference;
-  // --pct alimenta el conteo animado del número (styles.css); el texto del span queda como respaldo.
+  // Mismo gauge que Mi Ruta: --pct alimenta el conteo del número (styles.css); el span es el respaldo sin CSS.
   return `
     <article class="analizador-card analizador-match">
       <h2 class="analizador-card-title">Match con el perfil</h2>
-      <div class="analizador-ring">
+      <div class="gauge-ring analizador-ring">
         <svg viewBox="0 0 160 160" role="img" aria-label="${pct}% de compatibilidad">
-          <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="14" class="gauge-track"/>
-          <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="14" class="gauge-fill"
+          <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-track"/>
+          <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-fill"
             transform="rotate(-90 80 80)" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
         </svg>
-        <p class="analizador-ring-value" aria-hidden="true" style="--pct:${pct};"><span>${pct}%</span></p>
+        <p class="gauge-value" aria-hidden="true" style="--pct:${pct};"><span>${pct}%</span></p>
       </div>
       <p class="analizador-match-text">${matchMessage(pct)}</p>
     </article>`;

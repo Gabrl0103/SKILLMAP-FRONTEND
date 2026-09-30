@@ -208,9 +208,10 @@ function renderPreferencesCard(p) {
 
 const perfilState = { profile: sampleProfileData(), skills: { skills: null, error: null }, loading: false };
 
-// Animaciones de entrada de la vista (keyframes perfil-* en styles.css).
+// Animaciones de entrada de la vista (keyframes compartidos card-in y bar-fill en styles.css).
+const PERFIL_ENTRANCE = ["card-in", "bar-fill"];
 const perfilEntrance = container => container.getAnimations({ subtree: true })
-  .filter(a => a instanceof CSSAnimation && a.animationName.startsWith("perfil-"));
+  .filter(a => a instanceof CSSAnimation && PERFIL_ENTRANCE.includes(a.animationName));
 
 function renderPerfil() {
   const p = perfilState.profile;

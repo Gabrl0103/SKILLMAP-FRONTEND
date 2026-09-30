@@ -1,12 +1,23 @@
 :root {
   --pink:#D95F8E; --pink-soft:#FCE8EF; --mint:#5FD9AA;
-  --ink:#1F1F24; --ink-2:#3F3F46; --muted:#8A8792; --faint:#F2EEF1; --page:#FCF5F7;
+  --ink:#1F1F24; --ink-2:#3F3F46; --muted:#8A8792; --muted-2:#A19DA6; --faint:#F2EEF1; --page:#FCF5F7;
+  --mint-ink:#34B583; /* texto menta legible sobre fondos claros */
+  /* Chips y bordes por estado: dominado (menta) y en desarrollo (rosa) */
+  --mint-soft:#E9F9F2; --mint-line:#D2F2E4; --mint-line-hover:#A9E6CC;
+  --pink-tint:#FDEEF4; --pink-line:#F8DAE6; --pink-line-hover:#F1C4D6;
+  /* Tarjeta base de todas las vistas */
+  --line:#F7EBF0; --radius-card:1.75rem;
+  --shadow-card:0 1px 2px rgba(217,95,142,.04), 0 14px 34px rgba(217,95,142,.05);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --focus-ring:2px solid var(--pink); /* separación: 3px en tarjetas y títulos, 2px en controles chicos */
   --sidebar-w:14rem;
 }
 /* Respaldo: nada debe desbordar en horizontal, pero si algo lo hace no aparece scroll lateral */
 html, body { overflow-x:hidden; overflow-x:clip; }
 body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif; background:var(--page); color:var(--ink); }
-.card { background: #fff; border-radius: 0.9rem; box-shadow: 0 1px 2px rgba(16,16,20,0.05), 0 1px 6px rgba(16,16,20,0.04); }
+.card { background:#fff; border-radius:var(--radius-card); box-shadow:var(--shadow-card); } /* aviso de error de la API */
+/* Tarjeta base: Mi Ruta, Perfil y Analizador. Cada una conserva su padding */
+.ruta-card, .perfil-card, .analizador-card { background:#fff; border-radius:var(--radius-card); border:1px solid var(--line); box-shadow:var(--shadow-card); }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 ::selection { background:var(--pink-soft); color:var(--ink); }
 
@@ -14,9 +25,34 @@ body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
    (display:none), así que la animación se repite cada vez que la vista vuelve a mostrarse. */
 @keyframes view-in { from { opacity:.35; transform:translateY(6px); } }
 @keyframes view-fade { from { opacity:.35; } }
-main > section:not(.hidden) { animation:view-in 200ms cubic-bezier(.16,1,.3,1) backwards; }
+main > section:not(.hidden) { animation:view-in 200ms var(--ease-out) backwards; }
 /* El mapa solo se funde: un desplazamiento chocaría con su propio zoom y arrastre */
 main > #view-mapa:not(.hidden) { animation-name:view-fade; }
+
+/* Movimiento compartido por las vistas: entrada de tarjetas, fundido, llenado de barras y "no" lateral */
+@keyframes card-in { from { opacity:0; translate:0 12px; } } /* translate suelto: no choca con el transform del hover */
+@keyframes fade-in { from { opacity:0; } }
+@keyframes bar-fill { from { clip-path:inset(0 100% 0 0 round 9999px); } to { clip-path:inset(0 0 0 0 round 9999px); } }
+@keyframes btn-nope { 25% { translate:-3px 0; } 50% { translate:3px 0; } 75% { translate:-2px 0; } }
+
+/* ---------- Gauge (Mi Ruta y Analizador) ---------- */
+/* Anillo de 160px con trazo 18. El anillo se llena y el número cuenta desde 0 a la par: el número es un contador
+   que toma --pct del markup; el span con el valor queda como respaldo sin CSS. Sin @property el contador muestra
+   el valor final directamente. */
+@property --gauge-pct { syntax:"<integer>"; inherits:false; initial-value:0; }
+@keyframes gauge-fill-in { from { stroke-dashoffset:389.56; } } /* 2π·62: circunferencia del anillo */
+@keyframes gauge-count { from { --gauge-pct:0; } }
+.gauge-ring { position:relative; width:160px; height:160px; }
+.gauge-ring svg { width:100%; height:100%; }
+.gauge-track { stroke:var(--faint); }
+.gauge-fill { stroke:var(--pink); animation:gauge-fill-in 800ms var(--ease-out) 160ms backwards; }
+.gauge-value { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:2.6rem; font-weight:300;
+  letter-spacing:-.03em; color:var(--ink); font-variant-numeric:tabular-nums;
+  --gauge-pct:var(--pct); counter-reset:gauge-pct var(--gauge-pct); animation:gauge-count 800ms var(--ease-out) 160ms backwards; }
+.gauge-value > span { display:none; }
+.gauge-value::before { content:counter(gauge-pct); }
+.gauge-value::after { content:"%"; font-size:1.2rem; margin:.7rem 0 0 .1rem; }
+@media (prefers-reduced-motion: reduce) { .gauge-fill, .gauge-value { animation:none; } }
 
 /* ---------- Sidebar ---------- */
 /* Fijo al borde izquierdo y a alto completo en todas las vistas; el contenido deja su ancho como margen */
@@ -40,7 +76,7 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 .nav-item svg { flex-shrink:0; }
 button.nav-item { cursor:pointer; text-align:left; }
 button.nav-item:not(.active):hover { background:var(--pink-soft); color:var(--pink); }
-button.nav-item:focus-visible { outline:2px solid var(--pink); outline-offset:2px; }
+button.nav-item:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
 .nav-item.active { background:var(--pink); color:#fff; box-shadow:0 10px 22px rgba(217,95,142,.32); }
 .nav-item.disabled { opacity:.6; cursor:not-allowed; }
 
@@ -49,14 +85,14 @@ button.nav-item:focus-visible { outline:2px solid var(--pink); outline-offset:2p
 .objetivo-subtitle { margin-top:.7rem; font-size:.9rem; line-height:1.6; color:var(--muted); }
 
 .objetivo-search { display:flex; align-items:center; gap:.9rem; padding:0 1.4rem; height:3.4rem; margin-bottom:2.25rem; border-radius:1.1rem; background:#fff;
-  color:#A19DA6; box-shadow:0 1px 2px rgba(217,95,142,.04), 0 10px 26px rgba(217,95,142,.05); cursor:text;
+  color:var(--muted-2); box-shadow:0 1px 2px rgba(217,95,142,.04), 0 10px 26px rgba(217,95,142,.05); cursor:text;
   transition:box-shadow .2s ease, color .2s ease; }
 /* Foco: anillo rosa y la lupa toma el mismo color mientras se escribe */
 .objetivo-search:focus-within { box-shadow:0 0 0 2px var(--pink), 0 10px 26px rgba(217,95,142,.08); color:var(--pink); }
 .objetivo-search svg { flex-shrink:0; }
 .objetivo-search input { flex:1; min-width:0; height:100%; border:0; background:transparent; font:inherit; font-size:.9rem; color:var(--ink); }
 .objetivo-search input:focus { outline:none; }
-.objetivo-search input::placeholder { color:#A19DA6; text-overflow:ellipsis; }
+.objetivo-search input::placeholder { color:var(--muted-2); text-overflow:ellipsis; }
 
 .objetivo-empty { margin-bottom:1.25rem; font-size:.85rem; color:var(--muted); }
 .objetivo-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:1.1rem; }
@@ -65,16 +101,16 @@ button.nav-item:focus-visible { outline:2px solid var(--pink); outline-offset:2p
 .objetivo-radios { display:contents; }
 
 .objetivo-card { position:relative; display:flex; flex-direction:column; align-items:flex-start; min-height:12.5rem; padding:1.5rem 1.4rem 1.4rem; text-align:left;
-  border-radius:1.25rem; background:#fff; border:1.5px solid #F7EBF0; box-shadow:0 1px 2px rgba(217,95,142,.04), 0 14px 34px rgba(217,95,142,.05);
-  transition:border-color .25s ease, box-shadow .25s cubic-bezier(.16,1,.3,1), transform .25s cubic-bezier(.16,1,.3,1); }
+  border-radius:1.25rem; background:#fff; border:1.5px solid var(--line); box-shadow:var(--shadow-card);
+  transition:border-color .25s ease, box-shadow .25s var(--ease-out), transform .25s var(--ease-out); }
 .objetivo-card[hidden] { display:none; }
 button.objetivo-card { cursor:pointer; }
 /* Hover y foco: la tarjeta sube y su sombra se alarga; al presionar baja y se comprime apenas */
-button.objetivo-card:hover, button.objetivo-card:focus-visible { border-color:#F1CCDA; transform:translateY(-2px);
+button.objetivo-card:hover, button.objetivo-card:focus-visible { border-color:var(--pink-line-hover); transform:translateY(-2px);
   box-shadow:0 1px 2px rgba(217,95,142,.04), 0 18px 38px rgba(217,95,142,.1); }
 button.objetivo-card:active { transform:translateY(0) scale(.985); transition-duration:.08s; }
 button.objetivo-card:focus { outline:none; }
-button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offset:3px; }
+button.objetivo-card:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
 .objetivo-card[aria-checked="true"] { border-color:var(--pink); box-shadow:0 14px 34px rgba(217,95,142,.14); }
 button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-checked="true"]:focus-visible {
   border-color:var(--pink); box-shadow:0 18px 38px rgba(217,95,142,.18); }
@@ -91,7 +127,7 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .objetivo-card[aria-checked="true"] .objetivo-card-check path { stroke-dashoffset:0; transition:stroke-dashoffset .28s cubic-bezier(.65,0,.35,1) .12s; }
 .objetivo-card-title { margin-top:1.3rem; font-size:1rem; font-weight:700; line-height:1.3; letter-spacing:-.01em; color:var(--ink); overflow-wrap:anywhere; }
 .objetivo-card-desc { margin-top:.55rem; font-size:.78rem; line-height:1.6; color:var(--muted); }
-.objetivo-card-count { display:inline-flex; align-items:center; gap:.4rem; margin-top:auto; padding-top:1.1rem; font-size:.74rem; font-weight:600; color:#A19DA6; }
+.objetivo-card-count { display:inline-flex; align-items:center; gap:.4rem; margin-top:auto; padding-top:1.1rem; font-size:.74rem; font-weight:600; color:var(--muted-2); }
 .objetivo-card[aria-checked="true"] .objetivo-card-count { color:var(--pink); }
 
 .objetivo-card--otro { align-items:center; justify-content:center; gap:.35rem; text-align:center; background:#F8F6F8; border:1.5px dashed #DCD4D9;
@@ -110,8 +146,7 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 /* Objetivo: entrada. Las tarjetas suben en orden de lectura (--i lo pone renderGoalCard; "Otro objetivo" va al
    final). Usa translate suelto para no chocar con el transform del hover. Se repite al volver a la vista y cuando
    una tarjeta reaparece al borrar la búsqueda. */
-@keyframes objetivo-card-in { from { opacity:0; translate:0 12px; } }
-.objetivo-card { animation:objetivo-card-in 420ms cubic-bezier(.16,1,.3,1) backwards; animation-delay:calc(min(var(--i, 0), 12) * 45ms + 40ms); }
+.objetivo-card { animation:card-in 420ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 12) * 45ms + 40ms); }
 
 /* Menos movimiento: sin entrada, elevación, compresión, rebote ni trazo. Quedan borde, sombra y color. */
 @media (prefers-reduced-motion: reduce) {
@@ -122,8 +157,7 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 }
 
 /* ---------- Perfil ---------- */
-.perfil-card { background:#fff; border-radius:1.6rem; padding:1.75rem; border:1px solid #F7EBF0;
-  box-shadow:0 1px 2px rgba(217,95,142,.04), 0 14px 34px rgba(217,95,142,.05); }
+.perfil-card { padding:1.75rem; }
 .perfil-card-header { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .75rem; margin-bottom:1.5rem; }
 .perfil-card-title { font-size:1.15rem; font-weight:500; letter-spacing:-.01em; color:var(--ink); }
 .perfil-card > .perfil-card-title { margin-bottom:1.5rem; }
@@ -149,10 +183,9 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .btn-pill.perfil-btn-outline, .btn-pill.perfil-btn-outline:hover { background:#fff; color:#8A8792; border:1.5px solid #EDE7EB; box-shadow:none; }
 /* Editar Perfil y Exportar CV aún no existen: el hover solo aclara el tono (sin elevarse, para no prometer una
    acción) y al presionar el botón hace un "no" lateral corto */
-@keyframes btn-nope { 25% { translate:-3px 0; } 50% { translate:3px 0; } 75% { translate:-2px 0; } }
 .perfil-header-actions .btn-pill[aria-disabled="true"] { transition:background-color .15s ease, border-color .15s ease; }
 .perfil-header-actions .btn-pill[aria-disabled="true"]:hover { transform:none; background:#E0739C; box-shadow:0 10px 22px rgba(217,95,142,.3); }
-.perfil-header-actions .btn-pill.perfil-btn-outline[aria-disabled="true"]:hover { background:#fff; border-color:#F1CCDA; box-shadow:none; }
+.perfil-header-actions .btn-pill.perfil-btn-outline[aria-disabled="true"]:hover { background:#fff; border-color:var(--pink-line-hover); box-shadow:none; }
 .perfil-header-actions .btn-pill[aria-disabled="true"]:active { animation:btn-nope 220ms ease-out; }
 @media (max-width:767px) { .perfil-header-actions { flex-direction:row; flex-wrap:wrap; } }
 
@@ -165,42 +198,40 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .perfil-group + .perfil-group { margin-top:1.75rem; }
 .perfil-group-head { display:flex; flex-wrap:wrap; justify-content:space-between; gap:.25rem 1rem; margin-bottom:.85rem; }
 .perfil-group-title, .perfil-group-metric { font-size:.66rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; }
-.perfil-group-title { color:#A19DA6; }
-.perfil-group-metric--mastered { color:#34B583; }
+.perfil-group-title { color:var(--muted-2); }
+.perfil-group-metric--mastered { color:var(--mint-ink); }
 .perfil-group-metric--learning { color:var(--pink); }
 .perfil-group-empty { font-size:.8rem; color:var(--muted); }
-.perfil-sample-note { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.6rem; padding-top:1.1rem; border-top:1px solid var(--faint);
-  font-size:.72rem; color:var(--muted); }
 .perfil-skills { display:grid; grid-template-columns:repeat(auto-fill,minmax(9rem,1fr)); gap:.7rem; }
 .perfil-skill { display:flex; align-items:center; gap:.65rem; min-width:0; padding:.85rem 1rem; border-radius:.9rem; font-size:.8rem; font-weight:700; color:var(--ink); }
 .perfil-skill svg { flex-shrink:0; width:1.05rem; height:1.05rem; }
 .perfil-skill span { overflow-wrap:anywhere; }
-.perfil-skill--mastered { --mapa-node-bg:#E9F9F2; background:#E9F9F2; border:1px solid #D2F2E4; }
-.perfil-skill--mastered svg { color:#34B583; }
-.perfil-skill--learning { --mapa-node-bg:#FDEEF4; background:#FDEEF4; border:1px solid #F8DAE6; }
+.perfil-skill--mastered { --mapa-node-bg:var(--mint-soft); background:var(--mint-soft); border:1px solid var(--mint-line); }
+.perfil-skill--mastered svg { color:var(--mint-ink); }
+.perfil-skill--learning { --mapa-node-bg:var(--pink-tint); background:var(--pink-tint); border:1px solid var(--pink-line); }
 .perfil-skill--learning svg { color:var(--pink); }
 /* Hover sutil: el chip sube 1px y su borde se intensifica en su tono (no son clicables: sin cambio de cursor) */
-.perfil-skill { transition:transform .2s cubic-bezier(.16,1,.3,1), border-color .2s ease, box-shadow .2s ease; }
+.perfil-skill { transition:transform .2s var(--ease-out), border-color .2s ease, box-shadow .2s ease; }
 .perfil-skill:hover { transform:translateY(-1px); }
-.perfil-skill--mastered:hover { border-color:#A9E6CC; box-shadow:0 6px 14px rgba(95,217,170,.18); }
-.perfil-skill--learning:hover { border-color:#F1BCD1; box-shadow:0 6px 14px rgba(217,95,142,.14); }
+.perfil-skill--mastered:hover { border-color:var(--mint-line-hover); box-shadow:0 6px 14px rgba(95,217,170,.18); }
+.perfil-skill--learning:hover { border-color:var(--pink-line-hover); box-shadow:0 6px 14px rgba(217,95,142,.14); }
 
 /* Proyectos */
 .perfil-add { margin-left:auto; font-size:.75rem; font-weight:700; color:var(--pink); }
 .perfil-projects > li + li { margin-top:1.4rem; padding-top:1.4rem; border-top:1px solid var(--faint); }
 .perfil-project { display:flex; gap:1.25rem; align-items:flex-start; }
 .perfil-project-thumb { flex-shrink:0; width:4.25rem; height:4.25rem; border-radius:.9rem;
-  transition:transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s ease; }
+  transition:transform .25s var(--ease-out), box-shadow .25s ease; }
 .perfil-project:hover .perfil-project-thumb { transform:translateY(-2px); box-shadow:0 10px 20px rgba(31,29,35,.18); }
 .perfil-project-title { font-size:.95rem; font-weight:700; color:var(--ink); }
 .perfil-project-desc { margin-top:.3rem; font-size:.78rem; line-height:1.55; color:var(--muted); }
 .perfil-project-tags { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.6rem; }
 .perfil-project-tags li { padding:2px 7px; border-radius:5px; border:1px solid #EEE8EC; font-size:.6rem; font-weight:600; letter-spacing:.06em;
-  text-transform:uppercase; color:#A19DA6; transition:border-color .2s ease, color .2s ease; }
+  text-transform:uppercase; color:var(--muted-2); transition:border-color .2s ease, color .2s ease; }
 .perfil-project:hover .perfil-project-tags li { border-color:#E0D6DC; color:#8A8792; }
 
 /* Estadísticas de Carrera (tarjeta oscura) */
-.perfil-stats { padding:1.6rem 1.5rem; border-radius:1.6rem; background:#1F1D23; color:#fff; box-shadow:0 18px 36px rgba(31,29,35,.25); }
+.perfil-stats { padding:1.6rem 1.5rem; border-radius:var(--radius-card); background:#1F1D23; color:#fff; box-shadow:0 18px 36px rgba(31,29,35,.25); }
 .perfil-stats-title { margin-bottom:1.4rem; font-size:1.05rem; font-weight:700; letter-spacing:-.01em; }
 .perfil-stat + .perfil-stat { margin-top:1.1rem; }
 .perfil-stat-head { display:flex; justify-content:space-between; gap:1rem; margin-bottom:.45rem; font-size:.78rem; color:#CAC6CE; }
@@ -213,7 +244,7 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .perfil-stats-eyebrow { font-size:.64rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#8E8A94; }
 .perfil-achievements { display:flex; gap:.6rem; margin-top:.8rem; }
 .perfil-achievement { display:flex; align-items:center; justify-content:center; width:2.3rem; height:2.3rem; border-radius:.65rem; background:#302D36;
-  transition:transform .2s cubic-bezier(.16,1,.3,1), background-color .2s ease; }
+  transition:transform .2s var(--ease-out), background-color .2s ease; }
 .perfil-achievement:hover { transform:translateY(-2px); background:#3C3843; }
 .perfil-achievement--mint { color:var(--mint); }
 .perfil-achievement--pink { color:#F07AA8; }
@@ -232,25 +263,23 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
    su borde contrario) */
 .perfil-switch::after { content:""; position:absolute; top:3px; left:3px; width:calc(1.4rem - 6px); height:calc(1.4rem - 6px); border-radius:9999px;
   background:#fff; box-shadow:0 1px 3px rgba(16,16,20,.2); transform-origin:left center;
-  transition:translate .3s cubic-bezier(.16,1,.3,1), scale .15s ease; }
+  transition:translate .3s var(--ease-out), scale .15s ease; }
 .perfil-switch[aria-checked="true"] { background:var(--mint); }
 .perfil-switch[aria-checked="true"]::after { translate:1.1rem 0; transform-origin:right center; }
 .perfil-switch:not([aria-checked="true"]):hover { background:#CCC5CA; }
 .perfil-switch[aria-checked="true"]:hover { background:#4FCF9E; }
 .perfil-switch:active::after { scale:1.25 1; }
-.perfil-switch:focus-visible, .perfil-photo-edit:focus-visible, .perfil-add:focus-visible { outline:2px solid var(--pink); outline-offset:2px; }
+.perfil-switch:focus-visible, .perfil-photo-edit:focus-visible, .perfil-add:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
 
 /* Perfil: entrada. Tarjetas en orden de lectura (cabecera, habilidades, estadísticas, proyectos, preferencias) y
    las barras de estadísticas se llenan al aparecer su tarjeta. translate suelto para no chocar con transform.
-   renderPerfil continúa estas animaciones (keyframes perfil-*) al repintar con los datos de la API. */
-@keyframes perfil-card-in { from { opacity:0; translate:0 12px; } }
-@keyframes perfil-bar-fill { from { clip-path:inset(0 100% 0 0 round 9999px); } to { clip-path:inset(0 0 0 0 round 9999px); } }
-#perfil-content > .perfil-header, .perfil-col > * { animation:perfil-card-in 420ms cubic-bezier(.16,1,.3,1) backwards; }
+   renderPerfil continúa estas animaciones al repintar con los datos de la API. */
+#perfil-content > .perfil-header, .perfil-col > * { animation:card-in 420ms var(--ease-out) backwards; }
 .perfil-col:nth-child(1) > :nth-child(1) { animation-delay:60ms; }
 .perfil-col:nth-child(2) > :nth-child(1) { animation-delay:110ms; }
 .perfil-col:nth-child(1) > :nth-child(2) { animation-delay:160ms; }
 .perfil-col:nth-child(2) > :nth-child(2) { animation-delay:210ms; }
-.perfil-stat-bar span { animation:perfil-bar-fill 700ms cubic-bezier(.16,1,.3,1) 280ms backwards; }
+.perfil-stat-bar span { animation:bar-fill 700ms var(--ease-out) 280ms backwards; }
 .perfil-stat + .perfil-stat .perfil-stat-bar span { animation-delay:360ms; }
 
 /* Menos movimiento: sin entrada, llenado, elevación, estiramiento ni "no" lateral. Quedan color, borde y sombra. */
@@ -263,8 +292,7 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 }
 
 /* ---------- Analizador ---------- */
-.analizador-card { background:#fff; border-radius:1.6rem; padding:1.75rem; border:1px solid #F7EBF0;
-  box-shadow:0 1px 2px rgba(217,95,142,.04), 0 14px 34px rgba(217,95,142,.05); }
+.analizador-card { padding:1.75rem; }
 .analizador-input { padding:1.9rem 1.9rem 1.75rem; }
 .analizador-label { display:flex; align-items:center; gap:.7rem; margin-bottom:1.25rem; font-size:1rem; font-weight:700; color:var(--ink); }
 .analizador-label-icon { display:flex; align-items:center; justify-content:center; width:1.9rem; height:1.9rem; border-radius:.55rem;
@@ -272,7 +300,7 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .analizador-textarea { display:block; width:100%; min-height:10.5rem; padding:1.1rem 1.25rem; resize:vertical; border:0; border-radius:1rem;
   background:#F7F6F8; font:inherit; font-size:.85rem; line-height:1.6; color:var(--ink);
   transition:background-color .2s ease, box-shadow .2s ease; }
-.analizador-textarea::placeholder { color:#A19DA6; }
+.analizador-textarea::placeholder { color:var(--muted-2); }
 /* Hover: el fondo baja un tono. Foco: pasa a blanco y el anillo rosa entra con transición */
 .analizador-textarea:hover { background:#F2F0F3; }
 .analizador-textarea:focus { outline:none; background:#fff; box-shadow:0 0 0 2px var(--pink); }
@@ -288,55 +316,41 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .analizador-card-title { font-size:1rem; font-weight:700; letter-spacing:-.01em; color:var(--ink); }
 
 .analizador-match { display:flex; flex-direction:column; align-items:center; text-align:center; padding:2rem 1.5rem; }
-.analizador-ring { position:relative; width:160px; height:160px; margin:1.5rem 0 1.4rem; }
-.analizador-ring svg { width:100%; height:100%; }
-.analizador-ring-value { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:2.4rem; font-weight:300;
-  letter-spacing:-.03em; color:var(--ink); font-variant-numeric:tabular-nums; }
-/* El número se dibuja con un contador que toma --pct (renderMatch); así puede contar desde 0 junto al anillo.
-   Sin soporte de @property el contador muestra el valor final directamente. */
-@property --ring-pct { syntax:"<integer>"; inherits:false; initial-value:0; }
-.analizador-ring-value { --ring-pct:var(--pct); counter-reset:ring-pct var(--ring-pct); }
-.analizador-ring-value[style*="--pct"] > span { display:none; }
-.analizador-ring-value[style*="--pct"]::before { content:counter(ring-pct) "%"; }
+.analizador-ring { margin:1.5rem 0 1.4rem; }
 .analizador-match-text { max-width:15rem; font-size:.78rem; line-height:1.65; color:var(--muted); }
 
 .analizador-breakdown { padding:2rem; }
 .analizador-breakdown .analizador-card-title { margin-bottom:1.4rem; }
 .analizador-group + .analizador-group { margin-top:1.5rem; }
 .analizador-group-title { display:flex; align-items:center; gap:.5rem; margin-bottom:.75rem; font-size:.66rem; font-weight:600; letter-spacing:.1em;
-  text-transform:uppercase; color:#A19DA6; }
+  text-transform:uppercase; color:var(--muted-2); }
 .analizador-group-title svg { width:.8rem; height:.8rem; flex-shrink:0; }
 .analizador-group-title--mastered svg { color:var(--mint); }
 .analizador-group-title--progress svg { color:var(--pink); }
-.analizador-group-title--missing svg { color:#A19DA6; }
+.analizador-group-title--missing svg { color:var(--muted-2); }
 .analizador-group-empty { font-size:.78rem; color:var(--muted); }
 .analizador-chips { display:flex; flex-wrap:wrap; gap:.6rem; }
 .analizador-chip { padding:.5rem .8rem; border-radius:.55rem; font-size:.75rem; font-weight:600; overflow-wrap:anywhere; }
-.analizador-chip--mastered { background:#EAFAF3; border:1px solid #C9F0DF; color:#34B583; }
-.analizador-chip--progress { background:#FDEEF4; border:1px solid #F8D4E2; color:var(--pink); }
+.analizador-chip--mastered { background:var(--mint-soft); border:1px solid var(--mint-line); color:var(--mint-ink); }
+.analizador-chip--progress { background:var(--pink-tint); border:1px solid var(--pink-line); color:var(--pink); }
 .analizador-chip--missing { background:#fff; border:1.5px dashed #D2CCD0; color:#6E6A74; }
 /* Hover sutil: el chip sube 1px y su borde se intensifica en su tono (no son clicables: sin cambio de cursor) */
-.analizador-chip { transition:transform .2s cubic-bezier(.16,1,.3,1), border-color .2s ease; }
+.analizador-chip { transition:transform .2s var(--ease-out), border-color .2s ease; }
 .analizador-chip:hover { transform:translateY(-1px); }
-.analizador-chip--mastered:hover { border-color:#A9E6CC; }
-.analizador-chip--progress:hover { border-color:#F1BCD1; }
-.analizador-chip--missing:hover { border-color:#E7B8CB; }
+.analizador-chip--mastered:hover { border-color:var(--mint-line-hover); }
+.analizador-chip--progress:hover, .analizador-chip--missing:hover { border-color:var(--pink-line-hover); }
 
 /* Analizador: entrada del resultado. Nota de ejemplo, Match y Desglose en orden; los chips aparecen uno tras otro
-   por grupo (--i lo pone renderBreakdownGroup) y el anillo se llena mientras el número cuenta desde 0.
+   por grupo (--i lo pone renderBreakdownGroup). El gauge se anima solo (sección Gauge).
    Se repite al abrir la vista y con cada análisis nuevo. translate/scale sueltos: no chocan con el hover. */
-@keyframes analizador-in { from { opacity:0; translate:0 12px; } }
 @keyframes analizador-chip-in { from { opacity:0; scale:.9; } }
-@keyframes analizador-count { from { --ring-pct:0; } }
-#analizador-result > .analizador-sample-note, .analizador-grid > * { animation:analizador-in 420ms cubic-bezier(.16,1,.3,1) backwards; }
+#analizador-result > .analizador-sample-note, .analizador-grid > * { animation:card-in 420ms var(--ease-out) backwards; }
 .analizador-grid > :nth-child(1) { animation-delay:60ms; }
 .analizador-grid > :nth-child(2) { animation-delay:120ms; }
-.analizador-chip { animation:analizador-chip-in 320ms cubic-bezier(.16,1,.3,1) backwards; --chip-base:220ms;
+.analizador-chip { animation:analizador-chip-in 320ms var(--ease-out) backwards; --chip-base:220ms;
   animation-delay:calc(var(--chip-base) + min(var(--i, 0), 10) * 30ms); }
 .analizador-group:nth-of-type(2) .analizador-chip { --chip-base:340ms; }
 .analizador-group:nth-of-type(3) .analizador-chip { --chip-base:420ms; }
-.analizador-ring .gauge-fill { animation:ruta-gauge-fill 800ms cubic-bezier(.16,1,.3,1) 160ms backwards; } /* mismo radio que el gauge de Mi Ruta */
-.analizador-ring-value { animation:analizador-count 800ms cubic-bezier(.16,1,.3,1) 160ms backwards; }
 
 /* Analizando: el resultado anterior se atenúa y la varita del botón agita sus chispas mientras llega el nuevo */
 @keyframes analizador-wand { from { rotate:-10deg; } to { rotate:8deg; } }
@@ -346,14 +360,13 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 #analizador-submit[aria-busy="true"] svg { transform-origin:20% 80%; animation:analizador-wand 350ms ease-in-out infinite alternate; }
 #analizador-submit[aria-busy="true"] svg path + path { animation:analizador-twinkle 350ms ease-in-out infinite alternate; }
 
-/* Aviso de texto vacío: entra con fundido y su ícono hace un "no" lateral corto (btn-nope, en Perfil) */
-.analizador-warning:not([hidden]) { animation:ruta-fade 220ms ease-out; }
+/* Aviso de texto vacío: entra con fundido y su ícono hace un "no" lateral corto */
+.analizador-warning:not([hidden]) { animation:fade-in 220ms ease-out; }
 .analizador-warning:not([hidden]) svg { animation:btn-nope 280ms ease-out 60ms; }
 
-/* Menos movimiento: sin entrada, llenado, conteo, varita ni "no". Quedan el atenuado y los cambios de color. */
+/* Menos movimiento: sin entrada, varita ni "no". Quedan el atenuado y los cambios de color. */
 @media (prefers-reduced-motion: reduce) {
-  #analizador-result > .analizador-sample-note, .analizador-grid > *, .analizador-chip, .analizador-ring .gauge-fill,
-  .analizador-ring-value, #analizador-submit[aria-busy="true"] svg, #analizador-submit[aria-busy="true"] svg path + path,
+  #analizador-result > .analizador-sample-note, .analizador-grid > *, .analizador-chip, #analizador-submit[aria-busy="true"] svg, #analizador-submit[aria-busy="true"] svg path + path,
   .analizador-warning:not([hidden]) svg { animation:none; }
   .analizador-chip:hover { transform:none; }
 }
@@ -364,7 +377,7 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .goal-select { max-width:100%; text-overflow:ellipsis; appearance:none; background:transparent; border:0; padding:0 1.75rem 0 0; font-size:1.9rem; font-weight:500; letter-spacing:-.02em;
   color:var(--ink); cursor:pointer; }
 .goal-select:focus { outline:none; }
-.goal-select:focus-visible { outline:2px solid var(--pink); outline-offset:4px; border-radius:.4rem; }
+.goal-select:focus-visible { outline:var(--focus-ring); outline-offset:3px; border-radius:.4rem; }
 .goal-select:disabled { cursor:wait; }
 /* Flecha del selector: rosa en hover y foco para anunciar que el título se puede cambiar */
 .goal-select + svg { transition:color .15s ease; }
@@ -381,10 +394,9 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .ruta-col { display:flex; flex-direction:column; gap:1.75rem; min-width:0; }
 @media (min-width:1024px) { .ruta-grid { grid-template-columns:minmax(0,1fr) minmax(0,2.1fr); align-items:start; } }
 
-.ruta-card { background:#fff; border-radius:1.75rem; padding:1.75rem; border:1px solid #F7EBF0;
-  box-shadow:0 1px 2px rgba(217,95,142,.04), 0 14px 34px rgba(217,95,142,.06); }
+.ruta-card { padding:1.75rem; }
 .ruta-card:focus { outline:none; }
-.ruta-card:focus-visible { outline:2px solid var(--pink); outline-offset:3px; }
+.ruta-card:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
 .ruta-card-header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.5rem 1rem; margin-bottom:1.6rem; }
 .ruta-card-title { font-size:1.05rem; font-weight:600; color:var(--ink); letter-spacing:-.01em; }
 .ruta-card-hint { font-size:.78rem; color:var(--muted); }
@@ -409,15 +421,9 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 
 /* Gauge */
 .ruta-gauge { display:flex; flex-direction:column; align-items:center; text-align:center; padding:2.25rem 1.5rem 2.5rem; }
-.ruta-gauge-ring { position:relative; width:160px; height:160px; margin:1.75rem 0 1.5rem; }
-.ruta-gauge-ring svg { width:100%; height:100%; }
-.ruta-gauge-value { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:2.6rem; font-weight:300;
-  letter-spacing:-.03em; color:var(--ink); }
-.ruta-gauge-value span { font-size:1.2rem; margin:.7rem 0 0 .1rem; }
+.ruta-gauge-ring { margin:1.75rem 0 1.5rem; }
 .ruta-gauge-text { max-width:15.5rem; font-size:.8rem; line-height:1.55; color:var(--muted); margin-bottom:1.6rem; text-wrap:pretty; }
-.ruta-gauge-value, .gap-meta, .trend-axis, .market-demand-note { font-variant-numeric:tabular-nums; }
-.gauge-track { stroke:var(--faint); }
-.gauge-fill { stroke:var(--pink); transition: stroke-dashoffset .8s ease; }
+.gap-meta, .trend-axis, .market-demand-note { font-variant-numeric:tabular-nums; }
 
 /* Brechas */
 .gap-list { display:flex; flex-direction:column; gap:1.6rem; }
@@ -431,11 +437,12 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .gap-bar span { display:block; height:100%; border-radius:9999px; background:var(--pink); }
 .gap-meta { display:flex; justify-content:space-between; gap:1rem; margin-top:.45rem; font-size:.72rem; color:var(--muted); }
 .gap-status { color:var(--ink-2); font-weight:500; }
-.ruta-sample-note { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.6rem; padding-top:1.1rem; border-top:1px solid var(--faint);
+/* Nota de "Datos de ejemplo" al pie de una tarjeta (Mi Ruta y Perfil) */
+.ruta-sample-note, .perfil-sample-note { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.6rem; padding-top:1.1rem; border-top:1px solid var(--faint);
   font-size:.72rem; color:var(--muted); }
 
 /* Siguiente acción */
-.ruta-action { position:relative; overflow:hidden; padding:1.75rem; border-radius:1.75rem; background:var(--pink); color:#fff;
+.ruta-action { position:relative; overflow:hidden; padding:1.75rem; border-radius:var(--radius-card); background:var(--pink); color:#fff;
   box-shadow:0 18px 36px rgba(217,95,142,.28); }
 .ruta-action > :not(.ruta-action-bolt) { position:relative; z-index:1; }
 .ruta-action-head { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; }
@@ -469,23 +476,17 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .legend-key--demanda { border-top:2.5px dotted #B3ACB2; }
 .trend-tooltip .legend-key { width:14px; }
 
-/* Mi Ruta: entrada. Solo CSS: se repite al recargar datos o al volver a la vista. fill-mode backwards
-   para que al terminar no quede ningún transform aplicado. */
-@keyframes ruta-card-in { from { opacity:.4; transform:translateY(10px); } }
-@keyframes ruta-gauge-fill { from { stroke-dashoffset:389.56; } } /* 2π·62: circunferencia del anillo en dashboard.js */
-@keyframes ruta-bar-fill { from { clip-path:inset(0 100% 0 0 round 9999px); } to { clip-path:inset(0 0 0 0 round 9999px); } }
-@keyframes ruta-fade { from { opacity:0; } }
+/* Mi Ruta: entrada. Solo CSS: se repite al recargar datos o al volver a la vista. */
 /* Tarjetas en orden de lectura: preparación, brechas, siguiente acción, tendencia */
-.ruta-grid:not(.ruta-skeleton) > .ruta-col > * { animation:ruta-card-in 320ms cubic-bezier(.16,1,.3,1) backwards; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col > * { animation:card-in 420ms var(--ease-out) backwards; }
 .ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(1) { animation-delay:40ms; }
 .ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(1) > :nth-child(2) { animation-delay:80ms; }
 .ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(2) { animation-delay:120ms; }
-.ruta-gauge .gauge-fill { animation:ruta-gauge-fill 700ms cubic-bezier(.16,1,.3,1) 100ms backwards; }
 /* Barras una tras otra; las que aparecen con "Ver detalle de brechas" se llenan al mostrarse */
-.gap-bar span { animation:ruta-bar-fill 600ms cubic-bezier(.16,1,.3,1) 140ms backwards; }
+.gap-bar span { animation:bar-fill 600ms var(--ease-out) 140ms backwards; }
 .gap-row:nth-child(2) .gap-bar span { animation-delay:200ms; }
 .gap-row:nth-child(3) .gap-bar span { animation-delay:260ms; }
-.market-demand:not([hidden]) { animation:ruta-fade 240ms ease-out backwards; }
+.market-demand:not([hidden]) { animation:fade-in 240ms ease-out backwards; }
 
 /* Mi Ruta: skeleton de carga con la misma grilla que la vista final, para que no salte el layout */
 @keyframes skel-pulse { from { opacity:1; } to { opacity:.5; } }
@@ -500,13 +501,13 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .skel-pill { width:11rem; height:2.9rem; margin-top:1.6rem; }
 .skel-bar { height:10px; margin-top:.7rem; }
 .skel-chart { height:13rem; border-radius:1rem; }
-.skel-action { height:14.5rem; border-radius:1.75rem; background:var(--pink-soft); }
+.skel-action { height:14.5rem; border-radius:var(--radius-card); background:var(--pink-soft); }
 
-/* Menos movimiento: sin desplazamientos, escalonado ni pulso. Gauge y barras aparecen llenos y el cambio
+/* Menos movimiento: sin desplazamientos, escalonado ni pulso. Las barras aparecen llenas y el cambio
    de vista queda como un fundido breve, para no perder el aviso de que algo cambió. */
 @media (prefers-reduced-motion: reduce) {
   main > section:not(.hidden) { animation-name:view-fade; animation-duration:120ms; }
-  .ruta-grid:not(.ruta-skeleton) > .ruta-col > *, .ruta-gauge .gauge-fill, .gap-bar span, .skel, .skel-action { animation:none; }
+  .ruta-grid:not(.ruta-skeleton) > .ruta-col > *, .gap-bar span, .skel, .skel-action { animation:none; }
   .btn-pill:hover, .btn-pill:active { transform:none; }
 }
 
@@ -533,11 +534,11 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 
 .mapa-node { --mapa-node-bg:#fff; position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
   border-radius:9999px; background:var(--mapa-node-bg); text-align:center; cursor:default;
-  transition:transform .22s cubic-bezier(.16,1,.3,1), box-shadow .22s cubic-bezier(.16,1,.3,1), border-color .15s ease, opacity .2s ease; }
+  transition:transform .22s var(--ease-out), box-shadow .22s var(--ease-out), border-color .15s ease, opacity .2s ease; }
 /* Hover y foco: el nodo sube y su sombra se alarga en su propio color; queda por encima de sus vecinos */
 .mapa-node:hover, .mapa-node:focus-visible { z-index:1; transform:translateY(-3px) scale(1.04); }
 .mapa-node:focus { outline:none; }
-.mapa-node:focus-visible { outline:2px solid var(--pink); outline-offset:3px; }
+.mapa-node:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
 .mapa-node--mastered { --mapa-node-bg:var(--mint); color:#fff; box-shadow:0 10px 24px rgba(95,217,170,.35); }
 .mapa-node--progress { --mapa-node-bg:var(--pink); color:#fff; box-shadow:0 10px 24px rgba(217,95,142,.35); }
 .mapa-node--pending  { --mapa-node-bg:#FFFFFF; color:#C3BEC4; border:2px dashed #D6D0D4; }
@@ -557,13 +558,15 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .mapa-zoom button { height:42px; font-size:18px; font-weight:300; color:#71717A; }
 .mapa-zoom button + button { border-top:1px solid #F3EEF1; }
 .mapa-controls .mapa-center { width:38px; height:38px; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:#fff; color:#71717A; box-shadow:0 4px 14px rgba(16,16,20,.06); }
-.mapa-zoom button, .mapa-controls .mapa-center { transition:background-color .15s ease, color .15s ease, transform .15s cubic-bezier(.16,1,.3,1); }
+.mapa-zoom button, .mapa-controls .mapa-center { transition:background-color .15s ease, color .15s ease, transform .15s var(--ease-out); }
 .mapa-zoom button:hover:not(:disabled), .mapa-center:hover { color:var(--pink); background:var(--pink-soft); }
 /* Al presionar: tono más hondo y el botón redondo se hunde; respuesta inmediata al clic */
 .mapa-zoom button:active:not(:disabled), .mapa-center:active { background:#F8D5E3; transition-duration:.06s; }
 .mapa-controls .mapa-center:active { transform:scale(.92); }
 .mapa-zoom button:disabled { color:#D4D4D8; cursor:not-allowed; }
-.mapa-controls button:focus-visible { outline:2px solid var(--pink); outline-offset:1px; }
+.mapa-controls button:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+/* + y − viven dentro de un grupo con overflow:hidden: su contorno va por dentro para que no se recorte */
+.mapa-zoom button:focus-visible { outline-offset:-3px; }
 
 .mapa-legend { position:absolute; left:26px; bottom:26px; display:flex; gap:24px; padding:18px 22px; background:#fff; border-radius:9999px;
   box-shadow:0 4px 14px rgba(16,16,20,.06); font-size:12px; font-weight:600; color:var(--ink-2); }
@@ -596,12 +599,12 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 @keyframes mapa-line-draw { from { stroke-dashoffset:1; stroke:#E89AB9; } 50% { stroke-dashoffset:0; } }
 @keyframes mapa-slide-x { from { opacity:0; translate:-10px 0; } }
 @keyframes mapa-slide-y { from { opacity:0; translate:0 10px; } }
-.mapa-node { animation:mapa-node-in 380ms cubic-bezier(.16,1,.3,1) backwards; animation-delay:calc(min(var(--i, 0), 24) * 14ms + 60ms); }
+.mapa-node { animation:mapa-node-in 380ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 24) * 14ms + 60ms); }
 .mapa-links line { stroke-dasharray:1; animation:mapa-line-draw 800ms ease-out backwards;
   animation-delay:calc(min(var(--i, 0), 24) * 14ms + 160ms); }
-.mapa-cluster-label { animation:ruta-fade 300ms ease-out 260ms backwards; }
-.mapa-controls { animation:mapa-slide-x 320ms cubic-bezier(.16,1,.3,1) 120ms backwards; }
-.mapa-legend { animation:mapa-slide-y 320ms cubic-bezier(.16,1,.3,1) 160ms backwards; }
+.mapa-cluster-label { animation:fade-in 300ms ease-out 260ms backwards; }
+.mapa-controls { animation:mapa-slide-x 320ms var(--ease-out) 120ms backwards; }
+.mapa-legend { animation:mapa-slide-y 320ms var(--ease-out) 160ms backwards; }
 /* Menos movimiento: sin entrada, sin elevación ni hundimiento. Quedan los cambios de sombra y color y el
    resaltado de la leyenda, que no desplazan nada. */
 @media (prefers-reduced-motion: reduce) {

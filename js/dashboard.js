@@ -68,16 +68,17 @@ function renderGauge(r) {
     ? `Dominas todas las habilidades clave de ${goal}.`
     : `Estás a solo ${remaining} ${remaining === 1 ? "habilidad clave" : "habilidades clave"} de alcanzar el perfil ideal para ${goal}.`;
 
+  // Gauge compartido con el Analizador: --pct alimenta el conteo del número (styles.css); el span es el respaldo sin CSS.
   return `
     <article class="ruta-card ruta-gauge">
       <h2 class="ruta-card-title">Nivel de Preparación</h2>
-      <div class="ruta-gauge-ring">
+      <div class="gauge-ring ruta-gauge-ring">
         <svg viewBox="0 0 160 160" role="img" aria-label="${r.readinessPercentage}% de preparación">
           <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-track"/>
           <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-fill"
             transform="rotate(-90 80 80)" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
         </svg>
-        <p class="ruta-gauge-value" aria-hidden="true">${r.readinessPercentage}<span>%</span></p>
+        <p class="gauge-value" aria-hidden="true" style="--pct:${Math.round(r.readinessPercentage)};"><span>${r.readinessPercentage}%</span></p>
       </div>
       <p class="ruta-gauge-text">${message}</p>
       ${r.gaps.length ? `<button type="button" class="btn-pill" data-action="show-gaps">Ver detalle de brechas</button>` : ""}
