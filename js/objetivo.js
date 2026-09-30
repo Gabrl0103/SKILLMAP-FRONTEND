@@ -50,7 +50,7 @@ function renderGoalCard(goal) {
 function renderObjetivo(goals) {
   const cards = goals.map(renderGoalCard).join("");
   return `
-    <p class="objetivo-empty" role="status" ${goals.length ? "hidden" : ""}>${goals.length ? "" : "No hay objetivos registrados en la API."}</p>
+    <p class="objetivo-empty" role="status" ${goals.length ? "hidden" : ""}>${goals.length ? "" : "Aún no hay objetivos profesionales disponibles."}</p>
     <div class="objetivo-grid">
       <!-- display:contents: las tarjetas participan de la grilla y "Otro objetivo" queda fuera del grupo de radios -->
       <div class="objetivo-radios" role="radiogroup" aria-label="Objetivos profesionales">${cards}</div>
@@ -95,7 +95,7 @@ function filterGoalCards(query) {
   const empty = document.querySelector("#objetivo-content .objetivo-empty");
   if (empty && cards.length) {
     empty.hidden = visible > 0;
-    empty.textContent = visible ? "" : `Ningún objetivo coincide con “${query.trim()}”.`;
+    empty.textContent = visible ? "" : `Ningún objetivo coincide con “${query.trim()}”. Prueba con otra palabra o borra la búsqueda.`;
   }
   selectGoalCard(objetivoState.selectedId);
 }
@@ -122,7 +122,7 @@ function currentActiveGoalId(goals) {
 async function openObjetivo() {
   const container = document.getElementById("objetivo-content");
   if (!objetivoState.goals) {
-    container.innerHTML = `<p class="text-sm text-gray-400">Cargando objetivos desde la API…</p>`;
+    container.innerHTML = `<p class="text-sm text-gray-400">Cargando objetivos…</p>`;
     try {
       objetivoState.goals = await fetchGoals();
     } catch (err) {

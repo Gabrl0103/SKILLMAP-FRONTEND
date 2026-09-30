@@ -211,7 +211,7 @@ const STATUS_CLASS = { MASTERED: "mastered", IN_PROGRESS: "progress", PENDING: "
 // Solo el primer nodo entra en el orden de tabulación; las flechas mueven el foco entre nodos (tabindex móvil).
 function renderNode({ skill, category, x, y }, index) {
   const status = STATUS_CLASS[skill.status] || "pending";
-  const tooltip = `${skill.name} — ${skill.demandPercentage}% demanda`;
+  const tooltip = `${skill.name} — ${skill.demandPercentage}% de demanda`;
   const label = `${skill.name}, ${category}, ${STATUS_LABEL[skill.status] || STATUS_LABEL.PENDING}, `
     + `${skill.demandPercentage}% de demanda${DEMAND_IS_SAMPLE ? " (de ejemplo)" : ""}`;
   return `
@@ -230,7 +230,7 @@ function renderClusterLabel({ category, x, y, alignX, alignY }) {
 
 function renderMapa(skills) {
   if (skills.length === 0) {
-    return `<p class="mapa-status text-sm text-gray-400">No hay habilidades registradas en la API.</p>`;
+    return `<p class="mapa-status text-sm text-gray-400">Aún no hay habilidades para mostrar en el mapa.</p>`;
   }
   const { nodes, links, labels, width, height } = layoutGraph(skills);
   const lines = links
@@ -524,7 +524,7 @@ let mapaRequest = null; // se reutiliza para no volver a pedir /api/skills en ca
 function loadMapa() {
   if (mapaRequest) return mapaRequest;
   const container = document.getElementById("mapa-content");
-  container.innerHTML = `<p class="mapa-status text-sm text-gray-400">Cargando mapa de habilidades desde la API…</p>`;
+  container.innerHTML = `<p class="mapa-status text-sm text-gray-400">Cargando tu mapa de habilidades…</p>`;
 
   mapaRequest = (async () => {
     try {

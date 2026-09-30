@@ -106,13 +106,13 @@ function renderBrechas(gaps) {
   const body = gaps.length
     ? `<ul class="gap-list">${rows}</ul>
        <p class="ruta-sample-note">${sampleTag} ${DEMAND_IS_SAMPLE ? `${SAMPLE_DEMAND_TEXT}. ` : ""}Los badges de urgencia son simulados: la API aún no los provee.</p>`
-    : `<p class="text-sm text-gray-400">Sin brechas pendientes — todo dominado 🎉</p>`;
+    : `<p class="text-sm text-gray-400">No tienes brechas pendientes: ya dominas todas las habilidades de este objetivo.</p>`;
 
   return `
     <article id="brechas-card" class="ruta-card ruta-brechas" tabindex="-1">
       <header class="ruta-card-header">
         <h2 class="ruta-card-title">Brechas Prioritarias</h2>
-        <span class="ruta-card-hint">Ordenado por demanda</span>
+        <span class="ruta-card-hint">Ordenadas por demanda</span>
       </header>
       ${body}
     </article>`;
@@ -224,10 +224,10 @@ function bindTrendHover(container) {
 function renderApiError(err) {
   return `
     <div class="card p-6 md:col-span-2 border border-dashed" style="border-color:#D95F8E;">
-      <p class="text-sm font-medium text-gray-700">No se pudo conectar con la API</p>
-      <p class="text-xs text-gray-400 mt-1">Verifica que el backend esté corriendo en <code>${API_BASE_URL}</code>
-      (<code>./mvnw spring-boot:run</code> desde skillmap-api).</p>
-      <p class="text-xs text-gray-300 mt-2">Detalle técnico: ${err.message}</p>
+      <p class="text-sm font-medium text-gray-700">No pudimos cargar tus datos</p>
+      <p class="text-xs text-gray-400 mt-1">El servidor de SkillMap no responde. Recarga la página en unos minutos para intentarlo de nuevo.</p>
+      <p class="text-xs text-gray-300 mt-2">Detalle técnico: servidor en <code>${API_BASE_URL}</code>
+      (<code>./mvnw spring-boot:run</code> desde skillmap-api) · ${err.message}</p>
     </div>`;
 }
 
@@ -307,7 +307,7 @@ async function loadDashboard(goalId) {
   const container = document.getElementById("app-content");
   const requestId = ++latestRequest;
   document.getElementById("market-demand").hidden = true;
-  container.innerHTML = `<p class="text-sm text-gray-400">Cargando habilidades desde la API…</p>`;
+  container.innerHTML = `<p class="text-sm text-gray-400">Cargando tu ruta…</p>`;
   try {
     const res = await fetch(`${API_BASE_URL}/api/goals/${goalId}/readiness`);
     if (!res.ok) throw new Error("La API respondió " + res.status);
@@ -342,7 +342,7 @@ async function init() {
     const goals = await loadGoals();
     if (goals.length === 0) {
       selector.innerHTML = `<option>Sin objetivos</option>`;
-      container.innerHTML = `<p class="text-sm text-gray-400">No hay objetivos registrados en la API.</p>`;
+      container.innerHTML = `<p class="text-sm text-gray-400">Aún no hay objetivos profesionales disponibles.</p>`;
       return;
     }
     await loadDashboard(selector.value);

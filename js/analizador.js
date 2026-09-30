@@ -68,7 +68,7 @@ const BREAKDOWN_ICONS = {
 function renderBreakdownGroup(label, items, tone) {
   const chips = items.length
     ? `<ul class="analizador-chips">${items.map(name => `<li class="analizador-chip analizador-chip--${tone}">${escapeHtml(name)}</li>`).join("")}</ul>`
-    : `<p class="analizador-group-empty">Ninguna.</p>`;
+    : `<p class="analizador-group-empty">Ninguna en esta vacante.</p>`;
   return `
     <section class="analizador-group">
       <h3 class="analizador-group-title analizador-group-title--${tone}">${BREAKDOWN_ICONS[tone]}${label} (${items.length})</h3>
