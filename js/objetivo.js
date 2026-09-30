@@ -31,14 +31,14 @@ function goalTheme(title) {
 
 const objetivoState = { goals: null, selectedId: null };
 
-function renderGoalCard(goal) {
+function renderGoalCard(goal, index) {
   const theme = goalTheme(goal.title);
   const count = goal.skills.length;
   return `
     <button type="button" class="objetivo-card" role="radio" aria-checked="false" tabindex="-1" data-goal-id="${goal.id}"
-      data-title="${escapeHtml(normalizeText(goal.title))}" style="--goal-color:${theme.color}; --goal-bg:${theme.bg};">
+      data-title="${escapeHtml(normalizeText(goal.title))}" style="--goal-color:${theme.color}; --goal-bg:${theme.bg}; --i:${index};">
       <span class="objetivo-card-icon" aria-hidden="true">${theme.icon}</span>
-      <svg class="objetivo-card-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m7.5 12.3 3 3 6-6.3" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg class="objetivo-card-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m7.5 12.3 3 3 6-6.3" pathLength="1" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span class="objetivo-card-title">${escapeHtml(goal.title)}</span>
       <span class="objetivo-card-desc">${escapeHtml(goal.description || "")}</span>
       <span class="objetivo-card-count">${count} ${count === 1 ? "habilidad requerida" : "habilidades requeridas"}
@@ -54,7 +54,7 @@ function renderObjetivo(goals) {
     <div class="objetivo-grid">
       <!-- display:contents: las tarjetas participan de la grilla y "Otro objetivo" queda fuera del grupo de radios -->
       <div class="objetivo-radios" role="radiogroup" aria-label="Objetivos profesionales">${cards}</div>
-      <div class="objetivo-card objetivo-card--otro" aria-disabled="true" title="Próximamente">
+      <div class="objetivo-card objetivo-card--otro" aria-disabled="true" title="Próximamente" style="--i:${goals.length};">
         <span class="objetivo-otro-plus" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         </span>

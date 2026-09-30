@@ -49,8 +49,10 @@ button.nav-item:focus-visible { outline:2px solid var(--pink); outline-offset:2p
 .objetivo-subtitle { margin-top:.7rem; font-size:.9rem; line-height:1.6; color:var(--muted); }
 
 .objetivo-search { display:flex; align-items:center; gap:.9rem; padding:0 1.4rem; height:3.4rem; margin-bottom:2.25rem; border-radius:1.1rem; background:#fff;
-  color:#A19DA6; box-shadow:0 1px 2px rgba(217,95,142,.04), 0 10px 26px rgba(217,95,142,.05); cursor:text; }
-.objetivo-search:focus-within { box-shadow:0 0 0 2px var(--pink), 0 10px 26px rgba(217,95,142,.08); }
+  color:#A19DA6; box-shadow:0 1px 2px rgba(217,95,142,.04), 0 10px 26px rgba(217,95,142,.05); cursor:text;
+  transition:box-shadow .2s ease, color .2s ease; }
+/* Foco: anillo rosa y la lupa toma el mismo color mientras se escribe */
+.objetivo-search:focus-within { box-shadow:0 0 0 2px var(--pink), 0 10px 26px rgba(217,95,142,.08); color:var(--pink); }
 .objetivo-search svg { flex-shrink:0; }
 .objetivo-search input { flex:1; min-width:0; height:100%; border:0; background:transparent; font:inherit; font-size:.9rem; color:var(--ink); }
 .objetivo-search input:focus { outline:none; }
@@ -64,19 +66,29 @@ button.nav-item:focus-visible { outline:2px solid var(--pink); outline-offset:2p
 
 .objetivo-card { position:relative; display:flex; flex-direction:column; align-items:flex-start; min-height:12.5rem; padding:1.5rem 1.4rem 1.4rem; text-align:left;
   border-radius:1.25rem; background:#fff; border:1.5px solid #F7EBF0; box-shadow:0 1px 2px rgba(217,95,142,.04), 0 14px 34px rgba(217,95,142,.05);
-  transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+  transition:border-color .25s ease, box-shadow .25s cubic-bezier(.16,1,.3,1), transform .25s cubic-bezier(.16,1,.3,1); }
 .objetivo-card[hidden] { display:none; }
 button.objetivo-card { cursor:pointer; }
-button.objetivo-card:hover { border-color:#F1CCDA; transform:translateY(-2px); }
+/* Hover y foco: la tarjeta sube y su sombra se alarga; al presionar baja y se comprime apenas */
+button.objetivo-card:hover, button.objetivo-card:focus-visible { border-color:#F1CCDA; transform:translateY(-2px);
+  box-shadow:0 1px 2px rgba(217,95,142,.04), 0 18px 38px rgba(217,95,142,.1); }
+button.objetivo-card:active { transform:translateY(0) scale(.985); transition-duration:.08s; }
 button.objetivo-card:focus { outline:none; }
 button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offset:3px; }
 .objetivo-card[aria-checked="true"] { border-color:var(--pink); box-shadow:0 14px 34px rgba(217,95,142,.14); }
+button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-checked="true"]:focus-visible {
+  border-color:var(--pink); box-shadow:0 18px 38px rgba(217,95,142,.18); }
 .objetivo-card-icon { display:flex; align-items:center; justify-content:center; width:2.6rem; height:2.6rem; border-radius:.8rem;
   background:var(--goal-bg); color:var(--goal-color); }
 .objetivo-card-icon svg { width:1.35rem; height:1.35rem; }
+/* Check al seleccionar: el círculo aparece con un rebote corto y después se dibuja la palomita (pathLength=1).
+   Al deseleccionar se va rápido y sin rebote. */
 .objetivo-card-check { position:absolute; top:1.1rem; right:1.1rem; width:1.25rem; height:1.25rem; color:var(--pink); opacity:0; transform:scale(.6);
-  transition:opacity .15s ease, transform .15s ease; }
-.objetivo-card[aria-checked="true"] .objetivo-card-check { opacity:1; transform:none; }
+  transition:opacity .12s ease, transform .12s ease; }
+.objetivo-card-check path { stroke-dasharray:1; stroke-dashoffset:1; transition:stroke-dashoffset .1s ease; }
+.objetivo-card[aria-checked="true"] .objetivo-card-check { opacity:1; transform:none;
+  transition:opacity .15s ease, transform .35s cubic-bezier(.34,1.56,.64,1); }
+.objetivo-card[aria-checked="true"] .objetivo-card-check path { stroke-dashoffset:0; transition:stroke-dashoffset .28s cubic-bezier(.65,0,.35,1) .12s; }
 .objetivo-card-title { margin-top:1.3rem; font-size:1rem; font-weight:700; line-height:1.3; letter-spacing:-.01em; color:var(--ink); overflow-wrap:anywhere; }
 .objetivo-card-desc { margin-top:.55rem; font-size:.78rem; line-height:1.6; color:var(--muted); }
 .objetivo-card-count { display:inline-flex; align-items:center; gap:.4rem; margin-top:auto; padding-top:1.1rem; font-size:.74rem; font-weight:600; color:#A19DA6; }
@@ -92,6 +104,22 @@ button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offs
 .objetivo-actions { display:flex; justify-content:center; margin-top:2.75rem; }
 .objetivo-cta { padding:1rem 2.4rem; white-space:normal; text-align:center; }
 .objetivo-cta:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+/* Deshabilitado: hover y active de .btn-pill sin efecto */
+.objetivo-cta:disabled:hover, .objetivo-cta:disabled:active { transform:none; box-shadow:0 10px 22px rgba(217,95,142,.3); }
+
+/* Objetivo: entrada. Las tarjetas suben en orden de lectura (--i lo pone renderGoalCard; "Otro objetivo" va al
+   final). Usa translate suelto para no chocar con el transform del hover. Se repite al volver a la vista y cuando
+   una tarjeta reaparece al borrar la búsqueda. */
+@keyframes objetivo-card-in { from { opacity:0; translate:0 12px; } }
+.objetivo-card { animation:objetivo-card-in 420ms cubic-bezier(.16,1,.3,1) backwards; animation-delay:calc(min(var(--i, 0), 12) * 45ms + 40ms); }
+
+/* Menos movimiento: sin entrada, elevación, compresión, rebote ni trazo. Quedan borde, sombra y color. */
+@media (prefers-reduced-motion: reduce) {
+  .objetivo-card { animation:none; }
+  button.objetivo-card:hover, button.objetivo-card:focus-visible, button.objetivo-card:active { transform:none; }
+  .objetivo-card-check, .objetivo-card[aria-checked="true"] .objetivo-card-check { transform:none; }
+  .objetivo-card-check path, .objetivo-card[aria-checked="true"] .objetivo-card-check path { transition:none; }
+}
 
 /* ---------- Perfil ---------- */
 .perfil-card { background:#fff; border-radius:1.6rem; padding:1.75rem; border:1px solid #F7EBF0;
