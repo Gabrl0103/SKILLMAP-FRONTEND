@@ -233,8 +233,10 @@ function renderMapa(skills) {
     return `<p class="mapa-status text-sm text-gray-400">Aún no hay habilidades para mostrar en el mapa.</p>`;
   }
   const { nodes, links, labels, width, height } = layoutGraph(skills);
+  // pathLength y --i solo sirven a la animación de entrada: cada línea se traza cuando ya apareció su segundo nodo.
   const lines = links
-    .map(([a, b]) => `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`)
+    .map(([a, b]) => `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" pathLength="1"
+      style="--i:${Math.max(nodes.indexOf(a), nodes.indexOf(b))};"/>`)
     .join("");
 
   // Líneas y nodos comparten el mismo stage: el zoom (transform) se aplica solo a él y ambos escalan juntos.

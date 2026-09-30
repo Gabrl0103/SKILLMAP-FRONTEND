@@ -409,13 +409,20 @@ button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offs
   letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
 
 .mapa-node { --mapa-node-bg:#fff; position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
-  border-radius:9999px; background:var(--mapa-node-bg); text-align:center; cursor:default; transition:transform .15s ease, box-shadow .15s ease; }
-.mapa-node:hover, .mapa-node:focus-visible { transform:scale(1.05); }
+  border-radius:9999px; background:var(--mapa-node-bg); text-align:center; cursor:default;
+  transition:transform .22s cubic-bezier(.16,1,.3,1), box-shadow .22s cubic-bezier(.16,1,.3,1), border-color .15s ease, opacity .2s ease; }
+/* Hover y foco: el nodo sube y su sombra se alarga en su propio color; queda por encima de sus vecinos */
+.mapa-node:hover, .mapa-node:focus-visible { z-index:1; transform:translateY(-3px) scale(1.04); }
 .mapa-node:focus { outline:none; }
 .mapa-node:focus-visible { outline:2px solid var(--pink); outline-offset:3px; }
 .mapa-node--mastered { --mapa-node-bg:var(--mint); color:#fff; box-shadow:0 10px 24px rgba(95,217,170,.35); }
 .mapa-node--progress { --mapa-node-bg:var(--pink); color:#fff; box-shadow:0 10px 24px rgba(217,95,142,.35); }
 .mapa-node--pending  { --mapa-node-bg:#FFFFFF; color:#C3BEC4; border:2px dashed #D6D0D4; }
+.mapa-node--mastered:hover, .mapa-node--mastered:focus-visible { box-shadow:0 16px 32px rgba(95,217,170,.45); }
+.mapa-node--progress:hover, .mapa-node--progress:focus-visible { box-shadow:0 16px 32px rgba(217,95,142,.45); }
+.mapa-node--pending:hover, .mapa-node--pending:focus-visible { border-color:#BDB8BE; box-shadow:0 12px 26px rgba(120,20,60,.1); }
+/* Al arrastrar el nodo bajo el cursor no se levanta, para que no tiemble mientras el mapa se mueve */
+.mapa-viewport.is-dragging .mapa-node { transform:none; }
 .mapa-node-icon { width:22px; height:22px; flex-shrink:0; }
 /* Máximo 2 líneas; con 84px de ancho el texto cabe dentro del círculo de 112px */
 .mapa-node-label { max-width:84px; font-size:11px; font-weight:700; line-height:1.2; letter-spacing:-0.01em; text-transform:uppercase;
@@ -427,13 +434,26 @@ button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offs
 .mapa-zoom button { height:42px; font-size:18px; font-weight:300; color:#71717A; }
 .mapa-zoom button + button { border-top:1px solid #F3EEF1; }
 .mapa-controls .mapa-center { width:38px; height:38px; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:#fff; color:#71717A; box-shadow:0 4px 14px rgba(16,16,20,.06); }
-.mapa-zoom button:hover:not(:disabled), .mapa-center:hover { color:var(--pink); }
+.mapa-zoom button, .mapa-controls .mapa-center { transition:background-color .15s ease, color .15s ease, transform .15s cubic-bezier(.16,1,.3,1); }
+.mapa-zoom button:hover:not(:disabled), .mapa-center:hover { color:var(--pink); background:var(--pink-soft); }
+/* Al presionar: tono más hondo y el botón redondo se hunde; respuesta inmediata al clic */
+.mapa-zoom button:active:not(:disabled), .mapa-center:active { background:#F8D5E3; transition-duration:.06s; }
+.mapa-controls .mapa-center:active { transform:scale(.92); }
 .mapa-zoom button:disabled { color:#D4D4D8; cursor:not-allowed; }
 .mapa-controls button:focus-visible { outline:2px solid var(--pink); outline-offset:1px; }
 
 .mapa-legend { position:absolute; left:26px; bottom:26px; display:flex; gap:24px; padding:18px 22px; background:#fff; border-radius:9999px;
   box-shadow:0 4px 14px rgba(16,16,20,.06); font-size:12px; font-weight:600; color:var(--ink-2); }
-.mapa-legend span { display:flex; align-items:center; gap:8px; }
+/* Resaltado desde la leyenda: al pasar sobre un estado, los nodos de los otros estados se atenúan. El padding con
+   margen negativo le da al ítem un fondo en hover sin mover la leyenda. */
+.mapa-legend span { display:flex; align-items:center; gap:8px; padding:6px 10px; margin:-6px -10px; border-radius:9999px;
+  transition:background-color .15s ease; }
+.mapa-legend span:hover { background:var(--pink-soft); }
+.mapa-links, .mapa-cluster-label { transition:opacity .2s ease; }
+.mapa-viewport:has(.mapa-legend span:hover > .mapa-dot--mastered) .mapa-node:not(.mapa-node--mastered),
+.mapa-viewport:has(.mapa-legend span:hover > .mapa-dot--progress) .mapa-node:not(.mapa-node--progress),
+.mapa-viewport:has(.mapa-legend span:hover > .mapa-dot--pending) .mapa-node:not(.mapa-node--pending) { opacity:.22; }
+.mapa-viewport:has(.mapa-legend span:hover) :is(.mapa-links, .mapa-cluster-label) { opacity:.35; }
 .mapa-dot { width:10px; height:10px; border-radius:9999px; display:inline-block; }
 .mapa-dot--mastered { background:var(--mint); }
 .mapa-dot--progress { background:var(--pink); }
@@ -446,15 +466,22 @@ button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offs
 
 /* Mapa: entrada. Se repite cada vez que la vista vuelve a mostrarse (sale de display:none). Usa las propiedades
    scale/translate sueltas para no chocar con el transform del hover de los nodos ni con el zoom del stage.
-   Los nodos entran en orden de cluster (--i lo pone renderNode), con tope para que el total no pase de ~0.8s. */
+   Los nodos entran en orden de cluster (--i lo pone renderNode), con tope para que el total no pase de ~0.9s.
+   Cada línea (pathLength=1) se traza de un nodo al otro cuando su segundo nodo ya va a medio aparecer; nace en
+   rosa (su gris casi no contrasta con el fondo) y se asienta en su color de siempre. */
 @keyframes mapa-node-in { from { opacity:0; scale:.7; } }
+@keyframes mapa-line-draw { from { stroke-dashoffset:1; stroke:#E89AB9; } 50% { stroke-dashoffset:0; } }
 @keyframes mapa-slide-x { from { opacity:0; translate:-10px 0; } }
 @keyframes mapa-slide-y { from { opacity:0; translate:0 10px; } }
 .mapa-node { animation:mapa-node-in 380ms cubic-bezier(.16,1,.3,1) backwards; animation-delay:calc(min(var(--i, 0), 24) * 14ms + 60ms); }
-.mapa-links { animation:ruta-fade 400ms ease-out backwards; }
+.mapa-links line { stroke-dasharray:1; animation:mapa-line-draw 800ms ease-out backwards;
+  animation-delay:calc(min(var(--i, 0), 24) * 14ms + 160ms); }
 .mapa-cluster-label { animation:ruta-fade 300ms ease-out 260ms backwards; }
 .mapa-controls { animation:mapa-slide-x 320ms cubic-bezier(.16,1,.3,1) 120ms backwards; }
 .mapa-legend { animation:mapa-slide-y 320ms cubic-bezier(.16,1,.3,1) 160ms backwards; }
+/* Menos movimiento: sin entrada, sin elevación ni hundimiento. Quedan los cambios de sombra y color y el
+   resaltado de la leyenda, que no desplazan nada. */
 @media (prefers-reduced-motion: reduce) {
-  .mapa-node, .mapa-links, .mapa-cluster-label, .mapa-controls, .mapa-legend { animation:none; }
+  .mapa-node, .mapa-links line, .mapa-cluster-label, .mapa-controls, .mapa-legend { animation:none; }
+  .mapa-node:hover, .mapa-node:focus-visible, .mapa-controls .mapa-center:active { transform:none; }
 }
