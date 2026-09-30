@@ -2,15 +2,20 @@
 
 // ---------- Datos de ejemplo (el backend todavía no tiene el analizador) ----------
 
-// DATOS DE EJEMPLO: resultado fijo (el del mockup) sin importar el texto. La demora imita la red.
+// DATOS DE EJEMPLO: resultado fijo (el del mockup) sin importar el texto.
 // Tiene la misma forma que la respuesta esperada de POST /api/analyzer/analyze.
-function sampleAnalysis(_text) {
-  return new Promise(resolve => setTimeout(() => resolve({
+function sampleAnalysisData() {
+  return {
     matchPercentage: 75,
     mastered: ["React 18", "TypeScript", "Tailwind CSS", "Git / GitHub", "REST APIs", "Responsive Design"],
     inProgress: ["Next.js", "Unit Testing"],
     missing: ["GraphQL", "Apollo Client", "E2E Testing"],
-  }), 700));
+  };
+}
+
+// Versión asíncrona del ejemplo: la demora imita la red.
+function sampleAnalysis(_text) {
+  return new Promise(resolve => setTimeout(() => resolve(sampleAnalysisData()), 700));
 }
 
 const ANALYZER_USES_SAMPLE = true; // pasar a false cuando exista el endpoint
@@ -98,18 +103,28 @@ function renderAnalysis(r) {
 
 let analyzerRequest = 0; // evita que un análisis viejo pise al más reciente
 
+// El botón nunca se deshabilita (mantiene su rosa); mientras analiza solo cambia el texto.
 function setAnalyzing(isAnalyzing) {
   const button = document.getElementById("analizador-submit");
-  const text = document.getElementById("analizador-text");
   button.querySelector("[data-label]").textContent = isAnalyzing ? "Analizando…" : "Analizar Compatibilidad";
-  button.disabled = isAnalyzing || !text.value.trim();
   button.setAttribute("aria-busy", String(isAnalyzing));
 }
 
+function showEmptyWarning(show) {
+  document.getElementById("analizador-warning").hidden = !show;
+}
+
 async function runAnalysis() {
-  const text = document.getElementById("analizador-text").value.trim();
+  const textarea = document.getElementById("analizador-text");
+  const text = textarea.value.trim();
   const result = document.getElementById("analizador-result");
-  if (!text) return;
+  if (!text) {
+    showEmptyWarning(true);
+    textarea.focus();
+    return;
+  }
+  if (document.getElementById("analizador-submit").getAttribute("aria-busy") === "true") return;
+  showEmptyWarning(false);
   const requestId = ++analyzerRequest;
   setAnalyzing(true);
   try {
@@ -127,9 +142,9 @@ async function runAnalysis() {
 function initAnalizador() {
   const form = document.getElementById("analizador-form");
   const text = document.getElementById("analizador-text");
-  text.addEventListener("input", () => {
-    if (document.getElementById("analizador-submit").getAttribute("aria-busy") !== "true") setAnalyzing(false);
-  });
+  // Desde que se abre la vista se ve el resultado de ejemplo (con su etiqueta), como en el mockup.
+  document.getElementById("analizador-result").innerHTML = renderAnalysis(sampleAnalysisData());
+  text.addEventListener("input", () => { if (text.value.trim()) showEmptyWarning(false); });
   form.addEventListener("submit", e => { e.preventDefault(); runAnalysis(); });
 }
 

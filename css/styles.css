@@ -13,7 +13,9 @@ body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
 /* Fijo al borde izquierdo y a alto completo en todas las vistas; el contenido deja su ancho como margen */
 .sidebar { position:fixed; top:0; left:0; z-index:20; width:var(--sidebar-w); height:100vh; height:100dvh; overflow-y:auto; background:#fff; }
 .app-main { margin-left:var(--sidebar-w); }
-#view-dashboard, #view-objetivo, #view-perfil, #view-analizador { max-width:876px; margin-inline:auto; } /* mismo ancho de contenido que tenía Mi Ruta */
+/* Vistas con contenido: ancho máximo de 1200px, centradas en el área a la derecha del sidebar.
+   El padding lateral fijo (32px) lo pone <main> (px-8). El Mapa Visual no usa este contenedor: va de borde a borde. */
+#view-dashboard, #view-objetivo, #view-perfil, #view-analizador { max-width:1200px; margin-inline:auto; }
 /* Pantallas angostas: sidebar solo con íconos; los textos quedan disponibles para lectores de pantalla */
 @media (max-width:639px) {
   :root { --sidebar-w:4.5rem; }
@@ -188,10 +190,11 @@ button.objetivo-card:focus-visible { outline:2px solid var(--pink); outline-offs
   background:#F7F6F8; font:inherit; font-size:.85rem; line-height:1.6; color:var(--ink); }
 .analizador-textarea::placeholder { color:#A19DA6; }
 .analizador-textarea:focus { outline:none; box-shadow:0 0 0 2px var(--pink); }
-.analizador-actions { display:flex; justify-content:flex-end; margin-top:1.75rem; }
+.analizador-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:.75rem 1.25rem; margin-top:1.75rem; }
 .analizador-actions .btn-pill { padding:.95rem 1.8rem; }
-.analizador-actions .btn-pill:disabled { opacity:.55; cursor:not-allowed; transform:none; box-shadow:0 6px 14px rgba(217,95,142,.18); }
 .analizador-actions .btn-pill[aria-busy="true"] { cursor:progress; }
+.analizador-warning { display:flex; align-items:center; gap:.45rem; font-size:.8rem; font-weight:600; color:var(--pink); }
+.analizador-warning[hidden] { display:none; }
 
 .analizador-sample-note { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.75rem; font-size:.75rem; color:var(--muted); }
 .analizador-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:1.5rem; margin-top:1.25rem; }
