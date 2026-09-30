@@ -44,6 +44,7 @@ function renderMatch(pct) {
   const radius = 62;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (pct / 100) * circumference;
+  // --pct alimenta el conteo animado del número (styles.css); el texto del span queda como respaldo.
   return `
     <article class="analizador-card analizador-match">
       <h2 class="analizador-card-title">Match con el perfil</h2>
@@ -53,7 +54,7 @@ function renderMatch(pct) {
           <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="14" class="gauge-fill"
             transform="rotate(-90 80 80)" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
         </svg>
-        <p class="analizador-ring-value" aria-hidden="true">${pct}%</p>
+        <p class="analizador-ring-value" aria-hidden="true" style="--pct:${pct};"><span>${pct}%</span></p>
       </div>
       <p class="analizador-match-text">${matchMessage(pct)}</p>
     </article>`;
@@ -67,7 +68,7 @@ const BREAKDOWN_ICONS = {
 
 function renderBreakdownGroup(label, items, tone) {
   const chips = items.length
-    ? `<ul class="analizador-chips">${items.map(name => `<li class="analizador-chip analizador-chip--${tone}">${escapeHtml(name)}</li>`).join("")}</ul>`
+    ? `<ul class="analizador-chips">${items.map((name, i) => `<li class="analizador-chip analizador-chip--${tone}" style="--i:${i};">${escapeHtml(name)}</li>`).join("")}</ul>`
     : `<p class="analizador-group-empty">Ninguna en esta vacante.</p>`;
   return `
     <section class="analizador-group">
@@ -136,7 +137,8 @@ async function runAnalysis() {
     result.innerHTML = `<div class="analizador-grid">${renderApiError(err)}</div>`;
   }
   setAnalyzing(false);
-  result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  result.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
 }
 
 function initAnalizador() {

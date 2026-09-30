@@ -270,9 +270,12 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .analizador-label-icon { display:flex; align-items:center; justify-content:center; width:1.9rem; height:1.9rem; border-radius:.55rem;
   background:var(--pink-soft); color:var(--pink); }
 .analizador-textarea { display:block; width:100%; min-height:10.5rem; padding:1.1rem 1.25rem; resize:vertical; border:0; border-radius:1rem;
-  background:#F7F6F8; font:inherit; font-size:.85rem; line-height:1.6; color:var(--ink); }
+  background:#F7F6F8; font:inherit; font-size:.85rem; line-height:1.6; color:var(--ink);
+  transition:background-color .2s ease, box-shadow .2s ease; }
 .analizador-textarea::placeholder { color:#A19DA6; }
-.analizador-textarea:focus { outline:none; box-shadow:0 0 0 2px var(--pink); }
+/* Hover: el fondo baja un tono. Foco: pasa a blanco y el anillo rosa entra con transición */
+.analizador-textarea:hover { background:#F2F0F3; }
+.analizador-textarea:focus { outline:none; background:#fff; box-shadow:0 0 0 2px var(--pink); }
 .analizador-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:.75rem 1.25rem; margin-top:1.75rem; }
 .analizador-actions .btn-pill { padding:.95rem 1.8rem; }
 .analizador-actions .btn-pill[aria-busy="true"] { cursor:progress; }
@@ -288,7 +291,13 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .analizador-ring { position:relative; width:160px; height:160px; margin:1.5rem 0 1.4rem; }
 .analizador-ring svg { width:100%; height:100%; }
 .analizador-ring-value { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:2.4rem; font-weight:300;
-  letter-spacing:-.03em; color:var(--ink); }
+  letter-spacing:-.03em; color:var(--ink); font-variant-numeric:tabular-nums; }
+/* El número se dibuja con un contador que toma --pct (renderMatch); así puede contar desde 0 junto al anillo.
+   Sin soporte de @property el contador muestra el valor final directamente. */
+@property --ring-pct { syntax:"<integer>"; inherits:false; initial-value:0; }
+.analizador-ring-value { --ring-pct:var(--pct); counter-reset:ring-pct var(--ring-pct); }
+.analizador-ring-value[style*="--pct"] > span { display:none; }
+.analizador-ring-value[style*="--pct"]::before { content:counter(ring-pct) "%"; }
 .analizador-match-text { max-width:15rem; font-size:.78rem; line-height:1.65; color:var(--muted); }
 
 .analizador-breakdown { padding:2rem; }
@@ -306,6 +315,48 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .analizador-chip--mastered { background:#EAFAF3; border:1px solid #C9F0DF; color:#34B583; }
 .analizador-chip--progress { background:#FDEEF4; border:1px solid #F8D4E2; color:var(--pink); }
 .analizador-chip--missing { background:#fff; border:1.5px dashed #D2CCD0; color:#6E6A74; }
+/* Hover sutil: el chip sube 1px y su borde se intensifica en su tono (no son clicables: sin cambio de cursor) */
+.analizador-chip { transition:transform .2s cubic-bezier(.16,1,.3,1), border-color .2s ease; }
+.analizador-chip:hover { transform:translateY(-1px); }
+.analizador-chip--mastered:hover { border-color:#A9E6CC; }
+.analizador-chip--progress:hover { border-color:#F1BCD1; }
+.analizador-chip--missing:hover { border-color:#E7B8CB; }
+
+/* Analizador: entrada del resultado. Nota de ejemplo, Match y Desglose en orden; los chips aparecen uno tras otro
+   por grupo (--i lo pone renderBreakdownGroup) y el anillo se llena mientras el número cuenta desde 0.
+   Se repite al abrir la vista y con cada análisis nuevo. translate/scale sueltos: no chocan con el hover. */
+@keyframes analizador-in { from { opacity:0; translate:0 12px; } }
+@keyframes analizador-chip-in { from { opacity:0; scale:.9; } }
+@keyframes analizador-count { from { --ring-pct:0; } }
+#analizador-result > .analizador-sample-note, .analizador-grid > * { animation:analizador-in 420ms cubic-bezier(.16,1,.3,1) backwards; }
+.analizador-grid > :nth-child(1) { animation-delay:60ms; }
+.analizador-grid > :nth-child(2) { animation-delay:120ms; }
+.analizador-chip { animation:analizador-chip-in 320ms cubic-bezier(.16,1,.3,1) backwards; --chip-base:220ms;
+  animation-delay:calc(var(--chip-base) + min(var(--i, 0), 10) * 30ms); }
+.analizador-group:nth-of-type(2) .analizador-chip { --chip-base:340ms; }
+.analizador-group:nth-of-type(3) .analizador-chip { --chip-base:420ms; }
+.analizador-ring .gauge-fill { animation:ruta-gauge-fill 800ms cubic-bezier(.16,1,.3,1) 160ms backwards; } /* mismo radio que el gauge de Mi Ruta */
+.analizador-ring-value { animation:analizador-count 800ms cubic-bezier(.16,1,.3,1) 160ms backwards; }
+
+/* Analizando: el resultado anterior se atenúa y la varita del botón agita sus chispas mientras llega el nuevo */
+@keyframes analizador-wand { from { rotate:-10deg; } to { rotate:8deg; } }
+@keyframes analizador-twinkle { from { opacity:1; } to { opacity:.2; } }
+#analizador-result { transition:opacity .25s ease; }
+#view-analizador:has(#analizador-submit[aria-busy="true"]) #analizador-result { opacity:.45; }
+#analizador-submit[aria-busy="true"] svg { transform-origin:20% 80%; animation:analizador-wand 350ms ease-in-out infinite alternate; }
+#analizador-submit[aria-busy="true"] svg path + path { animation:analizador-twinkle 350ms ease-in-out infinite alternate; }
+
+/* Aviso de texto vacío: entra con fundido y su ícono hace un "no" lateral corto (btn-nope, en Perfil) */
+.analizador-warning:not([hidden]) { animation:ruta-fade 220ms ease-out; }
+.analizador-warning:not([hidden]) svg { animation:btn-nope 280ms ease-out 60ms; }
+
+/* Menos movimiento: sin entrada, llenado, conteo, varita ni "no". Quedan el atenuado y los cambios de color. */
+@media (prefers-reduced-motion: reduce) {
+  #analizador-result > .analizador-sample-note, .analizador-grid > *, .analizador-chip, .analizador-ring .gauge-fill,
+  .analizador-ring-value, #analizador-submit[aria-busy="true"] svg, #analizador-submit[aria-busy="true"] svg path + path,
+  .analizador-warning:not([hidden]) svg { animation:none; }
+  .analizador-chip:hover { transform:none; }
+}
 
 /* ---------- Mi Ruta ---------- */
 .ruta-eyebrow { display:block; width:fit-content; padding:4px 10px; border-radius:9999px; background:var(--pink-soft); color:var(--pink);
