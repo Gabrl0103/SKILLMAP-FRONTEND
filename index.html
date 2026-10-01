@@ -96,8 +96,11 @@
           </span>
           Descripción de la vacante
         </label>
-        <textarea id="analizador-text" class="analizador-textarea" rows="7" placeholder="Pega aquí el texto completo de la oferta de trabajo..."></textarea>
+        <textarea id="analizador-text" class="analizador-textarea" rows="7" maxlength="8000" aria-describedby="analizador-count" placeholder="Pega aquí el texto completo de la oferta de trabajo..."></textarea>
         <div class="analizador-actions">
+          <!-- Contador de caracteres (js/analizador.js); el span oculto solo avisa al llegar al límite -->
+          <p id="analizador-count" class="analizador-count">0 / 8.000</p>
+          <span id="analizador-count-live" class="sr-only" aria-live="polite"></span>
           <p id="analizador-warning" class="analizador-warning" role="alert" hidden>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></svg>
             Pega el texto de una oferta para analizarla.
@@ -108,7 +111,7 @@
           </button>
         </div>
       </form>
-      <!-- Lo llena js/analizador.js: resultado de ejemplo al cargar, luego el de cada análisis -->
+      <!-- Lo llena js/analizador.js: estado vacío al cargar, luego skeleton, resultado o error de cada análisis -->
       <div id="analizador-result" aria-live="polite"></div>
     </section>
 
