@@ -5,16 +5,27 @@ const API_BASE_URL = "http://localhost:8080";
 const STATUS_LABEL = { MASTERED: "Dominada", IN_PROGRESS: "En desarrollo", PENDING: "Por aprender" };
 const VISIBLE_GAPS = 3; // el mockup muestra 3 brechas; "Ver detalle de brechas" despliega el resto
 
-// ---------- Datos de ejemplo (la API todavía no los provee) ----------
+// ---------- Demanda ----------
 
-// DATOS DE EJEMPLO: la API no expone urgencia por brecha. Se asigna según la posición en el
-// ranking de demanda solo para reproducir el mockup. Reemplazar cuando el backend tenga el campo.
-function sampleUrgencyBadge(rank) {
-  return [
-    { label: "Alta demanda", tone: "hot" },
-    { label: "Crítica", tone: "hot" },
-  ][rank] || { label: "Media", tone: "neutral" };
+// Urgencia relativa a las habilidades del objetivo: tercio de mayor demanda = "Crítica", tercio medio =
+// "Alta demanda", resto = "Media". Se compara por valor: habilidades con la misma demanda llevan el mismo badge.
+function urgencyBadge(demand, referenceDemands) {
+  const sorted = [...referenceDemands].sort((a, b) => b - a);
+  const cut = third => sorted[Math.ceil((sorted.length * third) / 3) - 1];
+  if (demand > 0 && demand >= cut(1)) return { label: "Crítica", tone: "hot" };
+  if (demand > 0 && demand >= cut(2)) return { label: "Alta demanda", tone: "hot" };
+  return { label: "Media", tone: "neutral" };
 }
+
+// "Mercado Laboral": demanda media de las habilidades del objetivo frente a la de todo el catálogo.
+const MARKET_HIGH_RATIO = 1.25;
+const MARKET_LOW_RATIO = 0.8;
+
+function averageDemandOf(skills) {
+  return skills.reduce((sum, s) => sum + s.demandPercentage, 0) / skills.length;
+}
+
+// ---------- Datos de ejemplo (la API todavía no los provee) ----------
 
 // DATOS DE EJEMPLO: la API no guarda histórico del nivel ni de la demanda. Valores fijos.
 function sampleTrendData() {
@@ -27,34 +38,48 @@ function sampleTrendData() {
 
 const sampleTag = `<span class="sample-tag">Datos de ejemplo</span>`;
 
-// DATOS DE EJEMPLO: el backend todavía usa porcentajes de demanda sembrados. Cuando la demanda se calcule
-// a partir de vacantes reales, pasar a false: Mi Ruta, Mapa Visual y Perfil quitan la etiqueta solos.
-const DEMAND_IS_SAMPLE = true;
+// La demanda es real cuando el backend la calculó sobre ofertas (JOB_POSTINGS); si alguna habilidad aún tiene
+// el valor sembrado (SEEDED), Mi Ruta, Mapa Visual y Perfil la etiquetan como datos de ejemplo.
 const SAMPLE_DEMAND_TEXT = "Demanda de ejemplo: aún no proviene de vacantes reales";
 
+function demandIsSample(skills) {
+  return skills.some(s => s.demandSource !== "JOB_POSTINGS");
+}
+
 // Nota "Datos de ejemplo" + aviso de demanda, envuelta en un <p> con la clase dada. Vacía si la demanda es real.
-function sampleDemandNote(className) {
-  return DEMAND_IS_SAMPLE ? `<p class="${className}">${sampleTag} ${SAMPLE_DEMAND_TEXT}</p>` : "";
+function sampleDemandNote(className, skills) {
+  return demandIsSample(skills) ? `<p class="${className}">${sampleTag} ${SAMPLE_DEMAND_TEXT}</p>` : "";
+}
+
+// "Basado en N ofertas reales · Arbeitnow, Remotive" a partir de /api/jobs/stats. Vacío si no hay ofertas.
+function jobStatsText(stats) {
+  if (!stats?.totalJobs) return "";
+  const sources = stats.sources.filter(s => s.jobs > 0).map(s => escapeHtml(s.name)).join(", ");
+  return `Basado en ${stats.totalJobs} ofertas reales${sources ? ` · ${sources}` : ""}`;
 }
 
 // ---------- Bloques de la vista ----------
 
-// "Mercado Laboral" del encabezado: demanda promedio real de las brechas del objetivo.
-function renderMarketDemand(gaps) {
+// "Mercado Laboral" del encabezado: las habilidades del objetivo frente al catálogo completo. Sin datos, se oculta.
+function renderMarketDemand(goalSkills, catalog) {
   const el = document.getElementById("market-demand");
-  if (!gaps.length) { el.hidden = true; return; }
-  const avg = Math.round(gaps.reduce((sum, g) => sum + g.demandPercentage, 0) / gaps.length);
+  const marketAvg = catalog.length ? averageDemandOf(catalog) : 0;
+  if (!goalSkills.length || marketAvg === 0) { el.hidden = true; return; }
+  const goalAvg = averageDemandOf(goalSkills);
+  const ratio = goalAvg / marketAvg;
   const level =
-    avg >= 70 ? { label: "Alta Demanda", tone: "high", icon: "m3 17 6-6 4 4 8-8M15 7h6v6" } :
-    avg >= 40 ? { label: "Demanda Media", tone: "mid", icon: "M4 12h16M14 6l6 6-6 6" } :
-                { label: "Demanda Baja", tone: "low", icon: "m3 7 6 6 4-4 8 8M15 17h6v-6" };
+    ratio >= MARKET_HIGH_RATIO ? { label: "Alta Demanda", tone: "high", icon: "m3 17 6-6 4 4 8-8M15 7h6v6" } :
+    ratio > MARKET_LOW_RATIO   ? { label: "Demanda Media", tone: "mid", icon: "M4 12h16M14 6l6 6-6 6" } :
+                                 { label: "Demanda Baja", tone: "low", icon: "m3 7 6 6 4-4 8 8M15 17h6v-6" };
+  const title = `Las habilidades de este objetivo aparecen en promedio en el ${Math.round(goalAvg)}% de las ofertas; `
+    + `las de todo el catálogo, en el ${Math.round(marketAvg)}%`;
   el.innerHTML = `
     <p class="market-demand-label">Mercado Laboral</p>
-    <p class="market-demand-value market-demand-value--${level.tone}" title="Demanda promedio de tus brechas: ${avg}%">
+    <p class="market-demand-value market-demand-value--${level.tone}" title="${title}">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${level.icon}"/></svg>
       ${level.label}
     </p>
-    ${sampleDemandNote("market-demand-note")}`;
+    ${sampleDemandNote("market-demand-note", goalSkills)}`;
   el.hidden = false;
 }
 
@@ -85,10 +110,14 @@ function renderGauge(r) {
     </article>`;
 }
 
-function renderBrechas(gaps) {
+// reference: habilidades del objetivo contra las que se calculan los badges y el largo de las barras.
+function renderBrechas(gaps, reference, jobStats) {
+  const demands = reference.map(s => s.demandPercentage);
+  const maxDemand = Math.max(0, ...demands);
   // La API ya manda las brechas ordenadas por demanda.
   const rows = gaps.map((s, i) => {
-    const badge = sampleUrgencyBadge(i);
+    const badge = urgencyBadge(s.demandPercentage, demands);
+    const barWidth = maxDemand ? Math.min(100, (s.demandPercentage / maxDemand) * 100) : 0;
     const extra = i >= VISIBLE_GAPS;
     return `
       <li class="gap-row"${extra ? " data-extra hidden" : ""}>
@@ -96,7 +125,7 @@ function renderBrechas(gaps) {
           <span class="gap-name">${escapeHtml(s.name)}</span>
           <span class="gap-badge gap-badge--${badge.tone}">${badge.label}</span>
         </div>
-        <div class="gap-bar" aria-hidden="true"><span style="width:${s.demandPercentage}%"></span></div>
+        <div class="gap-bar" aria-hidden="true"><span style="width:${barWidth}%"></span></div>
         <div class="gap-meta">
           <span>Demanda: ${s.demandPercentage}%</span>
           <span class="gap-status">${STATUS_LABEL[s.status] || STATUS_LABEL.PENDING}</span>
@@ -104,9 +133,12 @@ function renderBrechas(gaps) {
       </li>`;
   }).join("");
 
+  // Demanda sembrada: aviso de ejemplo. Demanda real: de cuántas ofertas sale.
+  const statsText = jobStatsText(jobStats);
+  const note = demandIsSample(gaps) ? `<p class="ruta-sample-note">${sampleTag} ${SAMPLE_DEMAND_TEXT}</p>`
+    : statsText ? `<p class="ruta-sample-note">${statsText}</p>` : "";
   const body = gaps.length
-    ? `<ul class="gap-list">${rows}</ul>
-       <p class="ruta-sample-note">${sampleTag} ${DEMAND_IS_SAMPLE ? `${SAMPLE_DEMAND_TEXT}. ` : ""}Los badges de urgencia son simulados: la API aún no los provee.</p>`
+    ? `<ul class="gap-list">${rows}</ul>${note}`
     : `<p class="text-sm text-gray-400">No tienes brechas pendientes: ya dominas todas las habilidades de este objetivo.</p>`;
 
   return `
@@ -126,11 +158,11 @@ function renderNextAction(topGap, goalTitle) {
     <article class="ruta-action">
       <div class="ruta-action-head">
         <span class="ruta-action-eyebrow">Siguiente acción</span>
-        ${DEMAND_IS_SAMPLE ? sampleTag : ""}
+        ${demandIsSample([topGap]) ? sampleTag : ""}
       </div>
       <h2 class="ruta-action-title">${verb} ${escapeHtml(topGap.name)}</h2>
-      <p class="ruta-action-text">Esta habilidad tiene un ${topGap.demandPercentage}% de demanda en vacantes de
-        ${escapeHtml(goalTitle)} y es tu brecha con más demanda.</p>
+      <p class="ruta-action-text">Aparece en el ${topGap.demandPercentage}% de las ofertas analizadas y es tu brecha
+        con más demanda para ${escapeHtml(goalTitle)}.</p>
       <button type="button" class="btn-pill btn-pill--light" data-action="open-map">
         Empezar ahora
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4v16l14-8z"/></svg>
@@ -310,6 +342,28 @@ function fetchSkills() {
   return skillsRequest;
 }
 
+let jobStatsRequest = null; // compartida entre Mi Ruta y Mapa Visual
+
+function fetchJobStats() {
+  if (!jobStatsRequest) {
+    jobStatsRequest = fetch(`${API_BASE_URL}/api/jobs/stats`)
+      .then(res => {
+        if (!res.ok) throw new Error("La API respondió " + res.status);
+        return res.json();
+      })
+      .catch(err => { jobStatsRequest = null; throw err; }); // si falla, se reintenta en la próxima llamada
+  }
+  return jobStatsRequest;
+}
+
+// Habilidades del objetivo (todas, también las dominadas) y catálogo completo, para comparar demandas.
+async function fetchGoalDemand(goalId) {
+  const [goals, catalog] = await Promise.all([fetchGoals(), fetchSkills()]);
+  const goal = goals.find(g => String(g.id) === String(goalId));
+  const ids = new Set((goal?.skills || []).map(s => s.skillId));
+  return { goalSkills: catalog.filter(s => ids.has(s.id)), catalog };
+}
+
 // Llena el <select id="goal-selector"> con los objetivos de la API y selecciona el guardado (o el primero).
 async function loadGoals() {
   const selector = document.getElementById("goal-selector");
@@ -340,16 +394,25 @@ async function loadDashboard(goalId) {
   document.getElementById("market-demand").hidden = true;
   container.innerHTML = renderRutaSkeleton();
   try {
-    const res = await fetch(`${API_BASE_URL}/api/goals/${goalId}/readiness`);
-    if (!res.ok) throw new Error("La API respondió " + res.status);
-    const r = await res.json();
+    const readiness = fetch(`${API_BASE_URL}/api/goals/${goalId}/readiness`).then(res => {
+      if (!res.ok) throw new Error("La API respondió " + res.status);
+      return res.json();
+    });
+    // La comparación y las estadísticas son complementarias: si fallan, la vista se muestra sin ellas.
+    const [r, demand, jobStats] = await Promise.all([
+      readiness,
+      fetchGoalDemand(goalId).catch(() => ({ goalSkills: [], catalog: [] })),
+      fetchJobStats().catch(() => null),
+    ]);
     if (requestId !== latestRequest) return;
 
-    renderMarketDemand(r.gaps);
+    // Sin las habilidades del objetivo, badges y barras se calculan solo entre las brechas.
+    const reference = demand.goalSkills.length ? demand.goalSkills : r.gaps;
+    renderMarketDemand(demand.goalSkills, demand.catalog);
     container.innerHTML = `
       <div class="ruta-grid">
         <div class="ruta-col">${renderGauge(r)}${renderNextAction(r.gaps[0], r.goalTitle)}</div>
-        <div class="ruta-col">${renderBrechas(r.gaps)}${renderTrend()}</div>
+        <div class="ruta-col">${renderBrechas(r.gaps, reference, jobStats)}${renderTrend()}</div>
       </div>`;
     bindTrendHover(container);
   } catch (err) {

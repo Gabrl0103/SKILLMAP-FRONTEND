@@ -122,8 +122,8 @@ function renderSkillsCard(skillsState) {
     const learning = skillsState.skills.filter(s => s.status === "IN_PROGRESS");
     body = renderSkillGroup("Dominadas", mastered, "mastered", "Aún no tienes habilidades dominadas.")
       + renderSkillGroup("En aprendizaje", learning, "learning", "No estás aprendiendo ninguna habilidad ahora mismo.")
-      // "Demanda media" usa la demanda sembrada del backend (ver DEMAND_IS_SAMPLE en dashboard.js).
-      + (mastered.length || learning.length ? sampleDemandNote("perfil-sample-note") : "");
+      // "Demanda media" se marca como ejemplo mientras alguna habilidad tenga demanda sembrada (demandIsSample).
+      + (mastered.length || learning.length ? sampleDemandNote("perfil-sample-note", [...mastered, ...learning]) : "");
   }
   return `
     <article class="perfil-card">

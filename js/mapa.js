@@ -1,5 +1,5 @@
 // Vista "Mapa Visual": todas las habilidades del sistema como grafo de nodos agrupados por categoría.
-// Usa API_BASE_URL, renderApiError, STATUS_LABEL, DEMAND_IS_SAMPLE y sampleDemandNote definidos en dashboard.js.
+// Usa API_BASE_URL, renderApiError, STATUS_LABEL, demandIsSample, sampleTag, SAMPLE_DEMAND_TEXT, jobStatsText y fetchJobStats definidos en dashboard.js.
 
 const NODE_SIZE = 112;      // diámetro de cada nodo (px)
 const NODE_GAP = 36;        // separación mínima entre nodos vecinos de un mismo cluster
@@ -212,12 +212,13 @@ const STATUS_CLASS = { MASTERED: "mastered", IN_PROGRESS: "progress", PENDING: "
 function renderNode({ skill, category, x, y }, index) {
   const status = STATUS_CLASS[skill.status] || "pending";
   const tooltip = `${skill.name} — ${skill.demandPercentage}% de demanda`;
+  const isSample = demandIsSample([skill]);
   const label = `${skill.name}, ${category}, ${STATUS_LABEL[skill.status] || STATUS_LABEL.PENDING}, `
-    + `${skill.demandPercentage}% de demanda${DEMAND_IS_SAMPLE ? " (de ejemplo)" : ""}`;
+    + `${skill.demandPercentage}% de demanda${isSample ? " (de ejemplo)" : ""}`;
   return `
     <div class="mapa-node mapa-node--${status}" tabindex="${index === 0 ? 0 : -1}" role="img"
       style="left:${x - NODE_SIZE / 2}px; top:${y - NODE_SIZE / 2}px; width:${NODE_SIZE}px; height:${NODE_SIZE}px; --i:${index};"
-      data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(label)}">
+      data-tooltip="${escapeHtml(tooltip)}"${isSample ? " data-sample" : ""} aria-label="${escapeHtml(label)}">
       <svg class="mapa-node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[pickIcon(skill.name, category)]}</svg>
       <span class="mapa-node-label" lang="es">${escapeHtml(skill.name)}</span>
@@ -386,11 +387,17 @@ function panMapaToNode(node) {
   applyMapaTransform();
 }
 
-// Contenido del tooltip: nombre y demanda, más la nota de demanda de ejemplo mientras sea sembrada.
+let mapaJobStats = null; // /api/jobs/stats para la nota "Basado en N ofertas reales" del tooltip
+
+// Contenido del tooltip: nombre y demanda, más la nota de demanda de ejemplo si es sembrada o, si es real,
+// de cuántas ofertas sale.
 function fillMapaTooltip(tooltip, node) {
   if (tooltip.dataset.node === node.dataset.tooltip) return;
   tooltip.dataset.node = node.dataset.tooltip;
-  tooltip.innerHTML = `${escapeHtml(node.dataset.tooltip)}${sampleDemandNote("mapa-tooltip-note")}`;
+  const statsText = jobStatsText(mapaJobStats);
+  const note = "sample" in node.dataset ? `<p class="mapa-tooltip-note">${sampleTag} ${SAMPLE_DEMAND_TEXT}</p>`
+    : statsText ? `<p class="mapa-tooltip-note">${statsText}</p>` : "";
+  tooltip.innerHTML = `${escapeHtml(node.dataset.tooltip)}${note}`;
 }
 
 // Ubica el tooltip dentro del viewport: preferencia (x, y) y, si no cabe antes de maxBottom, del otro lado
@@ -530,7 +537,10 @@ function loadMapa() {
 
   mapaRequest = (async () => {
     try {
-      container.innerHTML = renderMapa(await fetchSkills());
+      // Las estadísticas solo alimentan la nota del tooltip: si fallan, el mapa se muestra igual.
+      const [skills, jobStats] = await Promise.all([fetchSkills(), fetchJobStats().catch(() => null)]);
+      mapaJobStats = jobStats;
+      container.innerHTML = renderMapa(skills);
       mapaNeedsFit = true;
       bindMapaEvents();
       applyMapaTransform();
