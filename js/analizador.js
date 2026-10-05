@@ -146,7 +146,7 @@ function renderAnalyzerSkeleton() {
 function renderAnalyzerError(err) {
   const offline = err.message === "No se pudo conectar con el servidor.";
   const hint = offline
-    ? `<p class="text-xs text-gray-300 mt-2">Detalle técnico: servidor en <code>${API_BASE_URL}</code> (<code>./mvnw spring-boot:run</code> desde skillmap-api)</p>`
+    ? `<p class="text-xs text-gray-300 mt-2">Detalle técnico: servidor en <code>${API_BASE_URL || location.origin}</code> (<code>./mvnw spring-boot:run</code> desde skillmap-api)</p>`
     : "";
   return `
     <div class="card analizador-error" role="alert">

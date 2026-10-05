@@ -1,4 +1,5 @@
-const API_BASE_URL = "http://localhost:8080";
+// Servido por el backend (puerto 8080): mismo origen. Si no (Live Server), apunta al backend local.
+const API_BASE_URL = location.port === "8080" ? "" : "http://localhost:8080";
 
 // Vista "Mi Ruta". Usa escapeHtml y showView definidos en mapa.js (disponibles tras DOMContentLoaded).
 
@@ -288,7 +289,7 @@ function renderApiError(err) {
     <div class="card p-6 md:col-span-2 border border-dashed" style="border-color:#D95F8E;">
       <p class="text-sm font-medium text-gray-700">No pudimos cargar tus datos</p>
       <p class="text-xs text-gray-400 mt-1">El servidor de SkillMap no responde. Recarga la página en unos minutos para intentarlo de nuevo.</p>
-      <p class="text-xs text-gray-300 mt-2">Detalle técnico: servidor en <code>${API_BASE_URL}</code>
+      <p class="text-xs text-gray-300 mt-2">Detalle técnico: servidor en <code>${API_BASE_URL || location.origin}</code>
       (<code>./mvnw spring-boot:run</code> desde skillmap-api) · ${err.message}</p>
     </div>`;
 }
