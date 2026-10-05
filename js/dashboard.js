@@ -1,5 +1,7 @@
-// Servido por el backend (puerto 8080): mismo origen. Si no (Live Server), apunta al backend local.
-const API_BASE_URL = location.port === "8080" ? "" : "http://localhost:8080";
+// file:// o Live Server (localhost/127.0.0.1:5500): apunta al backend local. Si no, lo sirve el backend: mismo origen.
+const API_BASE_URL = location.protocol === "file:" ||
+  (location.port === "5500" && ["localhost", "127.0.0.1"].includes(location.hostname))
+  ? "http://localhost:8080" : "";
 
 // Vista "Mi Ruta". Usa escapeHtml y showView definidos en mapa.js (disponibles tras DOMContentLoaded).
 
