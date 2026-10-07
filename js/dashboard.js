@@ -303,8 +303,7 @@ function showAllGaps() {
   const card = document.getElementById("brechas-card");
   if (!card) return;
   card.querySelectorAll(".gap-row[data-extra]").forEach(row => { row.hidden = false; });
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  card.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  card.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
   card.focus({ preventScroll: true });
 }
 

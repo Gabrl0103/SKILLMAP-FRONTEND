@@ -65,6 +65,15 @@
   --tooltip-bg:#1F1F24; --tooltip-fg:#FFFFFF; --tooltip-muted:#CAC6CE;
   --stats-bg:#1F1D23; --stats-shadow:0 18px 36px rgba(31,29,35,.25); --stats-muted:#8E8A94;
   --switch-off:#7D7888; --map-link:#E6DEE2;
+  /* Ajustes: interruptor encendido (gradiente de acción), perilla, borde de campos editables (≥3:1) y enlaces */
+  --switch-on:var(--action); --switch-knob:#FFFFFF; --switch-knob-shadow:0 1px 3px rgba(16,16,20,.24);
+  --field-bg:var(--surface-solid); --field-border:var(--card-border); --field-border-strong:var(--line-dashed);
+  --link:var(--chip-azul-fg);
+  /* Mini vistas previas de Claro/Oscuro: muestran cada tema tal cual, así que no cambian con data-theme */
+  --preview-light-bg:linear-gradient(135deg,#F7F3FA,#EEF2FD); --preview-light-accent:linear-gradient(90deg,#BE3A72,#3F63D8);
+  --preview-light-track:#E9E4EE; --preview-light-bar:#D95F8E;
+  --preview-dark-bg:linear-gradient(135deg,#0B1020,#1C1442); --preview-dark-accent:linear-gradient(90deg,#6D28D9,#3F63D8);
+  --preview-dark-track:rgba(255,255,255,.12); --preview-dark-bar:#A78BFA;
 
   /* Comunes */
   --radius-card:24px; --radius-pill:999px;
@@ -109,6 +118,7 @@
   --tooltip-bg:#2A2F55; --tooltip-fg:#ECEEF8; --tooltip-muted:#B9BFD6;
   --stats-bg:#2A2F55; --stats-shadow:0 18px 44px rgba(0,0,0,.35); --stats-muted:#A9AFC6;
   --switch-off:#7D829A; --map-link:rgba(255,255,255,.12);
+  --switch-knob-shadow:0 1px 3px rgba(0,0,0,.45);
 }
 /* Respaldo: nada debe desbordar en horizontal, pero si algo lo hace no aparece scroll lateral */
 html, body { overflow-x:hidden; overflow-x:clip; }
@@ -124,6 +134,8 @@ body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
 .objetivo-title, .perfil-name, .goal-title { background:var(--title-grad); -webkit-background-clip:text; background-clip:text; color:transparent;
   -webkit-text-fill-color:transparent; }
 
+/* Animaciones reducidas: cada bloque @media (prefers-reduced-motion) va seguido de sus mismas reglas bajo
+   :root[data-motion="reduced"] ("Reducir animaciones" de Ajustes, js/theme.js), así las dos vías se tratan igual. */
 /* Cambio de vista: la sección que se muestra entra con un fundido corto. showView solo alterna .hidden
    (display:none), así que la animación se repite cada vez que la vista vuelve a mostrarse. */
 @keyframes view-in { from { opacity:.35; transform:translateY(6px); } }
@@ -158,6 +170,7 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 .gauge-value::before { content:counter(gauge-pct); }
 .gauge-value::after { content:"%"; color:var(--text-mid); font-size:1.2rem; margin:.7rem 0 0 .1rem; }
 @media (prefers-reduced-motion: reduce) { .gauge-fill, .gauge-value { animation:none; } }
+:root[data-motion="reduced"] .gauge-fill, :root[data-motion="reduced"] .gauge-value { animation:none; }
 
 /* ---------- Barra superior ---------- */
 /* Tres zonas: marca, nav píldora centrada y tema + Ajustes. Valores del <header> de docs/mockups/v2 */
@@ -176,7 +189,9 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
   background:var(--nav-bg); border:1px solid var(--nav-border); box-shadow:var(--nav-shadow); backdrop-filter:var(--nav-blur); -webkit-backdrop-filter:var(--nav-blur); }
 .topnav-indicator { position:absolute; top:4px; left:0; height:44px; width:0; border-radius:var(--radius-pill); background:var(--action);
   box-shadow:var(--nav-active-shadow); pointer-events:none; opacity:0; }
-.topnav.is-ready .topnav-indicator { opacity:1; transition:transform var(--dur) var(--ease-out), width var(--dur) var(--ease-out); }
+.topnav.is-ready .topnav-indicator { opacity:1; transition:transform var(--dur) var(--ease-out), width var(--dur) var(--ease-out), opacity var(--dur-fast) ease; }
+/* Ajustes no está en el nav: sin ítem activo, el indicador se oculta */
+.topnav.is-ready:not(.has-active) .topnav-indicator { opacity:0; }
 .nav-item { position:relative; z-index:1; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; gap:8px; height:44px; padding:0 20px;
   border-radius:var(--radius-pill); font-size:14px; font-weight:600; white-space:nowrap; color:var(--nav-fg); cursor:pointer;
   transition:color var(--dur-fast) var(--ease-out); }
@@ -195,11 +210,12 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 .theme-switch button:hover { color:var(--text); }
 .theme-switch button[aria-pressed="true"] { background:var(--toggle-on-bg); color:var(--toggle-on-fg); box-shadow:var(--toggle-on-shadow); }
 
-/* Ajustes: visible pero deshabilitado hasta la Fase 4 */
+/* Ajustes: abre su vista; activa, toma el gradiente de acción como el ítem activo del nav */
 .topbar-settings { display:inline-flex; align-items:center; justify-content:center; width:52px; height:52px; border-radius:var(--radius-pill);
-  background:var(--nav-bg); border:1px solid var(--nav-border); color:var(--nav-fg); box-shadow:var(--nav-shadow); }
-.topbar-settings[aria-disabled="true"] { cursor:not-allowed; }
-.topbar-settings[aria-disabled="true"]:active { animation:btn-nope 220ms ease-out; }
+  background:var(--nav-bg); border:1px solid var(--nav-border); color:var(--nav-fg); box-shadow:var(--nav-shadow); cursor:pointer;
+  transition:color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
+.topbar-settings:hover { color:var(--text); }
+.topbar-settings[aria-current="page"] { background:var(--action); border-color:transparent; color:var(--on-action); box-shadow:var(--nav-active-shadow); }
 
 /* Contenido: ancho máximo de 1200px centrado, padding de 40px */
 .app-main { max-width:1200px; margin-inline:auto; padding:40px; }
@@ -220,8 +236,8 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 }
 @media (prefers-reduced-motion: reduce) {
   .topnav.is-ready .topnav-indicator { transition:none; }
-  .topbar-settings[aria-disabled="true"]:active { animation:none; }
 }
+:root[data-motion="reduced"] .topnav.is-ready .topnav-indicator { transition:none; }
 
 /* ---------- Objetivo ---------- */
 .objetivo-title, .perfil-name, .goal-title { font-size:clamp(2.25rem, 1.5rem + 2.5vw, 3rem); font-weight:600; line-height:1.1; letter-spacing:-.02em; }
@@ -299,6 +315,10 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
   .objetivo-card-check, .objetivo-card[aria-checked="true"] .objetivo-card-check { transform:none; }
   .objetivo-card-check path, .objetivo-card[aria-checked="true"] .objetivo-card-check path { transition:none; }
 }
+:root[data-motion="reduced"] .objetivo-card { animation:none; }
+:root[data-motion="reduced"] button.objetivo-card:hover, :root[data-motion="reduced"] button.objetivo-card:focus-visible, :root[data-motion="reduced"] button.objetivo-card:active { transform:none; }
+:root[data-motion="reduced"] .objetivo-card-check, :root[data-motion="reduced"] .objetivo-card[aria-checked="true"] .objetivo-card-check { transform:none; }
+:root[data-motion="reduced"] .objetivo-card-check path, :root[data-motion="reduced"] .objetivo-card[aria-checked="true"] .objetivo-card-check path { transition:none; }
 
 /* ---------- Perfil ---------- */
 .perfil-card { padding:1.75rem; }
@@ -437,6 +457,11 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
   .perfil-switch::after { transition:none; }
   .perfil-switch:active::after { scale:none; }
 }
+:root[data-motion="reduced"] #perfil-content > .perfil-header, :root[data-motion="reduced"] .perfil-col > *, :root[data-motion="reduced"] .perfil-stat-bar span { animation:none; }
+:root[data-motion="reduced"] .perfil-header-actions .btn-pill[aria-disabled="true"]:active { animation:none; }
+:root[data-motion="reduced"] .perfil-skill:hover, :root[data-motion="reduced"] .perfil-project:hover .perfil-project-thumb, :root[data-motion="reduced"] .perfil-achievement:hover { transform:none; }
+:root[data-motion="reduced"] .perfil-switch::after { transition:none; }
+:root[data-motion="reduced"] .perfil-switch:active::after { scale:none; }
 
 /* ---------- Analizador ---------- */
 .analizador-card { padding:1.75rem; }
@@ -540,6 +565,8 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
   .analizador-warning:not([hidden]) svg { animation:none; }
   .analizador-chip:hover { transform:none; }
 }
+:root[data-motion="reduced"] #analizador-result > .analizador-empty, :root[data-motion="reduced"] #analizador-result > .analizador-error, :root[data-motion="reduced"] .analizador-grid > *, :root[data-motion="reduced"] .analizador-chip, :root[data-motion="reduced"] #analizador-submit[aria-busy="true"] svg, :root[data-motion="reduced"] #analizador-submit[aria-busy="true"] svg path + path, :root[data-motion="reduced"] .analizador-warning:not([hidden]) svg { animation:none; }
+:root[data-motion="reduced"] .analizador-chip:hover { transform:none; }
 
 /* ---------- Mi Ruta ---------- */
 .ruta-eyebrow { display:block; width:fit-content; padding:4px 10px; border-radius:9999px; background:var(--chip-eyebrow-bg); color:var(--chip-eyebrow-fg);
@@ -573,6 +600,7 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 /* Opción activa con teclado: anillo del tema (aria-activedescendant, el foco real queda en la lista) */
 .goal-list:focus-visible .goal-option.is-active { outline:var(--focus-ring); outline-offset:-2px; }
 @media (prefers-reduced-motion: reduce) { .goal-chevron { transition:color var(--dur-fast) ease; } .goal-list:not([hidden]) { animation:none; } }
+:root[data-motion="reduced"] .goal-chevron { transition:color var(--dur-fast) ease; } :root[data-motion="reduced"] .goal-list:not([hidden]) { animation:none; }
 
 /* Demanda de mercado sobre una píldora con la superficie de tarjeta: el texto ya no depende de los resplandores */
 .market-demand { display:flex; flex-direction:column; align-items:flex-end; gap:4px; padding:12px 20px; text-align:right; border-radius:20px;
@@ -709,6 +737,9 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
   .ruta-grid:not(.ruta-skeleton) > .ruta-col > *, .gap-bar span, .skel, .skel-action { animation:none; }
   .btn-pill:hover, .btn-pill:active { transform:none; }
 }
+:root[data-motion="reduced"] main > section:not(.hidden) { animation-name:view-fade; animation-duration:120ms; }
+:root[data-motion="reduced"] .ruta-grid:not(.ruta-skeleton) > .ruta-col > *, :root[data-motion="reduced"] .gap-bar span, :root[data-motion="reduced"] .skel, :root[data-motion="reduced"] .skel-action { animation:none; }
+:root[data-motion="reduced"] .btn-pill:hover, :root[data-motion="reduced"] .btn-pill:active { transform:none; }
 
 /* ---------- Mapa Visual ---------- */
 /* Mapa en tarjeta (fondo de puntos sutil) + panel de detalle de 380px a la derecha; debajo del mapa en pantallas angostas */
@@ -858,3 +889,110 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
   .mapa-node:hover, .mapa-node:focus-visible { transform:none; }
   .mapa-panel-actions .btn-pill[aria-disabled="true"]:active { animation:none; }
 }
+:root[data-motion="reduced"] .mapa-node, :root[data-motion="reduced"] .mapa-link, :root[data-motion="reduced"] .mapa-route, :root[data-motion="reduced"] .mapa-cluster-label, :root[data-motion="reduced"] .mapa-controls, :root[data-motion="reduced"] .mapa-legend, :root[data-motion="reduced"] .mapa-panel > * { animation:none; }
+:root[data-motion="reduced"] .mapa-node:hover, :root[data-motion="reduced"] .mapa-node:focus-visible { transform:none; }
+:root[data-motion="reduced"] .mapa-panel-actions .btn-pill[aria-disabled="true"]:active { animation:none; }
+
+/* ---------- Ajustes ---------- */
+/* Valores de docs/mockups/v2 (Ajustes · modo claro): dos tarjetas arriba, Ofertas de empleo a lo ancho y el pie */
+.ajustes-header { display:flex; flex-direction:column; align-items:flex-start; gap:16px; margin-bottom:40px; }
+.ajustes-header .ruta-eyebrow { padding:5px 12px; font-size:12px; }
+.ajustes-header .objetivo-subtitle { font-size:1rem; }
+.ajustes-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
+.ajustes-card { display:flex; flex-direction:column; padding:32px; }
+.ajustes-jobs { grid-column:1 / -1; }
+.ajustes-card-title { margin-bottom:24px; font-size:20px; font-weight:600; letter-spacing:-.01em; color:var(--text); }
+.ajustes-text { font-size:15px; line-height:1.6; color:var(--text-2); }
+.ajustes-note { margin-top:24px; font-size:14px; line-height:1.55; color:var(--text-2); }
+.ajustes-label { display:block; margin-top:28px; font-size:15px; font-weight:600; color:var(--text); }
+/* Mensajes de guardado y error: vacíos no ocupan sitio */
+.ajustes-status { margin-top:16px; font-size:14px; line-height:1.5; color:var(--text-mid); }
+.ajustes-status:empty { display:none; }
+.ajustes-status[data-tone="error"], .ajustes-sync-result[data-tone="error"] { color:var(--pink-ink); }
+.ajustes-status[data-tone="ok"] { color:var(--mint-ink); }
+.ajustes-footer { margin-top:40px; font-size:14px; color:var(--text-2-page); }
+
+/* Tema: radios nativos ocultos dentro de cada tarjeta (flechas del teclado incluidas); la elegida, con borde rosa */
+.ajustes-themes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; min-width:0; }
+.ajustes-theme { position:relative; display:flex; flex-direction:column; gap:14px; padding:12px 12px 14px; border-radius:18px; cursor:pointer;
+  background:var(--surface-solid); border:2px solid var(--card-border); transition:border-color var(--dur-fast) ease, box-shadow var(--dur) var(--ease-out); }
+.ajustes-theme:hover { border-color:var(--pink-line-hover); }
+.ajustes-theme:has(input:checked) { border-color:var(--pink); box-shadow:0 10px 24px var(--action-shadow-color); }
+.ajustes-theme:has(input:focus-visible) { outline:var(--focus-ring); outline-offset:3px; }
+.ajustes-theme-name { padding-left:4px; font-size:16px; font-weight:500; color:var(--text); }
+.ajustes-preview { display:flex; flex-direction:column; align-items:flex-start; height:88px; padding:16px; border-radius:12px; }
+.ajustes-preview i { display:block; border-radius:var(--radius-pill); }
+.ajustes-preview i:nth-child(1) { width:56px; height:9px; }
+.ajustes-preview i:nth-child(2) { width:100%; height:6px; margin-top:16px; }
+.ajustes-preview i:nth-child(3) { width:64px; height:8px; margin-top:10px; }
+.ajustes-preview--light { background:var(--preview-light-bg); }
+.ajustes-preview--light i:nth-child(1) { background:var(--preview-light-accent); }
+.ajustes-preview--light i:nth-child(2) { background:var(--preview-light-track); }
+.ajustes-preview--light i:nth-child(3) { background:var(--preview-light-bar); }
+.ajustes-preview--dark { background:var(--preview-dark-bg); }
+.ajustes-preview--dark i:nth-child(1) { background:var(--preview-dark-accent); }
+.ajustes-preview--dark i:nth-child(2) { background:var(--preview-dark-track); }
+.ajustes-preview--dark i:nth-child(3) { background:var(--preview-dark-bar); }
+
+/* Interruptores: encendido con el gradiente de acción */
+.ajustes-toggle { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-top:24px; }
+.ajustes-toggle + .ajustes-toggle { margin-top:20px; }
+.ajustes-toggle-title { font-size:16px; font-weight:500; color:var(--text); }
+.ajustes-toggle-desc { margin-top:2px; font-size:14px; line-height:1.5; color:var(--text-2); }
+.ajustes-switch { position:relative; flex-shrink:0; width:48px; height:28px; border-radius:var(--radius-pill); background:var(--switch-off); cursor:pointer;
+  transition:filter var(--dur-fast) ease; }
+/* Área táctil de 44px sin agrandar el interruptor (::after es la perilla) */
+.ajustes-switch::before { content:""; position:absolute; inset:-8px -4px; }
+.ajustes-switch::after { content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:var(--radius-pill);
+  background:var(--switch-knob); box-shadow:var(--switch-knob-shadow); transition:translate var(--dur-slow) var(--ease-out); }
+.ajustes-switch[aria-checked="true"] { background:var(--switch-on); }
+.ajustes-switch[aria-checked="true"]::after { translate:20px 0; }
+.ajustes-switch:hover:not(:disabled) { filter:brightness(1.08); }
+.ajustes-switch:disabled { cursor:not-allowed; opacity:.5; }
+.ajustes-switch:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
+
+/* Key de Gemini: campo de solo lectura con puntos fijos (la key real nunca llega al navegador) y chip de estado */
+.ajustes-key-row { display:flex; align-items:center; gap:16px; margin-top:10px; }
+.ajustes-key-field, .ajustes-key-input { flex:1; min-width:0; height:48px; padding:0 16px; border-radius:14px; background:var(--field-bg);
+  font:inherit; font-size:15px; color:var(--text); }
+.ajustes-key-field { display:flex; align-items:center; border:1px solid var(--field-border); }
+.ajustes-key-dots { font-size:13px; letter-spacing:.14em; color:var(--text); }
+.ajustes-key-empty { font-size:14px; color:var(--text-2); }
+/* Campo editable: borde con contraste de control (≥3:1) */
+.ajustes-key-input { border:1px solid var(--field-border-strong); }
+.ajustes-key-input::placeholder { color:var(--text-2); }
+.ajustes-key-input:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.ajustes-chip { flex-shrink:0; padding:6px 12px; border-radius:var(--radius-pill); font-size:13px; font-weight:600; white-space:nowrap; }
+.ajustes-chip--ok { background:var(--mint-soft); color:var(--mint-ink); }
+.ajustes-chip--env { background:var(--chip-azul-bg); color:var(--chip-azul-fg); }
+.ajustes-key-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; margin-top:24px; }
+.ajustes-key-actions .btn-pill { min-width:8rem; padding:.85rem 1.5rem; font-size:15px; }
+.ajustes-key-actions .btn-pill:disabled { cursor:progress; }
+.ajustes-link { font-size:15px; font-weight:500; color:var(--link); text-decoration:underline; text-underline-offset:3px; border-radius:4px; }
+.ajustes-link:hover { text-decoration-thickness:2px; }
+.ajustes-link:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
+
+/* Ofertas de empleo: total, desglose por fuente y, a la derecha, el recálculo */
+.ajustes-jobs .ajustes-card-title { margin-bottom:28px; }
+.ajustes-jobs-body { display:flex; align-items:center; justify-content:space-between; gap:40px; }
+.ajustes-jobs-stats { display:flex; align-items:center; gap:40px; min-width:0; }
+.ajustes-jobs-stats > .ajustes-status { margin-top:0; }
+.ajustes-total { display:flex; align-items:baseline; gap:12px; white-space:nowrap; }
+.ajustes-total-num { font-size:64px; font-weight:300; line-height:1; letter-spacing:-.03em; color:var(--text); font-variant-numeric:tabular-nums; }
+.ajustes-total-label { font-size:17px; color:var(--text-2); }
+.ajustes-sources li { font-size:16px; line-height:26px; color:var(--text-2); }
+.ajustes-sources strong { font-weight:700; color:var(--text); }
+.ajustes-updated { margin-top:2px; font-size:14px; color:var(--text-2); }
+.ajustes-jobs-action { flex-shrink:0; width:344px; }
+.ajustes-jobs-action .ajustes-note { margin-top:16px; }
+.ajustes-jobs-action .btn-pill:disabled { cursor:progress; }
+.ajustes-jobs-action .btn-pill:disabled:hover { transform:none; box-shadow:0 12px 24px var(--action-shadow-color); }
+.ajustes-sync-result { margin-top:12px; font-size:14px; line-height:1.55; color:var(--text-mid); }
+.ajustes-sync-result:empty { display:none; }
+.ajustes-sync-result strong { font-weight:700; color:var(--text); }
+.ajustes-sync-summary { font-weight:600; color:var(--text); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ajustes-theme, .ajustes-switch::after { transition:none; }
+}
+:root[data-motion="reduced"] .ajustes-theme, :root[data-motion="reduced"] .ajustes-switch::after { transition:none; }

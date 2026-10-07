@@ -696,10 +696,13 @@ function loadMapa() {
 // ---------- Navegación ----------
 
 // Indicador del nav: píldora con el gradiente de acción que se desliza (transform + width) hasta el ítem activo.
-// El primer posicionado no se anima; con prefers-reduced-motion el CSS quita la transición y salta directo.
+// El primer posicionado no se anima; con animaciones reducidas el CSS quita la transición y salta directo.
+// En Ajustes (fuera del nav) ningún ítem está activo y el indicador se oculta.
 function positionNavIndicator() {
   const nav = document.querySelector(".topnav");
-  const active = nav?.querySelector(".nav-item.active");
+  if (!nav) return;
+  const active = nav.querySelector(".nav-item.active");
+  nav.classList.toggle("has-active", Boolean(active));
   if (!active) return;
   const indicator = nav.querySelector(".topnav-indicator");
   indicator.style.width = `${active.offsetWidth}px`;
@@ -712,12 +715,12 @@ function positionNavIndicator() {
   if (nav.scrollWidth > nav.clientWidth) active.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
-// Navegación sin router: muestra la sección elegida, oculta las demás y marca el item activo.
+// Navegación sin router: muestra la sección elegida, oculta las demás y marca el item activo (nav o botón Ajustes).
 function showView(view) {
   document.querySelectorAll("main > section[id^='view-']").forEach(section => {
     section.classList.toggle("hidden", section.id !== `view-${view}`);
   });
-  document.querySelectorAll(".nav-item[data-view]").forEach(item => {
+  document.querySelectorAll(".nav-item[data-view], .topbar-settings[data-view]").forEach(item => {
     const isActive = item.dataset.view === view;
     item.classList.toggle("active", isActive);
     if (isActive) item.setAttribute("aria-current", "page");
@@ -728,9 +731,10 @@ function showView(view) {
   if (view === "mapa") loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); });
   if (view === "objetivo") openObjetivo(); // definido en objetivo.js
   if (view === "perfil") openPerfil();     // definido en perfil.js
+  if (view === "ajustes") openAjustes();   // definido en ajustes.js
 }
 
-document.querySelectorAll(".nav-item[data-view]").forEach(item => {
+document.querySelectorAll(".nav-item[data-view], .topbar-settings[data-view]").forEach(item => {
   item.addEventListener("click", () => showView(item.dataset.view));
 });
 

@@ -208,8 +208,7 @@ async function runAnalysis() {
   const hadFocus = document.activeElement === button || result.contains(document.activeElement);
   setAnalyzing(true);
   result.innerHTML = renderAnalyzerSkeleton();
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  result.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
+  result.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "nearest" });
   let failed = false;
   try {
     const r = await analyzeOffer(text.slice(0, ANALYZER_MAX_CHARS));
