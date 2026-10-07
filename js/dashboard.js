@@ -55,10 +55,11 @@ function sampleDemandNote(className, skills) {
 }
 
 // "Basado en N ofertas reales · Arbeitnow, Remotive" a partir de /api/jobs/stats. Vacío si no hay ofertas.
-function jobStatsText(stats) {
+// El Mapa Visual usa el inicio "Ruta calculada con".
+function jobStatsText(stats, lead = "Basado en") {
   if (!stats?.totalJobs) return "";
   const sources = stats.sources.filter(s => s.jobs > 0).map(s => escapeHtml(s.name)).join(", ");
-  return `Basado en ${stats.totalJobs} ofertas reales${sources ? ` · ${sources}` : ""}`;
+  return `${lead} ${stats.totalJobs} ofertas reales${sources ? ` · ${sources}` : ""}`;
 }
 
 // ---------- Bloques de la vista ----------
@@ -360,6 +361,21 @@ function fetchJobStats() {
   return jobStatsRequest;
 }
 
+const readinessRequests = new Map(); // /api/goals/{id}/readiness por objetivo, compartida entre Mi Ruta y Mapa Visual
+
+function fetchReadiness(goalId) {
+  const key = String(goalId);
+  if (!readinessRequests.has(key)) {
+    readinessRequests.set(key, fetch(`${API_BASE_URL}/api/goals/${key}/readiness`)
+      .then(res => {
+        if (!res.ok) throw new Error("La API respondió " + res.status);
+        return res.json();
+      })
+      .catch(err => { readinessRequests.delete(key); throw err; })); // si falla, se reintenta en la próxima llamada
+  }
+  return readinessRequests.get(key);
+}
+
 // Habilidades del objetivo (todas, también las dominadas) y catálogo completo, para comparar demandas.
 async function fetchGoalDemand(goalId) {
   const [goals, catalog] = await Promise.all([fetchGoals(), fetchSkills()]);
@@ -368,25 +384,132 @@ async function fetchGoalDemand(goalId) {
   return { goalSkills: catalog.filter(s => ids.has(s.id)), catalog };
 }
 
-// Llena el <select id="goal-selector"> con los objetivos de la API y selecciona el guardado (o el primero).
-async function loadGoals() {
-  const selector = document.getElementById("goal-selector");
-  const goals = await fetchGoals();
+// ---------- Selector de objetivo ----------
+// El título del objetivo (h1 con gradiente) es un botón que abre una lista simple con los objetivos de la API
+// (patrón listbox: el foco queda en la lista y aria-activedescendant marca la opción activa).
 
-  selector.innerHTML = goals.map(g => `<option value="${g.id}">${escapeHtml(g.title)}</option>`).join("");
-  selector.disabled = goals.length === 0;
+let activeGoalId = null; // objetivo que muestra Mi Ruta; lo leen Objetivo y Mapa Visual
+
+function getActiveGoalId() {
+  return activeGoalId;
+}
+
+const goalPicker = {
+  button: () => document.getElementById("goal-button"),
+  list: () => document.getElementById("goal-list"),
+  options: () => [...document.querySelectorAll("#goal-list .goal-option")],
+};
+
+function setGoalTitle(text) {
+  document.getElementById("goal-title").textContent = text;
+}
+
+// Llena la lista con los objetivos y deja seleccionado el activo.
+function renderGoalOptions(goals) {
+  const check = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>`;
+  goalPicker.list().innerHTML = goals.map(g => `
+    <li id="goal-option-${g.id}" class="goal-option" role="option" data-goal-id="${g.id}" aria-selected="false">
+      <span>${escapeHtml(g.title)}</span>${check}
+    </li>`).join("");
+  goalPicker.button().disabled = goals.length === 0;
+}
+
+function syncGoalPicker(goals) {
+  goalPicker.options().forEach(o => o.setAttribute("aria-selected", String(o.dataset.goalId === activeGoalId)));
+  const goal = goals?.find(g => String(g.id) === activeGoalId);
+  if (goal) setGoalTitle(goal.title);
+}
+
+function setActiveOption(option) {
+  const list = goalPicker.list();
+  goalPicker.options().forEach(o => o.classList.toggle("is-active", o === option));
+  if (!option) { list.removeAttribute("aria-activedescendant"); return; }
+  list.setAttribute("aria-activedescendant", option.id);
+  option.scrollIntoView({ block: "nearest" });
+}
+
+function openGoalList() {
+  const list = goalPicker.list();
+  if (!goalPicker.options().length) return;
+  list.hidden = false;
+  goalPicker.button().setAttribute("aria-expanded", "true");
+  setActiveOption(goalPicker.options().find(o => o.dataset.goalId === activeGoalId) || goalPicker.options()[0]);
+  list.focus();
+}
+
+function closeGoalList({ focusButton = true } = {}) {
+  const list = goalPicker.list();
+  if (list.hidden) return;
+  list.hidden = true;
+  goalPicker.button().setAttribute("aria-expanded", "false");
+  setActiveOption(null);
+  if (focusButton) goalPicker.button().focus();
+}
+
+function chooseGoal(option) {
+  closeGoalList();
+  if (option && option.dataset.goalId !== activeGoalId) setActiveGoal(option.dataset.goalId);
+}
+
+function bindGoalPicker() {
+  const button = goalPicker.button(), list = goalPicker.list();
+
+  button.addEventListener("click", () => (list.hidden ? openGoalList() : closeGoalList()));
+  button.addEventListener("keydown", e => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); openGoalList(); }
+  });
+
+  list.addEventListener("keydown", e => {
+    const options = goalPicker.options();
+    const current = options.findIndex(o => o.classList.contains("is-active"));
+    const next = { ArrowDown: current + 1, ArrowUp: current - 1, Home: 0, End: options.length - 1 }[e.key];
+    if (next !== undefined) {
+      e.preventDefault();
+      setActiveOption(options[Math.min(options.length - 1, Math.max(0, next))]);
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      chooseGoal(options[current]);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      closeGoalList();
+    } else if (e.key === "Tab") {
+      closeGoalList({ focusButton: false });
+    }
+  });
+  list.addEventListener("click", e => {
+    const option = e.target.closest(".goal-option");
+    if (option) chooseGoal(option);
+  });
+  list.addEventListener("pointermove", e => {
+    const option = e.target.closest(".goal-option");
+    if (option && !option.classList.contains("is-active")) setActiveOption(option);
+  });
+  // Clic fuera o foco fuera: se cierra sin robar el foco
+  document.addEventListener("pointerdown", e => {
+    if (!e.target.closest(".goal-picker")) closeGoalList({ focusButton: false });
+  });
+  list.addEventListener("focusout", e => {
+    if (!e.relatedTarget || !e.relatedTarget.closest(".goal-picker")) closeGoalList({ focusButton: false });
+  });
+}
+
+// Llena el selector con los objetivos de la API y activa el guardado (o el primero).
+async function loadGoals() {
+  const goals = await fetchGoals();
+  renderGoalOptions(goals);
   const saved = readSavedGoalId();
-  if (goals.some(g => String(g.id) === saved)) selector.value = saved;
+  activeGoalId = goals.some(g => String(g.id) === saved) ? saved : goals[0] ? String(goals[0].id) : null;
+  syncGoalPicker(goals);
   return goals;
 }
 
 // Cambia el objetivo activo: lo guarda, lo aplica al selector de Mi Ruta y recarga el dashboard.
 async function setActiveGoal(goalId) {
-  const selector = document.getElementById("goal-selector");
   saveGoalId(goalId);
   // Si el selector no cargó (p. ej. la API falló al abrir la app), se vuelve a llenar antes de elegir.
-  if (![...selector.options].some(o => o.value === String(goalId))) await loadGoals().catch(() => {});
-  selector.value = goalId;
+  const goals = await (goalPicker.options().length ? fetchGoals() : loadGoals()).catch(() => null);
+  activeGoalId = String(goalId);
+  syncGoalPicker(goals);
   loadDashboard(goalId);
 }
 
@@ -398,13 +521,9 @@ async function loadDashboard(goalId) {
   document.getElementById("market-demand").hidden = true;
   container.innerHTML = renderRutaSkeleton();
   try {
-    const readiness = fetch(`${API_BASE_URL}/api/goals/${goalId}/readiness`).then(res => {
-      if (!res.ok) throw new Error("La API respondió " + res.status);
-      return res.json();
-    });
     // La comparación y las estadísticas son complementarias: si fallan, la vista se muestra sin ellas.
     const [r, demand, jobStats] = await Promise.all([
-      readiness,
+      fetchReadiness(goalId),
       fetchGoalDemand(goalId).catch(() => ({ goalSkills: [], catalog: [] })),
       fetchJobStats().catch(() => null),
     ]);
@@ -426,11 +545,10 @@ async function loadDashboard(goalId) {
 }
 
 async function init() {
-  const selector = document.getElementById("goal-selector");
   const container = document.getElementById("app-content");
   container.innerHTML = renderRutaSkeleton(); // mientras llegan los objetivos
 
-  selector.addEventListener("change", () => setActiveGoal(selector.value));
+  bindGoalPicker();
   container.addEventListener("click", e => {
     const action = e.target.closest("[data-action]")?.dataset.action;
     if (action === "show-gaps") showAllGaps();
@@ -440,13 +558,13 @@ async function init() {
   try {
     const goals = await loadGoals();
     if (goals.length === 0) {
-      selector.innerHTML = `<option>Sin objetivos</option>`;
+      setGoalTitle("Sin objetivos");
       container.innerHTML = `<p class="text-sm text-muted-page">Aún no hay objetivos profesionales disponibles.</p>`;
       return;
     }
-    await loadDashboard(selector.value);
+    await loadDashboard(activeGoalId);
   } catch (err) {
-    selector.innerHTML = `<option>Sin conexión</option>`;
+    setGoalTitle("Sin conexión");
     container.innerHTML = renderApiError(err);
   }
 }

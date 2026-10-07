@@ -1,4 +1,4 @@
-// Vista "Objetivo". Usa fetchGoals, setActiveGoal y renderApiError (dashboard.js) y escapeHtml/showView (mapa.js).
+// Vista "Objetivo". Usa fetchGoals, setActiveGoal, getActiveGoalId y renderApiError (dashboard.js) y escapeHtml/showView (mapa.js).
 
 // Ícono y color de cada tarjeta según palabras clave del título (sin acentos, en minúsculas).
 // Gana el primer tema que coincide; sin coincidencia se usa GENERIC_THEME. El fondo del ícono lo deriva styles.css
@@ -115,8 +115,7 @@ function handleObjetivoKeys(e) {
 
 // Objetivo activo actual: el del selector de Mi Ruta; si aún no cargó, el guardado; si no, el primero.
 function currentActiveGoalId(goals) {
-  const selector = document.getElementById("goal-selector");
-  const candidates = [selector.disabled ? null : selector.value, readSavedGoalId()];
+  const candidates = [getActiveGoalId(), readSavedGoalId()]; // getActiveGoalId en dashboard.js
   return candidates.find(id => goals.some(g => String(g.id) === id)) ?? (goals[0] ? String(goals[0].id) : null);
 }
 

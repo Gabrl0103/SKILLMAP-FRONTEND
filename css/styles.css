@@ -51,8 +51,16 @@
   --pink-tint:#FDEEF4; --pink-line:#F8DAE6; --pink-line-hover:#F1C4D6;
   --title-grad:linear-gradient(90deg,#B02E6A,#3552C4); --title-solid:#B02E6A;
   --focus:#3F63D8;
-  /* Header sticky translúcido (Fase 3: la barra superior lo usa; hoy lo usa el sidebar) */
+  /* Barra superior sticky translúcida; nav píldora e interruptor de tema (valores del <header> del mockup) */
   --header-bg:rgba(251,247,250,.55); --header-border:rgba(190,58,114,.08); --header-blur:blur(18px) saturate(1.4);
+  --nav-bg:rgba(255,255,255,.74); --nav-border:rgba(190,58,114,.12); --nav-shadow:0 10px 28px rgba(63,99,216,.10); --nav-blur:blur(14px);
+  --nav-fg:var(--text-mid); --nav-active-shadow:0 8px 18px rgba(190,58,114,.30);
+  --toggle-on-bg:#FFFFFF; --toggle-on-fg:var(--pink-ink); --toggle-on-shadow:0 4px 12px rgba(63,99,216,.16);
+  /* Texto sobre el gradiente de acción (botones, nav activo, logo) */
+  --on-action:#FFFFFF;
+  /* Mapa Visual: puntos del fondo, anillo del nodo seleccionado y trazo de la ruta sugerida (mismo azul punteado que
+     "Demanda" en Mi Ruta: punteado = aún no) */
+  --map-dot:rgba(94,90,107,.16); --node-ring:var(--chip-azul-fg); --map-route:var(--chart-demand);
   /* Tooltips, tarjeta oscura de Perfil y otros controles */
   --tooltip-bg:#1F1F24; --tooltip-fg:#FFFFFF; --tooltip-muted:#CAC6CE;
   --stats-bg:#1F1D23; --stats-shadow:0 18px 36px rgba(31,29,35,.25); --stats-muted:#8E8A94;
@@ -62,7 +70,7 @@
   --radius-card:24px; --radius-pill:999px;
   --ease-out:cubic-bezier(.16,1,.3,1); --dur-fast:150ms; --dur:200ms; --dur-slow:250ms;
   --focus-ring:2px solid var(--focus); /* separación: 3px en tarjetas y títulos, 2px en controles chicos */
-  --sidebar-w:14rem;
+  --header-h:84px; /* alto de la barra superior en escritorio (16 + 52 + 16); el Mapa Visual lo descuenta */
 
   /* Alias de v1: las reglas de las vistas los siguen usando y cambian solos con el tema */
   --ink:var(--text); --ink-2:var(--text-mid); --muted:var(--text-2); --muted-2:var(--text-2); --faint:var(--track);
@@ -94,6 +102,10 @@
   --title-grad:linear-gradient(90deg,#C4B5FD,#93B4FF); --title-solid:#C4B5FD;
   --focus:#A78BFA;
   --header-bg:rgba(11,16,32,.55); --header-border:rgba(255,255,255,.06);
+  --nav-bg:rgba(20,26,51,.72); --nav-border:rgba(255,255,255,.10); --nav-shadow:0 10px 28px rgba(0,0,0,.40);
+  --nav-fg:var(--text-2); --nav-active-shadow:0 8px 20px rgba(109,40,217,.45);
+  --toggle-on-bg:#2A2F55; --toggle-on-fg:var(--chip-violeta-fg); --toggle-on-shadow:0 4px 12px rgba(0,0,0,.35);
+  --map-dot:rgba(255,255,255,.07); --node-ring:rgba(196,181,253,.85);
   --tooltip-bg:#2A2F55; --tooltip-fg:#ECEEF8; --tooltip-muted:#B9BFD6;
   --stats-bg:#2A2F55; --stats-shadow:0 18px 44px rgba(0,0,0,.35); --stats-muted:#A9AFC6;
   --switch-off:#7D829A; --map-link:rgba(255,255,255,.12);
@@ -108,21 +120,9 @@ body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
   box-shadow:var(--card-shadow); backdrop-filter:var(--card-blur); -webkit-backdrop-filter:var(--card-blur); }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 ::selection { background:var(--chip-rosa-bg); color:var(--text); }
-/* Títulos de página con el gradiente del tema. <select> no admite texto recortado al fondo: el selector de objetivo
-   usa el color inicial del gradiente (Fase 3 lo cambia por el botón del mockup) */
-.objetivo-title, .perfil-name { background:var(--title-grad); -webkit-background-clip:text; background-clip:text; color:transparent;
+/* Títulos de página (h1 de las vistas) con el gradiente del tema: 48px, peso 600, como el mockup */
+.objetivo-title, .perfil-name, .goal-title { background:var(--title-grad); -webkit-background-clip:text; background-clip:text; color:transparent;
   -webkit-text-fill-color:transparent; }
-
-/* Botón temporal para probar ambos temas (TEMPORAL: se quita en Fase 4, cuando el tema pase al backend) */
-.theme-toggle { position:fixed; right:24px; bottom:24px; z-index:30; display:flex; align-items:center; justify-content:center; width:48px; height:48px;
-  border-radius:var(--radius-pill); border:1px solid var(--card-border); background:var(--surface); color:var(--text-mid); box-shadow:var(--card-shadow);
-  backdrop-filter:var(--header-blur); -webkit-backdrop-filter:var(--header-blur); cursor:pointer;
-  transition:color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
-.theme-toggle:hover { color:var(--pink-ink); transform:translateY(-1px); }
-.theme-toggle:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
-.theme-toggle .icon-sun, :root[data-theme="dark"] .theme-toggle .icon-moon { display:none; }
-:root[data-theme="dark"] .theme-toggle .icon-sun { display:block; }
-@media (prefers-reduced-motion: reduce) { .theme-toggle:hover { transform:none; } }
 
 /* Cambio de vista: la sección que se muestra entra con un fundido corto. showView solo alterna .hidden
    (display:none), así que la animación se repite cada vez que la vista vuelve a mostrarse. */
@@ -159,35 +159,72 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 .gauge-value::after { content:"%"; color:var(--text-mid); font-size:1.2rem; margin:.7rem 0 0 .1rem; }
 @media (prefers-reduced-motion: reduce) { .gauge-fill, .gauge-value { animation:none; } }
 
-/* ---------- Sidebar ---------- */
-/* Fijo al borde izquierdo y a alto completo en todas las vistas; el contenido deja su ancho como margen */
-.sidebar { position:fixed; top:0; left:0; z-index:20; width:var(--sidebar-w); height:100vh; height:100dvh; overflow-y:auto;
-  background:var(--header-bg); border-right:1px solid var(--header-border); backdrop-filter:var(--header-blur); -webkit-backdrop-filter:var(--header-blur); }
-.app-main { margin-left:var(--sidebar-w); }
-/* Vistas con contenido: ancho máximo de 1200px, centradas en el área a la derecha del sidebar.
-   El padding lateral fijo (32px) lo pone <main> (px-8). El Mapa Visual no usa este contenedor: va de borde a borde. */
-#view-dashboard, #view-objetivo, #view-perfil, #view-analizador { max-width:1200px; margin-inline:auto; }
-/* Pantallas angostas: sidebar solo con íconos; los textos quedan disponibles para lectores de pantalla */
-@media (max-width:639px) {
-  :root { --sidebar-w:4.5rem; }
-  .sidebar { padding-inline:.6rem; }
-  .sidebar-brand { justify-content:center; padding-inline:0; }
-  .sidebar .nav-item { justify-content:center; padding-inline:0; }
-  .sidebar-text { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
-}
-.logo-mark { width:36px; height:36px; border-radius:11px; display:flex; align-items:center; justify-content:center; background:var(--action); color:#fff;
-  box-shadow:0 8px 20px var(--action-shadow-color); }
-.nav-item { display:flex; align-items:center; gap:.85rem; padding:.85rem 1.1rem; border-radius:1.1rem; font-size:.9rem; font-weight:600; color:var(--muted);
-  transition:background var(--dur-fast) ease, color var(--dur-fast) ease; }
+/* ---------- Barra superior ---------- */
+/* Tres zonas: marca, nav píldora centrada y tema + Ajustes. Valores del <header> de docs/mockups/v2 */
+.topbar { position:sticky; top:0; z-index:20; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px 24px;
+  padding:16px 40px; background:var(--header-bg); border-bottom:1px solid var(--header-border);
+  backdrop-filter:var(--header-blur); -webkit-backdrop-filter:var(--header-blur); }
+.topbar-brand { display:flex; align-items:center; gap:12px; min-width:0; }
+.logo-mark { flex-shrink:0; width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:var(--action);
+  color:var(--on-action); box-shadow:0 8px 20px var(--action-shadow-color); }
+.topbar-name { font-size:18px; font-weight:700; letter-spacing:.04em; color:var(--text); }
+.topbar-actions { justify-self:end; display:flex; align-items:center; gap:12px; }
+
+/* Nav: píldora con un indicador que se desliza hasta el ítem activo (transform + width, js en mapa.js).
+   El primer posicionado va sin transición (.is-ready la activa después) */
+.topnav { position:relative; display:flex; align-items:center; gap:4px; padding:4px; max-width:100%; border-radius:var(--radius-pill);
+  background:var(--nav-bg); border:1px solid var(--nav-border); box-shadow:var(--nav-shadow); backdrop-filter:var(--nav-blur); -webkit-backdrop-filter:var(--nav-blur); }
+.topnav-indicator { position:absolute; top:4px; left:0; height:44px; width:0; border-radius:var(--radius-pill); background:var(--action);
+  box-shadow:var(--nav-active-shadow); pointer-events:none; opacity:0; }
+.topnav.is-ready .topnav-indicator { opacity:1; transition:transform var(--dur) var(--ease-out), width var(--dur) var(--ease-out); }
+.nav-item { position:relative; z-index:1; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; gap:8px; height:44px; padding:0 20px;
+  border-radius:var(--radius-pill); font-size:14px; font-weight:600; white-space:nowrap; color:var(--nav-fg); cursor:pointer;
+  transition:color var(--dur-fast) var(--ease-out); }
 .nav-item svg { flex-shrink:0; }
-button.nav-item { cursor:pointer; text-align:left; }
-button.nav-item:not(.active):hover { background:var(--chip-rosa-bg); color:var(--chip-rosa-fg); }
-button.nav-item:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
-.nav-item.active { background:var(--action); color:#fff; box-shadow:0 8px 18px var(--action-shadow-color); }
-.nav-item.disabled { opacity:.6; cursor:not-allowed; }
+.nav-item:not(.active):hover { color:var(--text); }
+.nav-item.active { color:var(--on-action); font-weight:700; }
+/* Sin JS el indicador no se ve: el activo lleva su propio fondo hasta que el indicador está listo */
+.topnav:not(.is-ready) .nav-item.active { background:var(--action); }
+.nav-item:focus-visible, .theme-switch button:focus-visible, .topbar-settings:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+
+/* Interruptor de tema: sol y luna, el activo con fondo y color del tema */
+.theme-switch { display:inline-flex; gap:4px; padding:4px; border-radius:var(--radius-pill); background:var(--nav-bg); border:1px solid var(--nav-border);
+  box-shadow:var(--nav-shadow); }
+.theme-switch button { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:var(--radius-pill); color:var(--nav-fg);
+  transition:background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
+.theme-switch button:hover { color:var(--text); }
+.theme-switch button[aria-pressed="true"] { background:var(--toggle-on-bg); color:var(--toggle-on-fg); box-shadow:var(--toggle-on-shadow); }
+
+/* Ajustes: visible pero deshabilitado hasta la Fase 4 */
+.topbar-settings { display:inline-flex; align-items:center; justify-content:center; width:52px; height:52px; border-radius:var(--radius-pill);
+  background:var(--nav-bg); border:1px solid var(--nav-border); color:var(--nav-fg); box-shadow:var(--nav-shadow); }
+.topbar-settings[aria-disabled="true"] { cursor:not-allowed; }
+.topbar-settings[aria-disabled="true"]:active { animation:btn-nope 220ms ease-out; }
+
+/* Contenido: ancho máximo de 1200px centrado, padding de 40px */
+.app-main { max-width:1200px; margin-inline:auto; padding:40px; }
+
+/* Pantallas medianas: el nav pasa a solo íconos (los nombres quedan en aria-label) */
+@media (max-width:1079px) {
+  .nav-item { width:44px; padding:0; }
+  .nav-text { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+}
+/* Angostas: marca y acciones arriba, nav en su propia fila con scroll horizontal si no cabe */
+@media (max-width:639px) {
+  :root { --header-h:144px; }
+  .topbar { grid-template-columns:1fr auto; padding:12px 16px; gap:12px; }
+  .topnav { grid-column:1 / -1; grid-row:2; justify-self:center; overflow-x:auto; scrollbar-width:none; }
+  .topnav::-webkit-scrollbar { display:none; }
+  .topbar-name { display:none; }
+  .app-main { padding:24px 16px 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .topnav.is-ready .topnav-indicator { transition:none; }
+  .topbar-settings[aria-disabled="true"]:active { animation:none; }
+}
 
 /* ---------- Objetivo ---------- */
-.objetivo-title { font-size:1.9rem; font-weight:500; line-height:1.2; letter-spacing:-.02em; color:var(--ink); }
+.objetivo-title, .perfil-name, .goal-title { font-size:clamp(2.25rem, 1.5rem + 2.5vw, 3rem); font-weight:600; line-height:1.1; letter-spacing:-.02em; }
 .objetivo-subtitle { margin-top:.7rem; font-size:.9rem; line-height:1.6; color:var(--text-2-page); }
 
 .objetivo-search { display:flex; align-items:center; gap:.9rem; padding:0 1.4rem; height:3.4rem; margin-bottom:2.25rem; border-radius:1.1rem; background:var(--surface);
@@ -282,7 +319,6 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .perfil-photo-edit::before { content:""; position:absolute; inset:-8px; }
 .perfil-identity { flex:1 1 18rem; min-width:0; }
 .perfil-name-row { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .9rem; }
-.perfil-name { font-size:1.75rem; font-weight:400; line-height:1.2; letter-spacing:-.02em; color:var(--ink); }
 .perfil-bio { margin-top:.4rem; font-size:.88rem; line-height:1.55; color:var(--muted); }
 .perfil-links { display:flex; flex-wrap:wrap; gap:.55rem; margin-top:1rem; }
 .perfil-link { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .75rem; border-radius:.6rem; background:var(--surface-2);
@@ -360,8 +396,8 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .perfil-achievement--pink { color:#F07AA8; }
 .perfil-achievement--blue { color:#6FA8F7; }
 .perfil-stats-note { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.3rem; font-size:.7rem; color:var(--stats-muted); }
-.perfil-stats .sample-tag, .mapa-tooltip .sample-tag { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.3); color:#CAC6CE; }
-.perfil-stats .sample-tag::before, .mapa-tooltip .sample-tag::before { background:rgba(255,255,255,.4); }
+.perfil-stats .sample-tag { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.3); color:#CAC6CE; }
+.perfil-stats .sample-tag::before { background:rgba(255,255,255,.4); }
 
 /* Preferencias */
 .perfil-prefs { display:flex; flex-direction:column; gap:.7rem; }
@@ -508,27 +544,50 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 /* ---------- Mi Ruta ---------- */
 .ruta-eyebrow { display:block; width:fit-content; padding:4px 10px; border-radius:9999px; background:var(--chip-eyebrow-bg); color:var(--chip-eyebrow-fg);
   font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; }
-.goal-select { min-height:44px; max-width:100%; text-overflow:ellipsis; appearance:none; background:transparent; border:0; padding:0 1.75rem 0 0; font-size:1.9rem; font-weight:500; letter-spacing:-.02em;
-  color:var(--title-solid); cursor:pointer; }
-/* Opciones del menú: fondo y texto sólidos del tema, legibles en claro y oscuro */
-.goal-select option { background:var(--surface-solid); color:var(--text); -webkit-text-fill-color:var(--text); font-size:1rem; font-weight:500; }
-.goal-select:focus { outline:none; }
-.goal-select:focus-visible { outline:var(--focus-ring); outline-offset:3px; border-radius:.4rem; }
-.goal-select:disabled { cursor:wait; }
-/* Flecha del selector: rosa en hover y foco para anunciar que el título se puede cambiar */
-.goal-select + svg { transition:color var(--dur-fast) ease; }
-.goal-select:hover:not(:disabled) + svg, .goal-select:focus-visible + svg { color:var(--pink-ink); }
-/* TODO Fase 3: la demanda de mercado va sobre una superficie (píldora/panel). Mientras tanto se apoya directo en el
-   fondo de página: texto secundario con --text-2-page y el valor como texto grande (≥14pt bold, mínimo 3:1),
-   porque --mint-ink no llega a 4.5:1 sobre los resplandores. */
-.market-demand { text-align:right; padding-top:.35rem; }
-.market-demand-label { font-size:.85rem; color:var(--text-2-page); }
-.market-demand-value { display:flex; align-items:center; justify-content:flex-end; gap:.45rem; margin-top:.2rem; font-size:1.2rem; font-weight:700; }
+/* Encabezado: objetivo a la izquierda y demanda de mercado a la derecha, alineados abajo como el mockup */
+.ruta-header { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:32px; }
+.ruta-goal { display:flex; flex-direction:column; align-items:flex-start; gap:16px; }
+
+/* Selector de objetivo: el h1 con gradiente + chevron es un botón que abre una lista simple (role=listbox) */
+.goal-picker { position:relative; max-width:100%; }
+.goal-button { display:inline-flex; align-items:center; gap:16px; max-width:100%; min-height:44px; text-align:left; border-radius:.5rem; cursor:pointer; }
+.goal-button:disabled { cursor:wait; }
+.goal-button:focus-visible { outline:var(--focus-ring); outline-offset:4px; }
+.goal-heading { max-width:100%; }
+.goal-title { min-width:0; overflow-wrap:anywhere; }
+.goal-chevron { flex-shrink:0; color:var(--text-2-page); transition:color var(--dur-fast) ease, transform var(--dur) var(--ease-out); }
+.goal-button:hover:not(:disabled) .goal-chevron, .goal-button:focus-visible .goal-chevron { color:var(--title-solid); }
+.goal-button[aria-expanded="true"] .goal-chevron { transform:rotate(180deg); }
+/* Lista: superficie sólida del tema, legible en claro y oscuro */
+.goal-list { position:absolute; top:calc(100% + 8px); left:0; z-index:15; min-width:min(20rem, calc(100vw - 32px)); max-height:min(22rem, 60vh); overflow-y:auto;
+  padding:6px; border-radius:16px; background:var(--surface-solid); border:1px solid var(--card-border); box-shadow:var(--card-shadow); }
+.goal-list[hidden] { display:none; }
+.goal-list:not([hidden]) { animation:fade-in var(--dur-fast) ease-out; }
+.goal-list:focus { outline:none; }
+.goal-option { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:44px; padding:10px 14px; border-radius:10px;
+  font-size:15px; font-weight:500; color:var(--text); cursor:pointer; }
+.goal-option svg { flex-shrink:0; color:var(--pink-ink); visibility:hidden; }
+.goal-option[aria-selected="true"] { font-weight:700; }
+.goal-option[aria-selected="true"] svg { visibility:visible; }
+.goal-option:hover, .goal-option.is-active { background:var(--surface-2); }
+/* Opción activa con teclado: anillo del tema (aria-activedescendant, el foco real queda en la lista) */
+.goal-list:focus-visible .goal-option.is-active { outline:var(--focus-ring); outline-offset:-2px; }
+@media (prefers-reduced-motion: reduce) { .goal-chevron { transition:color var(--dur-fast) ease; } .goal-list:not([hidden]) { animation:none; } }
+
+/* Demanda de mercado sobre una píldora con la superficie de tarjeta: el texto ya no depende de los resplandores */
+.market-demand { display:flex; flex-direction:column; align-items:flex-end; gap:4px; padding:12px 20px; text-align:right; border-radius:20px;
+  background:var(--surface); border:1px solid var(--card-border); box-shadow:var(--card-shadow); backdrop-filter:var(--card-blur); -webkit-backdrop-filter:var(--card-blur); }
+.market-demand-label { font-size:14px; font-weight:500; color:var(--text-2); }
+.market-demand-value { display:flex; align-items:center; justify-content:flex-end; gap:8px; font-size:20px; font-weight:700; }
 .market-demand-value--high { color:var(--mint-ink); }
 .market-demand-value--mid { color:var(--pink-ink); }
 .market-demand-value--low { color:var(--chip-azul-fg); }
-.market-demand-note { max-width:18rem; margin:.5rem 0 0 auto; font-size:.72rem; line-height:1.9; color:var(--text-2-page); }
-.market-demand-note .sample-tag { color:var(--text-2-page); }
+.market-demand-note { max-width:18rem; margin-top:4px; font-size:.72rem; line-height:1.9; color:var(--text-2); }
+/* Angostas: la píldora baja debajo del título y se alinea a la izquierda con él */
+@media (max-width:639px) {
+  .market-demand { align-items:flex-start; text-align:left; }
+  .market-demand-value { justify-content:flex-start; }
+}
 
 .ruta-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:1.75rem; }
 .ruta-col { display:flex; flex-direction:column; gap:1.75rem; min-width:0; }
@@ -652,12 +711,20 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 }
 
 /* ---------- Mapa Visual ---------- */
-/* En esta vista el lienzo llena todo a la derecha del sidebar: sin padding y a alto completo */
-.app-shell.is-mapa > main { padding:0; }
-.mapa-status { padding:2.5rem; } /* carga / error / vacío: sin el padding de main */
+/* Mapa en tarjeta (fondo de puntos sutil) + panel de detalle de 380px a la derecha; debajo del mapa en pantallas angostas */
+.mapa-layout { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:24px; align-items:stretch; }
+@media (max-width:1023px) { .mapa-layout { grid-template-columns:minmax(0,1fr); } }
+.mapa-card, .mapa-panel { border-radius:var(--radius-card); border:1px solid var(--card-border); box-shadow:var(--card-shadow);
+  backdrop-filter:var(--card-blur); -webkit-backdrop-filter:var(--card-blur); }
+.mapa-card { position:relative; overflow:hidden; overflow:clip;
+  background:radial-gradient(circle, var(--map-dot) 1.2px, transparent 1.7px) 0 0 / 24px 24px, var(--surface); }
 /* clip (no hidden): el viewport no es contenedor de scroll, así el foco en un nodo lejano no lo desplaza
    y los controles, la leyenda y el tooltip quedan siempre fijos sobre el lienzo */
-.mapa-viewport { position:relative; overflow:hidden; overflow:clip; height:100vh; height:100dvh; background:transparent; } /* deja ver el fondo del tema */
+.mapa-viewport { position:relative; overflow:hidden; overflow:clip; height:clamp(480px, calc(100vh - var(--header-h) - 80px), 760px);
+  height:clamp(480px, calc(100dvh - var(--header-h) - 80px), 760px); }
+/* Una columna (panel debajo): el mapa gana alto; en móvil se recorre arrastrando y la leyenda se compacta */
+@media (max-width:1023px) { .mapa-viewport { height:clamp(600px, calc(100dvh - var(--header-h) - 80px), 720px); } }
+@media (max-width:639px) { .mapa-viewport { height:520px; } }
 .mapa-stage { position:absolute; top:0; left:0; transform-origin:0 0; }
 .mapa-stage.is-ready { transition:transform .25s ease; }
 /* Arrastre: cursor de mano, sin selección de texto ni scroll táctil, y sin transición para que siga al puntero */
@@ -667,72 +734,106 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .mapa-viewport.is-dragging .mapa-node { cursor:grabbing; }
 .mapa-controls, .mapa-legend { cursor:default; }
 .mapa-links { position:absolute; inset:0; overflow:visible; }
-.mapa-links line { stroke:var(--map-link); stroke-width:1.2; }
-/* Nombre de la categoría junto a su cluster. TODO Fase 3: textos del mapa sobre superficie; mientras tanto van
-   directo sobre el fondo de página con --text-2-page */
-.mapa-cluster-label { position:absolute; white-space:nowrap; pointer-events:none; font-size:11px; font-weight:700; line-height:14px;
-  letter-spacing:.12em; text-transform:uppercase; color:var(--text-2-page); }
+.mapa-link { stroke:var(--map-link); stroke-width:1.2; }
+/* Ruta sugerida: brechas del objetivo activo en el orden de la API (por demanda), punteada */
+.mapa-route { fill:none; stroke:var(--map-route); stroke-width:3; stroke-dasharray:.5 7; stroke-linecap:round; stroke-linejoin:round; }
+/* Nombre de la categoría junto a su cluster, sobre una píldora con la superficie sólida del tema */
+.mapa-cluster-label { position:absolute; white-space:nowrap; pointer-events:none; padding:4px 10px; border-radius:var(--radius-pill);
+  background:var(--surface-solid); border:1px solid var(--card-border); font-size:11px; font-weight:700; line-height:14px;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--text-2); }
 
-.mapa-node { --mapa-node-bg:var(--surface-solid); position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
-  border-radius:9999px; background:var(--mapa-node-bg); text-align:center; cursor:default;
+.mapa-node { --mapa-node-bg:var(--surface-solid); position:absolute; display:flex; align-items:center; justify-content:center; padding:8px;
+  border-radius:9999px; background:var(--mapa-node-bg); text-align:center; cursor:pointer;
   transition:transform .22s var(--ease-out), box-shadow .22s var(--ease-out), border-color .15s ease, opacity .2s ease; }
 /* Hover y foco: el nodo sube y su sombra se alarga en su propio color; queda por encima de sus vecinos */
 .mapa-node:hover, .mapa-node:focus-visible { z-index:1; transform:translateY(-3px) scale(1.04); }
 .mapa-node:focus { outline:none; }
-.mapa-node:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
-/* --mapa-node-bg queda sólido (lo usan los íconos para "recortar" trazos); el fondo visible puede ser gradiente */
-.mapa-node--mastered { --mapa-node-bg:#3FBF93; background:var(--mastered-bg); color:var(--mastered-fg); box-shadow:0 10px 24px rgba(95,217,170,.35); }
-.mapa-node--progress { --mapa-node-bg:#6D28D9; background:var(--progress-bg); color:var(--progress-fg); box-shadow:0 10px 24px rgba(217,95,142,.35); }
-.mapa-node--pending  { --mapa-node-bg:var(--surface-solid); color:var(--text-2); border:2px dashed var(--line-dashed); }
+.mapa-node:focus-visible { outline:var(--focus-ring); outline-offset:8px; }
+/* Estados: menta = dominada, rosa→violeta = en desarrollo, punteado = por aprender. Iguales en ambos temas */
+.mapa-node--mastered { background:var(--mastered-bg); color:var(--mastered-fg); box-shadow:0 10px 24px rgba(95,217,170,.35); }
+.mapa-node--progress { background:var(--progress-bg); color:var(--progress-fg); box-shadow:0 10px 24px rgba(217,95,142,.35); }
+.mapa-node--pending  { color:var(--text-mid); border:2px dashed var(--line-dashed); }
 .mapa-node--mastered:hover, .mapa-node--mastered:focus-visible { box-shadow:0 16px 32px rgba(95,217,170,.45); }
 .mapa-node--progress:hover, .mapa-node--progress:focus-visible { box-shadow:0 16px 32px rgba(217,95,142,.45); }
 .mapa-node--pending:hover, .mapa-node--pending:focus-visible { border-color:var(--text-2); box-shadow:var(--card-shadow); }
+/* Seleccionado: anillo claro alrededor del nodo */
+.mapa-node[aria-pressed="true"]::after { content:""; position:absolute; inset:-6px; border-radius:inherit; border:3px solid var(--node-ring); pointer-events:none; }
+.mapa-node--pending[aria-pressed="true"]::after { inset:-8px; }
 /* Al arrastrar el nodo bajo el cursor no se levanta, para que no tiemble mientras el mapa se mueve */
 .mapa-viewport.is-dragging .mapa-node { transform:none; }
-.mapa-node-icon { width:22px; height:22px; flex-shrink:0; }
-/* Máximo 2 líneas; con 84px de ancho el texto cabe dentro del círculo de 112px */
-.mapa-node-label { max-width:84px; font-size:11px; font-weight:700; line-height:1.2; letter-spacing:-0.01em; text-transform:uppercase;
+/* Máximo 2 líneas dentro del círculo */
+.mapa-node-label { max-width:100%; font-size:12.5px; font-weight:700; line-height:1.2; letter-spacing:-0.01em;
   display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden; overflow-wrap:break-word; hyphens:auto; }
-.mapa-node--pending .mapa-node-label { color:var(--ink-2); }
 
-.mapa-controls { position:absolute; top:24px; left:26px; display:flex; flex-direction:column; align-items:center; gap:16px; }
-.mapa-zoom { display:flex; flex-direction:column; width:46px; background:var(--surface); border:1px solid var(--card-border); border-radius:14px; box-shadow:var(--card-shadow);
-  backdrop-filter:var(--card-blur); -webkit-backdrop-filter:var(--card-blur); overflow:hidden; }
-.mapa-zoom button { height:44px; font-size:18px; font-weight:300; color:var(--text-mid); }
-.mapa-zoom button + button { border-top:1px solid var(--divider); }
-.mapa-controls .mapa-center { width:44px; height:44px; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--surface);
-  border:1px solid var(--card-border); color:var(--text-mid); box-shadow:var(--card-shadow); backdrop-filter:var(--card-blur); -webkit-backdrop-filter:var(--card-blur); }
-.mapa-zoom button, .mapa-controls .mapa-center { transition:background-color .15s ease, color .15s ease, transform .15s var(--ease-out); }
-.mapa-zoom button:hover:not(:disabled), .mapa-center:hover { color:var(--chip-rosa-fg); background:var(--chip-rosa-bg); }
-/* Al presionar: tono más hondo y el botón redondo se hunde; respuesta inmediata al clic */
-.mapa-zoom button:active:not(:disabled), .mapa-center:active { background:var(--pink-line); transition-duration:.06s; }
-.mapa-controls .mapa-center:active { transform:scale(.92); }
-.mapa-zoom button:disabled { color:var(--disabled-fg); cursor:not-allowed; }
-.mapa-controls button:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
-/* + y − viven dentro de un grupo con overflow:hidden: su contorno va por dentro para que no se recorte */
-.mapa-zoom button:focus-visible { outline-offset:-3px; }
+/* Controles de zoom: +, − y centrar en una columna, botones de 44px */
+.mapa-controls { position:absolute; top:24px; left:24px; display:flex; flex-direction:column; background:var(--surface-solid); border:1px solid var(--card-border);
+  border-radius:16px; box-shadow:var(--card-shadow); overflow:hidden; }
+.mapa-controls button { display:flex; align-items:center; justify-content:center; width:44px; height:44px; color:var(--text-mid);
+  transition:background-color .15s ease, color .15s ease; }
+.mapa-controls button + button { border-top:1px solid var(--divider); }
+.mapa-controls button:hover:not(:disabled) { color:var(--chip-rosa-fg); background:var(--chip-rosa-bg); }
+.mapa-controls button:active:not(:disabled) { background:var(--pink-line); transition-duration:.06s; }
+.mapa-controls button:disabled { color:var(--disabled-fg); cursor:not-allowed; }
+/* Los botones viven dentro de un grupo con overflow:hidden: su contorno va por dentro para que no se recorte */
+.mapa-controls button:focus-visible { outline:var(--focus-ring); outline-offset:-3px; }
 
-.mapa-legend { position:absolute; left:26px; bottom:26px; display:flex; gap:24px; padding:18px 22px; background:var(--surface); border:1px solid var(--card-border); border-radius:9999px;
-  box-shadow:var(--card-shadow); backdrop-filter:var(--card-blur); -webkit-backdrop-filter:var(--card-blur); font-size:12px; font-weight:600; color:var(--ink-2); }
-/* Resaltado desde la leyenda: al pasar sobre un estado, los nodos de los otros estados se atenúan. El padding con
+.mapa-legend { position:absolute; left:24px; bottom:24px; max-width:calc(100% - 48px); display:flex; flex-wrap:wrap; gap:8px 24px;
+  padding:12px 20px; background:var(--surface-solid); border:1px solid var(--card-border); border-radius:20px; box-shadow:var(--card-shadow);
+  font-size:13px; font-weight:500; color:var(--text-mid); }
+/* Resaltado desde la leyenda: al pasar sobre un ítem, los nodos que no le corresponden se atenúan. El padding con
    margen negativo le da al ítem un fondo en hover sin mover la leyenda. */
-.mapa-legend span { display:flex; align-items:center; gap:8px; padding:6px 10px; margin:-6px -10px; border-radius:9999px;
+@media (max-width:639px) { .mapa-legend { left:12px; bottom:12px; max-width:calc(100% - 24px); gap:6px 16px; padding:8px 14px; font-size:12px; } }
+.mapa-legend span { display:flex; align-items:center; gap:8px; padding:4px 8px; margin:-4px -8px; border-radius:9999px; white-space:nowrap;
   transition:background-color .15s ease; }
-.mapa-legend span:hover { background:var(--chip-rosa-bg); }
+.mapa-legend span:hover { background:var(--surface-2); }
 .mapa-links, .mapa-cluster-label { transition:opacity .2s ease; }
 .mapa-viewport:has(.mapa-legend span:hover > .mapa-dot--mastered) .mapa-node:not(.mapa-node--mastered),
 .mapa-viewport:has(.mapa-legend span:hover > .mapa-dot--progress) .mapa-node:not(.mapa-node--progress),
-.mapa-viewport:has(.mapa-legend span:hover > .mapa-dot--pending) .mapa-node:not(.mapa-node--pending) { opacity:.22; }
-.mapa-viewport:has(.mapa-legend span:hover) :is(.mapa-links, .mapa-cluster-label) { opacity:.35; }
-.mapa-dot { width:10px; height:10px; border-radius:9999px; display:inline-block; }
+.mapa-viewport:has(.mapa-legend span:hover > .mapa-dot--pending) .mapa-node:not(.mapa-node--pending),
+.mapa-viewport:has(.mapa-legend span:hover > .mapa-key-route) .mapa-node:not(.is-route) { opacity:.22; }
+.mapa-viewport:has(.mapa-legend span:hover) .mapa-cluster-label,
+.mapa-viewport:has(.mapa-legend span:hover > .mapa-dot) .mapa-links { opacity:.35; }
+.mapa-dot { width:12px; height:12px; border-radius:9999px; display:inline-block; }
 .mapa-dot--mastered { background:var(--mastered-bg); }
 .mapa-dot--progress { background:var(--progress-bg); }
 .mapa-dot--pending { border:1.5px dashed var(--line-dashed); }
+.mapa-key-route { display:inline-block; width:20px; border-top:3px dotted var(--map-route); }
 
 .mapa-tooltip { position:absolute; z-index:10; pointer-events:none; white-space:nowrap; padding:6px 10px; border-radius:8px;
   background:var(--tooltip-bg); color:var(--tooltip-fg); font-size:12px; box-shadow:0 6px 16px rgba(16,16,20,.18); }
 .mapa-tooltip[hidden] { display:none; }
-.mapa-tooltip-note { display:flex; align-items:center; gap:.5rem; margin-top:6px; font-size:11px; color:var(--tooltip-muted); }
+
+/* Panel de detalle de la habilidad seleccionada */
+.mapa-panel { display:flex; flex-direction:column; padding:32px; background:var(--surface); min-width:0; }
+.mapa-panel-chips { display:flex; flex-wrap:wrap; gap:8px; }
+.mapa-chip { display:inline-flex; align-items:center; height:28px; padding:0 12px; border-radius:var(--radius-pill); font-size:12px; font-weight:700; white-space:nowrap; }
+.mapa-chip--category { background:var(--chip-azul-bg); color:var(--chip-azul-fg); letter-spacing:.06em; text-transform:uppercase; }
+.mapa-chip--mastered { background:var(--mint-soft); color:var(--mint-ink); }
+.mapa-chip--progress { background:var(--chip-rosa-bg); color:var(--chip-rosa-fg); }
+.mapa-chip--pending { border:1.5px dashed var(--line-dashed); color:var(--text-2); }
+.mapa-panel-name { margin-top:24px; font-size:2.25rem; font-weight:600; line-height:1.15; letter-spacing:-.02em; overflow-wrap:anywhere;
+  background:var(--title-grad); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; }
+.mapa-panel-demand { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; margin-top:20px; }
+.mapa-panel-pct { font-size:4rem; font-weight:300; line-height:1; letter-spacing:-.03em; color:var(--text); font-variant-numeric:tabular-nums; }
+.mapa-panel-pct-label { font-size:1.25rem; color:var(--text-2); }
+.mapa-panel-text { margin-top:20px; font-size:15px; line-height:1.65; color:var(--text-2); text-wrap:pretty; }
+.mapa-panel-actions { display:flex; flex-direction:column; gap:12px; margin-top:28px; }
+.mapa-panel-actions .btn-pill { width:100%; white-space:normal; text-align:center; }
+.btn-pill.btn-pill--outline { background:transparent; color:var(--text); border:1.5px solid var(--tag-border); box-shadow:none; }
+/* Fase 6 y marcado de skills: visibles pero deshabilitados. Sin elevación; al presionar, un "no" lateral corto */
+.mapa-panel-actions .btn-pill[aria-disabled="true"] { cursor:not-allowed; }
+.mapa-panel-actions .btn-pill[aria-disabled="true"]:hover { transform:none; }
+.mapa-panel-actions .btn-pill:not(.btn-pill--outline)[aria-disabled="true"]:hover { box-shadow:0 12px 24px var(--action-shadow-color); }
+.mapa-panel-actions .btn-pill[aria-disabled="true"]:active { animation:btn-nope 220ms ease-out; }
+.mapa-panel-note { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:28px; padding-top:20px; border-top:1px solid var(--divider);
+  font-size:13px; line-height:1.5; color:var(--text-2); }
+/* Sin selección */
+.mapa-panel-empty { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:12px; flex:1; }
+.mapa-panel-empty-icon { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:14px;
+  background:var(--chip-rosa-bg); color:var(--chip-rosa-fg); }
+.mapa-panel-empty-title { font-size:1.05rem; font-weight:700; color:var(--text); }
+.mapa-panel-empty-text { font-size:14px; line-height:1.6; color:var(--text-2); }
+.mapa-panel > * { animation:fade-in 200ms ease-out backwards; }
 
 /* Mapa: entrada. Se repite cada vez que la vista vuelve a mostrarse (sale de display:none). Usa las propiedades
    scale/translate sueltas para no chocar con el transform del hover de los nodos ni con el zoom del stage.
@@ -740,18 +841,20 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
    Cada línea (pathLength=1) se traza de un nodo al otro cuando su segundo nodo ya va a medio aparecer; nace en
    rosa (su gris casi no contrasta con el fondo) y se asienta en su color de siempre. */
 @keyframes mapa-node-in { from { opacity:0; scale:.7; } }
-@keyframes mapa-line-draw { from { stroke-dashoffset:1; stroke:#E89AB9; } 50% { stroke-dashoffset:0; } }
+@keyframes mapa-line-draw { from { stroke-dashoffset:1; stroke:var(--pink); } 50% { stroke-dashoffset:0; } }
 @keyframes mapa-slide-x { from { opacity:0; translate:-10px 0; } }
 @keyframes mapa-slide-y { from { opacity:0; translate:0 10px; } }
 .mapa-node { animation:mapa-node-in 380ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 24) * 14ms + 60ms); }
-.mapa-links line { stroke-dasharray:1; animation:mapa-line-draw 800ms ease-out backwards;
+.mapa-link { stroke-dasharray:1; animation:mapa-line-draw 800ms ease-out backwards;
   animation-delay:calc(min(var(--i, 0), 24) * 14ms + 160ms); }
+.mapa-route { animation:fade-in 400ms ease-out 500ms backwards; }
 .mapa-cluster-label { animation:fade-in 300ms ease-out 260ms backwards; }
 .mapa-controls { animation:mapa-slide-x 320ms var(--ease-out) 120ms backwards; }
 .mapa-legend { animation:mapa-slide-y 320ms var(--ease-out) 160ms backwards; }
-/* Menos movimiento: sin entrada, sin elevación ni hundimiento. Quedan los cambios de sombra y color y el
+/* Menos movimiento: sin entrada, sin elevación ni "no" lateral. Quedan los cambios de sombra y color y el
    resaltado de la leyenda, que no desplazan nada. */
 @media (prefers-reduced-motion: reduce) {
-  .mapa-node, .mapa-links line, .mapa-cluster-label, .mapa-controls, .mapa-legend { animation:none; }
-  .mapa-node:hover, .mapa-node:focus-visible, .mapa-controls .mapa-center:active { transform:none; }
+  .mapa-node, .mapa-link, .mapa-route, .mapa-cluster-label, .mapa-controls, .mapa-legend, .mapa-panel > * { animation:none; }
+  .mapa-node:hover, .mapa-node:focus-visible { transform:none; }
+  .mapa-panel-actions .btn-pill[aria-disabled="true"]:active { animation:none; }
 }

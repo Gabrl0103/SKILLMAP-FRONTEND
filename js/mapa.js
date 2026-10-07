@@ -1,18 +1,23 @@
-// Vista "Mapa Visual": todas las habilidades del sistema como grafo de nodos agrupados por categoría.
-// Usa API_BASE_URL, renderApiError, STATUS_LABEL, demandIsSample, sampleTag, SAMPLE_DEMAND_TEXT, jobStatsText y fetchJobStats definidos en dashboard.js.
+// Vista "Mapa Visual": todas las habilidades del sistema como grafo de nodos agrupados por categoría, con la ruta
+// sugerida del objetivo activo y un panel de detalle de la habilidad seleccionada.
+// Usa API_BASE_URL, renderApiError, STATUS_LABEL, demandIsSample, sampleTag, SAMPLE_DEMAND_TEXT, jobStatsText,
+// fetchJobStats, fetchGoals, fetchReadiness y getActiveGoalId (dashboard.js) y currentActiveGoalId (objetivo.js).
+// También define la navegación entre vistas (showView) y el indicador del nav de la barra superior.
 
-const NODE_SIZE = 112;      // diámetro de cada nodo (px)
-const NODE_GAP = 36;        // separación mínima entre nodos vecinos de un mismo cluster
-const CLUSTER_GAP = 40;     // separación mínima entre los bordes de dos clusters
+const NODE_SIZE = 96;       // diámetro de cada nodo (px)
+const NODE_GAP = 20;        // separación mínima entre nodos vecinos de un mismo cluster
+const CLUSTER_GAP = 28;     // separación mínima entre los bordes de dos clusters
 const STAGE_PADDING = 8;    // margen alrededor del grafo dentro del stage (sombras y hover)
 const LABEL_OFFSET = 10;    // distancia entre el borde del cluster y su etiqueta de categoría
-const LABEL_CHAR_W = 8.5, LABEL_HEIGHT = 14; // tamaño estimado de la etiqueta (11px, mayúsculas, tracking .12em)
+// Tamaño estimado de la etiqueta: píldora de 11px en mayúsculas con tracking .12em, padding 10px y borde de 1px
+const LABEL_CHAR_W = 8.5, LABEL_PAD_X = 22, LABEL_HEIGHT = 24;
 const ZOOM_STEP = 0.1, ZOOM_MIN = 0.5, ZOOM_MAX = 2;
 const FIT_MARGIN = 24;      // margen entre el grafo ajustado y los bordes / controles
-const FIT_MIN = 0.75, FIT_MAX = 1.25; // límites del zoom automático para que los nombres sigan legibles
+const FIT_MIN = 0.6, FIT_MAX = 1.25;  // límites del zoom automático para que los nombres sigan legibles
 const WHEEL_SPEED = 0.0015; // sensibilidad de la rueda (factor exponencial por px de delta)
 
-// Íconos inline (viewBox 24x24, trazo con currentColor). Sin librerías externas.
+// Íconos inline (viewBox 24x24, trazo con currentColor). Sin librerías externas. Los usa Perfil; los nodos del mapa
+// muestran solo el nombre, como el mockup.
 const ICONS = {
   js: `<rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" stroke="none"/><text x="18.5" y="18.5" text-anchor="end" font-size="8.5" font-weight="800" fill="var(--mapa-node-bg)" stroke="none" font-family="inherit">JS</text>`,
   atom: `<circle cx="12" cy="12" r="1.6" fill="currentColor"/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>`,
@@ -154,7 +159,7 @@ function clusterLabel(cluster) {
 
 // Caja estimada de una etiqueta, para incluirla en el tamaño del stage y en el ajuste automático.
 function labelBox(label) {
-  const w = label.category.length * LABEL_CHAR_W;
+  const w = label.category.length * LABEL_CHAR_W + LABEL_PAD_X;
   const left = label.x + (w * label.alignX) / 100, top = label.y + (LABEL_HEIGHT * label.alignY) / 100;
   return { left, top, right: left + w, bottom: top + LABEL_HEIGHT };
 }
@@ -209,19 +214,17 @@ function layoutGraph(skills) {
 const STATUS_CLASS = { MASTERED: "mastered", IN_PROGRESS: "progress", PENDING: "pending" };
 
 // Solo el primer nodo entra en el orden de tabulación; las flechas mueven el foco entre nodos (tabindex móvil).
+// Clic o Enter/Espacio seleccionan el nodo y llenan el panel de detalle.
 function renderNode({ skill, category, x, y }, index) {
   const status = STATUS_CLASS[skill.status] || "pending";
   const tooltip = `${skill.name} — ${skill.demandPercentage}% de demanda`;
-  const isSample = demandIsSample([skill]);
   const label = `${skill.name}, ${category}, ${STATUS_LABEL[skill.status] || STATUS_LABEL.PENDING}, `
-    + `${skill.demandPercentage}% de demanda${isSample ? " (de ejemplo)" : ""}`;
+    + `${skill.demandPercentage}% de demanda${demandIsSample([skill]) ? " (de ejemplo)" : ""}`;
   return `
-    <div class="mapa-node mapa-node--${status}" tabindex="${index === 0 ? 0 : -1}" role="img"
+    <div class="mapa-node mapa-node--${status}" tabindex="${index === 0 ? 0 : -1}" role="button" aria-pressed="false"
       style="left:${x - NODE_SIZE / 2}px; top:${y - NODE_SIZE / 2}px; width:${NODE_SIZE}px; height:${NODE_SIZE}px; --i:${index};"
-      data-tooltip="${escapeHtml(tooltip)}"${isSample ? " data-sample" : ""} aria-label="${escapeHtml(label)}">
-      <svg class="mapa-node-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[pickIcon(skill.name, category)]}</svg>
-      <span class="mapa-node-label" lang="es">${escapeHtml(skill.name)}</span>
+      data-skill-id="${skill.id}" data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(label)}">
+      <span class="mapa-node-label" lang="es" aria-hidden="true">${escapeHtml(skill.name)}</span>
     </div>`;
 }
 
@@ -231,45 +234,172 @@ function renderClusterLabel({ category, x, y, alignX, alignY }) {
 
 function renderMapa(skills) {
   if (skills.length === 0) {
-    return `<p class="mapa-status text-sm text-muted-page">Aún no hay habilidades para mostrar en el mapa.</p>`;
+    return `<p class="text-sm text-muted-page">Aún no hay habilidades para mostrar en el mapa.</p>`;
   }
   const { nodes, links, labels, width, height } = layoutGraph(skills);
   // pathLength y --i solo sirven a la animación de entrada: cada línea se traza cuando ya apareció su segundo nodo.
   const lines = links
-    .map(([a, b]) => `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" pathLength="1"
+    .map(([a, b]) => `<line class="mapa-link" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" pathLength="1"
       style="--i:${Math.max(nodes.indexOf(a), nodes.indexOf(b))};"/>`)
     .join("");
 
   // Líneas y nodos comparten el mismo stage: el zoom (transform) se aplica solo a él y ambos escalan juntos.
+  // La ruta sugerida (polyline) la llena updateMapaRoute cuando llega el objetivo activo.
   return `
-    <div class="mapa-viewport" id="mapa-viewport">
-      <div class="mapa-stage" id="mapa-stage" style="width:${width}px; height:${height}px;"
-        role="group" aria-label="Mapa de habilidades. Usa las flechas para recorrerlas.">
-        <svg class="mapa-links" width="${width}" height="${height}" aria-hidden="true">${lines}</svg>
-        ${labels.map(renderClusterLabel).join("")}
-        ${nodes.map(renderNode).join("")}
-      </div>
+    <div class="mapa-layout">
+      <div class="mapa-card">
+        <div class="mapa-viewport" id="mapa-viewport">
+          <div class="mapa-stage" id="mapa-stage" style="width:${width}px; height:${height}px;"
+            role="group" aria-label="Mapa de habilidades. Usa las flechas para recorrerlas y Enter para ver su detalle.">
+            <svg class="mapa-links" width="${width}" height="${height}" aria-hidden="true">${lines}<polyline class="mapa-route" id="mapa-route" points=""/></svg>
+            ${labels.map(renderClusterLabel).join("")}
+            ${nodes.map(renderNode).join("")}
+          </div>
 
-      <div class="mapa-controls">
-        <div class="mapa-zoom">
-          <button type="button" data-zoom="in" aria-label="Acercar">+</button>
-          <button type="button" data-zoom="out" aria-label="Alejar">−</button>
+          <div class="mapa-controls" role="group" aria-label="Zoom del mapa">
+            <button type="button" data-zoom="in" aria-label="Acercar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <button type="button" data-zoom="out" aria-label="Alejar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+            </button>
+            <button type="button" data-zoom="center" aria-label="Centrar mapa">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="mapa-legend">
+            <span><i class="mapa-dot mapa-dot--mastered"></i>Dominada</span>
+            <span><i class="mapa-dot mapa-dot--progress"></i>En desarrollo</span>
+            <span><i class="mapa-dot mapa-dot--pending"></i>Por aprender</span>
+            <span id="mapa-legend-route" hidden><i class="mapa-key-route"></i>Ruta sugerida</span>
+          </div>
+
+          <div class="mapa-tooltip" id="mapa-tooltip" aria-hidden="true" hidden></div>
         </div>
-        <button type="button" class="mapa-center" data-zoom="center" aria-label="Centrar mapa">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-            <circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
-          </svg>
-        </button>
       </div>
 
-      <div class="mapa-legend">
-        <span><i class="mapa-dot mapa-dot--mastered"></i>Dominada</span>
-        <span><i class="mapa-dot mapa-dot--progress"></i>En Desarrollo</span>
-        <span><i class="mapa-dot mapa-dot--pending"></i>Por Aprender</span>
-      </div>
-
-      <div class="mapa-tooltip" id="mapa-tooltip" aria-hidden="true" hidden></div>
+      <aside class="mapa-panel" id="mapa-panel" aria-label="Detalle de la habilidad">${renderMapaPanelEmpty()}</aside>
+      <p class="sr-only" id="mapa-live" aria-live="polite"></p>
     </div>`;
+}
+
+// ---------- Panel de detalle ----------
+
+let mapaSkills = [];          // /api/skills tal como llegó (el panel busca aquí la habilidad seleccionada)
+let mapaSelectedId = null;    // id de la habilidad seleccionada (sobrevive a cambios de objetivo)
+let mapaJobStats = null;      // /api/jobs/stats para la nota "Ruta calculada con N ofertas reales"
+// Objetivo activo: brechas en orden de demanda (ruta sugerida) y todas sus habilidades
+let mapaRoute = { goalId: null, goalTitle: "", gapIds: [], goalSkillIds: new Set() };
+
+function renderMapaPanelEmpty() {
+  return `
+    <div class="mapa-panel-empty">
+      <span class="mapa-panel-empty-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="8" r="2.5"/><circle cx="10" cy="18" r="2.5"/><path d="M8.2 7l7.6.6M7.4 8.2l1.8 7.4M16.6 10.2l-5 6.2"/></svg>
+      </span>
+      <h2 class="mapa-panel-empty-title">Selecciona una habilidad</h2>
+      <p class="mapa-panel-empty-text">Haz clic en un nodo del mapa (o recórrelos con las flechas y pulsa Enter) para ver su demanda y su lugar en tu ruta.</p>
+    </div>`;
+}
+
+// Texto corto armado solo con datos de la API: lugar en la ruta del objetivo activo o, si no está en él, su estado.
+function mapaSkillText(skill) {
+  const { goalTitle, gapIds, goalSkillIds } = mapaRoute;
+  const goal = escapeHtml(goalTitle);
+  const gap = gapIds.indexOf(skill.id);
+  if (gap === 0) return `Es tu siguiente giro hacia ${goal}: la brecha con más demanda de tu ruta.`;
+  if (gap > 0) return `Es la brecha ${gap + 1} de ${gapIds.length} en tu ruta hacia ${goal}, ordenada por demanda.`;
+  if (goalSkillIds.has(skill.id)) {
+    return skill.status === "MASTERED" ? `Ya la dominas y suma a tu preparación para ${goal}.` : `Forma parte de tu objetivo ${goal}.`;
+  }
+  const byStatus = { MASTERED: "Ya la dominas.", IN_PROGRESS: "La estás desarrollando.", PENDING: "Aún no la has empezado." };
+  const text = byStatus[skill.status] || byStatus.PENDING;
+  return goalTitle ? `${text} No forma parte de tu objetivo ${goal}.` : text;
+}
+
+function renderMapaPanel(skill) {
+  const status = STATUS_CLASS[skill.status] || "pending";
+  const statsText = jobStatsText(mapaJobStats, "Ruta calculada con");
+  const note = demandIsSample([skill]) ? `<p class="mapa-panel-note">${sampleTag} ${SAMPLE_DEMAND_TEXT}</p>`
+    : statsText ? `<p class="mapa-panel-note">${statsText}</p>` : "";
+  return `
+    <div class="mapa-panel-chips">
+      ${skill.category ? `<span class="mapa-chip mapa-chip--category">${escapeHtml(skill.category)}</span>` : ""}
+      <span class="mapa-chip mapa-chip--${status}">${STATUS_LABEL[skill.status] || STATUS_LABEL.PENDING}</span>
+    </div>
+    <h2 class="mapa-panel-name">${escapeHtml(skill.name)}</h2>
+    <p class="mapa-panel-demand"><span class="mapa-panel-pct">${skill.demandPercentage}</span><span class="mapa-panel-pct-label">% de las ofertas</span></p>
+    <p class="mapa-panel-text">${mapaSkillText(skill)}</p>
+    <div class="mapa-panel-actions">
+      <!-- Próximamente: contexto y preguntas frecuentes (Fase 6) y marcado de skills -->
+      <button type="button" class="btn-pill" aria-disabled="true" title="Próximamente">Ver contexto y preguntas frecuentes</button>
+      <button type="button" class="btn-pill btn-pill--outline" aria-disabled="true" title="Próximamente">Marcar como dominada</button>
+    </div>
+    ${note}`;
+}
+
+function refreshMapaPanel() {
+  const panel = document.getElementById("mapa-panel");
+  if (!panel) return;
+  const skill = mapaSkills.find(s => s.id === mapaSelectedId);
+  panel.innerHTML = skill ? renderMapaPanel(skill) : renderMapaPanelEmpty();
+}
+
+function selectMapaNode(node) {
+  const id = Number(node.dataset.skillId);
+  document.querySelectorAll("#mapa-stage .mapa-node").forEach(n => n.setAttribute("aria-pressed", String(n === node)));
+  if (id === mapaSelectedId) return;
+  mapaSelectedId = id;
+  refreshMapaPanel();
+  const skill = mapaSkills.find(s => s.id === id);
+  if (skill) document.getElementById("mapa-live").textContent = `${skill.name} seleccionada. Detalle en el panel.`;
+}
+
+// ---------- Ruta sugerida ----------
+
+// Brechas del objetivo activo (readiness, ya ordenadas por demanda) y sus habilidades. Sin objetivo: ruta vacía.
+async function fetchMapaRoute() {
+  const goals = await fetchGoals();
+  const goalId = currentActiveGoalId(goals);
+  if (!goalId) return { goalId: null, goalTitle: "", gapIds: [], goalSkillIds: new Set() };
+  const readiness = await fetchReadiness(goalId);
+  const goal = goals.find(g => String(g.id) === goalId);
+  return {
+    goalId,
+    goalTitle: readiness.goalTitle,
+    gapIds: readiness.gaps.map(s => s.id),
+    goalSkillIds: new Set((goal?.skills || []).map(s => s.skillId)),
+  };
+}
+
+// Traza la polyline punteada por los centros de las brechas en orden y marca sus nodos (resaltado de la leyenda).
+function drawMapaRoute() {
+  const route = document.getElementById("mapa-route");
+  if (!route) return;
+  const half = NODE_SIZE / 2;
+  const byId = new Map([...document.querySelectorAll("#mapa-stage .mapa-node")].map(n => [Number(n.dataset.skillId), n]));
+  byId.forEach((node, id) => node.classList.toggle("is-route", mapaRoute.gapIds.includes(id)));
+  const points = mapaRoute.gapIds.map(id => byId.get(id)).filter(Boolean)
+    .map(n => `${n.offsetLeft + half},${n.offsetTop + half}`);
+  route.setAttribute("points", points.length > 1 ? points.join(" ") : "");
+  document.getElementById("mapa-legend-route").hidden = points.length < 2;
+}
+
+// Al abrir la vista: si el objetivo activo cambió desde la última vez, se recalcula la ruta y el texto del panel.
+async function updateMapaRoute() {
+  if (!document.getElementById("mapa-route")) return;
+  try {
+    const goals = await fetchGoals();
+    if (mapaRoute.goalId && currentActiveGoalId(goals) === mapaRoute.goalId) return;
+    mapaRoute = await fetchMapaRoute();
+  } catch {
+    mapaRoute = { goalId: null, goalTitle: "", gapIds: [], goalSkillIds: new Set() }; // la ruta es complementaria
+  }
+  drawMapaRoute();
+  refreshMapaPanel();
 }
 
 const PAN_MARGIN = 80; // px del grafo que siempre quedan visibles al arrastrar
@@ -280,18 +410,16 @@ let mapaNeedsFit = true;      // el ajuste automático se calcula en cuanto el v
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-// Área libre del viewport, simétrica para que el grafo quede centrado en el lienzo:
-// la columna de controles se descuenta a ambos lados y la franja de la leyenda arriba y abajo.
+// Área libre del viewport: todo el lienzo menos un margen, y abajo la franja de la leyenda. Los controles ocupan
+// solo la esquina superior izquierda, donde el layout en anillo casi nunca pone nodos, así que no se descuentan.
 function mapaSafeArea(viewport) {
-  const controls = viewport.querySelector(".mapa-controls");
   const legend = viewport.querySelector(".mapa-legend");
-  const insetX = controls.offsetLeft + controls.offsetWidth + FIT_MARGIN;
-  const insetY = viewport.clientHeight - legend.offsetTop + FIT_MARGIN;
+  const bottom = viewport.clientHeight - legend.offsetTop + FIT_MARGIN / 2;
   return {
-    left: insetX,
-    top: insetY,
-    width: Math.max(0, viewport.clientWidth - 2 * insetX),
-    height: Math.max(0, viewport.clientHeight - 2 * insetY),
+    left: FIT_MARGIN,
+    top: FIT_MARGIN,
+    width: Math.max(0, viewport.clientWidth - 2 * FIT_MARGIN),
+    height: Math.max(0, viewport.clientHeight - FIT_MARGIN - bottom),
   };
 }
 
@@ -387,17 +515,11 @@ function panMapaToNode(node) {
   applyMapaTransform();
 }
 
-let mapaJobStats = null; // /api/jobs/stats para la nota "Basado en N ofertas reales" del tooltip
-
-// Contenido del tooltip: nombre y demanda, más la nota de demanda de ejemplo si es sembrada o, si es real,
-// de cuántas ofertas sale.
+// Contenido del tooltip: nombre y demanda (el detalle completo vive en el panel).
 function fillMapaTooltip(tooltip, node) {
   if (tooltip.dataset.node === node.dataset.tooltip) return;
   tooltip.dataset.node = node.dataset.tooltip;
-  const statsText = jobStatsText(mapaJobStats);
-  const note = "sample" in node.dataset ? `<p class="mapa-tooltip-note">${sampleTag} ${SAMPLE_DEMAND_TEXT}</p>`
-    : statsText ? `<p class="mapa-tooltip-note">${statsText}</p>` : "";
-  tooltip.innerHTML = `${escapeHtml(node.dataset.tooltip)}${note}`;
+  tooltip.textContent = node.dataset.tooltip;
 }
 
 // Ubica el tooltip dentro del viewport: preferencia (x, y) y, si no cabe antes de maxBottom, del otro lado
@@ -423,6 +545,7 @@ function showMapaTooltipForNode(viewport, tooltip, node) {
 }
 
 // Flechas / Inicio / Fin: mueven el foco entre nodos. Solo el nodo activo queda en el orden de tabulación.
+// Enter / Espacio: seleccionan el nodo enfocado.
 function bindMapaKeys(viewport, tooltip) {
   const stage = document.getElementById("mapa-stage");
   const nodes = [...stage.querySelectorAll(".mapa-node")];
@@ -430,6 +553,11 @@ function bindMapaKeys(viewport, tooltip) {
   stage.addEventListener("keydown", e => {
     const i = nodes.indexOf(e.target);
     if (i === -1) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      selectMapaNode(e.target);
+      return;
+    }
     const next = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: nodes.length - 1 }[e.key];
     if (next === undefined) return;
     e.preventDefault();
@@ -464,31 +592,40 @@ function bindMapaWheel(viewport, tooltip) {
   }, { passive: false });
 }
 
+const CLICK_SLOP = 4; // px que puede moverse el puntero para que soltar sobre un nodo cuente como clic y no arrastre
+
 // Arrastre con el mouse (pointer events: también funciona con touch). Sigue a un solo puntero:
 // un segundo dedo o puntero a mitad del gesto se ignora en vez de hacer saltar el mapa.
+// Si el gesto empezó sobre un nodo y casi no se movió, es un clic: selecciona ese nodo.
 function bindMapaDrag(viewport, tooltip) {
   let drag = null;
 
   viewport.addEventListener("pointerdown", e => {
     if (drag || e.button !== 0 || e.target.closest(".mapa-controls, .mapa-legend")) return;
-    drag = { id: e.pointerId, startX: e.clientX, startY: e.clientY, panX: mapaPan.x, panY: mapaPan.y };
+    drag = { id: e.pointerId, startX: e.clientX, startY: e.clientY, panX: mapaPan.x, panY: mapaPan.y,
+      node: e.target.closest(".mapa-node"), moved: false };
     viewport.setPointerCapture(e.pointerId);
-    viewport.classList.add("is-dragging");
     tooltip.hidden = true;
   });
 
   viewport.addEventListener("pointermove", e => {
     if (!drag || e.pointerId !== drag.id) return;
-    mapaPan = { x: drag.panX + e.clientX - drag.startX, y: drag.panY + e.clientY - drag.startY };
+    const dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) < CLICK_SLOP) return;
+    drag.moved = true;
+    viewport.classList.add("is-dragging");
+    mapaPan = { x: drag.panX + dx, y: drag.panY + dy };
     applyMapaTransform();
   });
 
   // Fin del gesto: soltar, cancelación del navegador, captura perdida o la ventana pierde el foco.
   const endDrag = e => {
     if (!drag || (e.pointerId !== undefined && e.pointerId !== drag.id)) return;
+    const { node, moved } = drag;
     if (viewport.hasPointerCapture(drag.id)) viewport.releasePointerCapture(drag.id);
     drag = null;
     viewport.classList.remove("is-dragging");
+    if (e.type === "pointerup" && node && !moved) selectMapaNode(node);
   };
   viewport.addEventListener("pointerup", endDrag);
   viewport.addEventListener("pointercancel", endDrag);
@@ -524,6 +661,9 @@ function bindMapaEvents() {
     placeMapaTooltip(viewport, tooltip, x + 14, y + 14, x - 14, y - 14);
   });
   viewport.addEventListener("mouseleave", () => { tooltip.hidden = true; });
+
+  // El viewport cambia de tamaño con la ventana y cuando el panel pasa debajo del mapa: se vuelve a centrar.
+  if ("ResizeObserver" in window) new ResizeObserver(() => applyMapaTransform()).observe(viewport);
 }
 
 window.addEventListener("resize", applyMapaTransform);
@@ -533,12 +673,13 @@ let mapaRequest = null; // se reutiliza para no volver a pedir /api/skills en ca
 function loadMapa() {
   if (mapaRequest) return mapaRequest;
   const container = document.getElementById("mapa-content");
-  container.innerHTML = `<p class="mapa-status text-sm text-muted-page">Cargando tu mapa de habilidades…</p>`;
+  container.innerHTML = `<p class="text-sm text-muted-page">Cargando tu mapa de habilidades…</p>`;
 
   mapaRequest = (async () => {
     try {
-      // Las estadísticas solo alimentan la nota del tooltip: si fallan, el mapa se muestra igual.
+      // Las estadísticas solo alimentan la nota del panel: si fallan, el mapa se muestra igual.
       const [skills, jobStats] = await Promise.all([fetchSkills(), fetchJobStats().catch(() => null)]);
+      mapaSkills = skills;
       mapaJobStats = jobStats;
       container.innerHTML = renderMapa(skills);
       mapaNeedsFit = true;
@@ -546,10 +687,29 @@ function loadMapa() {
       applyMapaTransform();
     } catch (err) {
       mapaRequest = null; // si falla, se reintenta la próxima vez que se abra la vista
-      container.innerHTML = `<div class="mapa-status">${renderApiError(err)}</div>`;
+      container.innerHTML = renderApiError(err);
     }
   })();
   return mapaRequest;
+}
+
+// ---------- Navegación ----------
+
+// Indicador del nav: píldora con el gradiente de acción que se desliza (transform + width) hasta el ítem activo.
+// El primer posicionado no se anima; con prefers-reduced-motion el CSS quita la transición y salta directo.
+function positionNavIndicator() {
+  const nav = document.querySelector(".topnav");
+  const active = nav?.querySelector(".nav-item.active");
+  if (!active) return;
+  const indicator = nav.querySelector(".topnav-indicator");
+  indicator.style.width = `${active.offsetWidth}px`;
+  indicator.style.transform = `translateX(${active.offsetLeft}px)`;
+  if (!nav.classList.contains("is-ready")) {
+    void indicator.offsetWidth; // fija la posición inicial antes de activar la transición
+    nav.classList.add("is-ready");
+  }
+  // Nav con scroll horizontal (pantallas angostas): el ítem activo siempre a la vista
+  if (nav.scrollWidth > nav.clientWidth) active.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 // Navegación sin router: muestra la sección elegida, oculta las demás y marca el item activo.
@@ -563,10 +723,9 @@ function showView(view) {
     if (isActive) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
   });
-  // El mapa ocupa todo el ancho a la derecha del sidebar: solo en esta vista se quita el ancho máximo y el padding.
-  document.querySelector(".app-shell").classList.toggle("is-mapa", view === "mapa");
-  // Si la carga terminó mientras la vista estaba oculta, se centra al volver a mostrarla.
-  if (view === "mapa") loadMapa().then(applyMapaTransform);
+  positionNavIndicator();
+  // Si la carga terminó mientras la vista estaba oculta, se centra al volver a mostrarla; la ruta sigue al objetivo activo.
+  if (view === "mapa") loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); });
   if (view === "objetivo") openObjetivo(); // definido en objetivo.js
   if (view === "perfil") openPerfil();     // definido en perfil.js
 }
@@ -574,3 +733,13 @@ function showView(view) {
 document.querySelectorAll(".nav-item[data-view]").forEach(item => {
   item.addEventListener("click", () => showView(item.dataset.view));
 });
+
+// Indicador: al cargar, cuando llega la fuente (cambia el ancho de los ítems) y cuando el nav cambia de tamaño
+// (redimensionar, paso a solo íconos).
+positionNavIndicator();
+document.fonts?.ready.then(positionNavIndicator);
+window.addEventListener("resize", positionNavIndicator);
+if ("ResizeObserver" in window) {
+  const nav = document.querySelector(".topnav");
+  if (nav) new ResizeObserver(positionNavIndicator).observe(nav);
+}

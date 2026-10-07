@@ -17,126 +17,137 @@
 </head>
 <body class="min-h-screen">
 
-<div class="app-shell">
-
-  <!-- SIDEBAR (fijo a la izquierda en todas las vistas; ver .sidebar en styles.css) -->
-  <aside class="sidebar px-5 py-6 flex flex-col justify-between">
-    <div>
-      <div class="sidebar-brand flex items-center gap-3 px-1 mb-10">
-        <div class="logo-mark" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 3.4 3.8 10.2c-.8.3-.7 1.4.1 1.6l6.6 1.7 1.7 6.6c.2.8 1.3.9 1.6.1l6.8-16.8z"/></svg>
-        </div>
-        <span class="sidebar-text text-base font-medium text-ink tracking-tight">SKILLMAP</span>
-      </div>
-      <nav class="flex flex-col gap-2">
-        <button type="button" class="nav-item" data-view="objetivo">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>
-          <span class="sidebar-text">Objetivo</span>
-        </button>
-        <button type="button" class="nav-item active" data-view="dashboard" aria-current="page">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/></svg>
-          <span class="sidebar-text">Mi Ruta</span>
-        </button>
-        <button type="button" class="nav-item" data-view="mapa">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H16a3.5 3.5 0 0 0 0-7H8a3.5 3.5 0 0 1 0-7h7.5"/></svg>
-          <span class="sidebar-text">Mapa Visual</span>
-        </button>
-        <button type="button" class="nav-item" data-view="analizador">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/><path d="M8 12v-1.5M10.5 12V8.5M13 12v-2.5"/></svg>
-          <span class="sidebar-text">Analizador</span>
-        </button>
-        <button type="button" class="nav-item" data-view="perfil">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="7.5" r="4"/><path d="M4 20.5c.8-4.2 4-6.5 8-6.5s7.2 2.3 8 6.5z"/></svg>
-          <span class="sidebar-text">Perfil</span>
-        </button>
-      </nav>
+<!-- BARRA SUPERIOR (sticky en todas las vistas; ver .topbar en styles.css) -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="logo-mark" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
     </div>
-    <p class="sidebar-text text-[10px] text-muted px-2">v0.1</p>
-  </aside>
+    <span class="topbar-name">SKILLMAP</span>
+  </div>
 
-  <!-- MAIN -->
-  <main class="app-main min-w-0 px-8 py-8 md:py-10">
-    <section id="view-objetivo" class="hidden">
-      <header class="mb-9">
-        <h1 class="objetivo-title">¿Cuál es tu próximo gran salto?</h1>
-        <p class="objetivo-subtitle">Define tu objetivo profesional para que el GPS pueda trazar la ruta más eficiente hacia tu meta.</p>
-      </header>
-      <label class="objetivo-search">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <span class="sr-only">Buscar objetivo</span>
-        <input id="objetivo-search" type="search" autocomplete="off" placeholder="Busca un rol profesional (ej. Senior Frontend Engineer, UX Designer...)">
+  <!-- El indicador se desliza hasta el ítem activo (positionNavIndicator en mapa.js) -->
+  <nav class="topnav" aria-label="Navegación principal">
+    <span class="topnav-indicator" aria-hidden="true"></span>
+    <button type="button" class="nav-item" data-view="objetivo" aria-label="Objetivo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>
+      <span class="nav-text">Objetivo</span>
+    </button>
+    <button type="button" class="nav-item active" data-view="dashboard" aria-label="Mi Ruta" aria-current="page">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+      <span class="nav-text">Mi Ruta</span>
+    </button>
+    <button type="button" class="nav-item" data-view="mapa" aria-label="Mapa Visual">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="8" r="2.5"/><circle cx="10" cy="18" r="2.5"/><path d="M8.2 7l7.6.6M7.4 8.2l1.8 7.4M16.6 10.2l-5 6.2"/></svg>
+      <span class="nav-text">Mapa Visual</span>
+    </button>
+    <button type="button" class="nav-item" data-view="analizador" aria-label="Analizador">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg>
+      <span class="nav-text">Analizador</span>
+    </button>
+    <button type="button" class="nav-item" data-view="perfil" aria-label="Perfil">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+      <span class="nav-text">Perfil</span>
+    </button>
+  </nav>
+
+  <div class="topbar-actions">
+    <!-- Tema: setTheme (js/theme.js) -->
+    <div class="theme-switch" role="group" aria-label="Tema">
+      <button type="button" data-theme-option="light" aria-label="Modo claro" aria-pressed="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+      <button type="button" data-theme-option="dark" aria-label="Modo oscuro" aria-pressed="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+    <!-- Ajustes llega en Fase 4: visible pero deshabilitado -->
+    <button type="button" class="topbar-settings" aria-label="Ajustes" aria-disabled="true" title="Próximamente">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- MAIN: ancho máximo de 1200px, centrado -->
+<main class="app-main">
+  <section id="view-objetivo" class="hidden">
+    <header class="mb-9">
+      <h1 class="objetivo-title">¿Cuál es tu próximo gran salto?</h1>
+      <p class="objetivo-subtitle">Define tu objetivo profesional para que el GPS pueda trazar la ruta más eficiente hacia tu meta.</p>
+    </header>
+    <label class="objetivo-search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span class="sr-only">Buscar objetivo</span>
+      <input id="objetivo-search" type="search" autocomplete="off" placeholder="Busca un rol profesional (ej. Senior Frontend Engineer, UX Designer...)">
+    </label>
+    <!-- Lo llena js/objetivo.js la primera vez que se abre la vista -->
+    <div id="objetivo-content"></div>
+  </section>
+
+  <section id="view-dashboard">
+    <header class="ruta-header">
+      <div class="ruta-goal min-w-0 max-w-full">
+        <span id="goal-eyebrow" class="ruta-eyebrow">Objetivo actual</span>
+        <!-- Selector de objetivo: el título es un botón que abre la lista (js/dashboard.js). Un <select> no admite texto
+             con gradiente; esta lista usa los mismos objetivos de la API -->
+        <div class="goal-picker">
+          <h1 class="goal-heading"><button type="button" id="goal-button" class="goal-button" aria-haspopup="listbox" aria-expanded="false"
+            aria-controls="goal-list" aria-labelledby="goal-eyebrow goal-title" disabled>
+            <span id="goal-title" class="goal-title">Cargando…</span>
+            <svg class="goal-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button></h1>
+          <ul id="goal-list" class="goal-list" role="listbox" aria-labelledby="goal-eyebrow" tabindex="-1" hidden></ul>
+        </div>
+      </div>
+      <!-- Lo llena js/dashboard.js con la demanda promedio de las brechas del objetivo -->
+      <div id="market-demand" class="market-demand" hidden></div>
+    </header>
+
+    <!-- Lo llena js/dashboard.js: primero el skeleton de carga, después la ruta -->
+    <div id="app-content"></div>
+  </section>
+
+  <section id="view-analizador" class="hidden">
+    <header class="mb-8">
+      <h1 class="objetivo-title">Analizador de Vacantes</h1>
+      <p class="objetivo-subtitle">Pega la descripción de una oferta laboral para analizar tu compatibilidad y detectar nuevas brechas.</p>
+    </header>
+    <form id="analizador-form" class="analizador-card analizador-input">
+      <label for="analizador-text" class="analizador-label">
+        <span class="analizador-label-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="6" width="12" height="15" rx="2.5" opacity=".55"/><rect x="8" y="3" width="13" height="16" rx="2.5"/></svg>
+        </span>
+        Descripción de la vacante
       </label>
-      <!-- Lo llena js/objetivo.js la primera vez que se abre la vista -->
-      <div id="objetivo-content"></div>
-    </section>
+      <textarea id="analizador-text" class="analizador-textarea" rows="7" maxlength="8000" aria-describedby="analizador-count" placeholder="Pega aquí el texto completo de la oferta de trabajo..."></textarea>
+      <div class="analizador-actions">
+        <!-- Contador de caracteres (js/analizador.js); el span oculto solo avisa al llegar al límite -->
+        <p id="analizador-count" class="analizador-count">0 / 8.000</p>
+        <span id="analizador-count-live" class="sr-only" aria-live="polite"></span>
+        <p id="analizador-warning" class="analizador-warning" role="alert" hidden>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></svg>
+          Pega el texto de una oferta para analizarla.
+        </p>
+        <button type="submit" id="analizador-submit" class="btn-pill">
+          <span data-label>Analizar Compatibilidad</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 11-11M13 7l4 4"/><path d="M18 3v3M16.5 4.5h3M20 10v2M19 11h2M11 2.5v1.5M10.25 3.25h1.5"/></svg>
+        </button>
+      </div>
+    </form>
+    <!-- Lo llena js/analizador.js: estado vacío al cargar, luego skeleton, resultado o error de cada análisis -->
+    <div id="analizador-result" aria-live="polite"></div>
+  </section>
 
-    <section id="view-dashboard">
-      <header class="flex flex-wrap items-start justify-between gap-4 mb-8">
-        <div class="min-w-0 max-w-full">
-          <label for="goal-selector" class="ruta-eyebrow">Objetivo actual</label>
-          <div class="relative inline-flex items-center mt-2 max-w-full">
-            <select id="goal-selector" disabled class="goal-select">
-              <option>Cargando…</option>
-            </select>
-            <svg class="pointer-events-none absolute right-0 text-mid" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-          </div>
-        </div>
-        <!-- Lo llena js/dashboard.js con la demanda promedio de las brechas del objetivo -->
-        <div id="market-demand" class="market-demand" hidden></div>
-      </header>
+  <section id="view-perfil" class="hidden">
+    <!-- Lo llena js/perfil.js la primera vez que se abre la vista -->
+    <div id="perfil-content"></div>
+  </section>
 
-      <!-- Lo llena js/dashboard.js: primero el skeleton de carga, después la ruta -->
-      <div id="app-content"></div>
-    </section>
-
-    <section id="view-analizador" class="hidden">
-      <header class="mb-8">
-        <h1 class="objetivo-title">Analizador de Vacantes</h1>
-        <p class="objetivo-subtitle">Pega la descripción de una oferta laboral para analizar tu compatibilidad y detectar nuevas brechas.</p>
-      </header>
-      <form id="analizador-form" class="analizador-card analizador-input">
-        <label for="analizador-text" class="analizador-label">
-          <span class="analizador-label-icon" aria-hidden="true">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="6" width="12" height="15" rx="2.5" opacity=".55"/><rect x="8" y="3" width="13" height="16" rx="2.5"/></svg>
-          </span>
-          Descripción de la vacante
-        </label>
-        <textarea id="analizador-text" class="analizador-textarea" rows="7" maxlength="8000" aria-describedby="analizador-count" placeholder="Pega aquí el texto completo de la oferta de trabajo..."></textarea>
-        <div class="analizador-actions">
-          <!-- Contador de caracteres (js/analizador.js); el span oculto solo avisa al llegar al límite -->
-          <p id="analizador-count" class="analizador-count">0 / 8.000</p>
-          <span id="analizador-count-live" class="sr-only" aria-live="polite"></span>
-          <p id="analizador-warning" class="analizador-warning" role="alert" hidden>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></svg>
-            Pega el texto de una oferta para analizarla.
-          </p>
-          <button type="submit" id="analizador-submit" class="btn-pill">
-            <span data-label>Analizar Compatibilidad</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 11-11M13 7l4 4"/><path d="M18 3v3M16.5 4.5h3M20 10v2M19 11h2M11 2.5v1.5M10.25 3.25h1.5"/></svg>
-          </button>
-        </div>
-      </form>
-      <!-- Lo llena js/analizador.js: estado vacío al cargar, luego skeleton, resultado o error de cada análisis -->
-      <div id="analizador-result" aria-live="polite"></div>
-    </section>
-
-    <section id="view-perfil" class="hidden">
-      <!-- Lo llena js/perfil.js la primera vez que se abre la vista -->
-      <div id="perfil-content"></div>
-    </section>
-
-    <section id="view-mapa" class="hidden">
-      <!-- Lo llena js/mapa.js la primera vez que se abre la vista -->
-      <div id="mapa-content"></div>
-    </section>
-  </main>
-</div>
-
-<!-- TEMPORAL (Fase 4 lo quita cuando el tema pase al backend): alterna claro/oscuro para probar ambos temas -->
-<button type="button" id="theme-toggle" class="theme-toggle" aria-label="Modo oscuro" aria-pressed="false">
-  <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-  <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-</button>
+  <section id="view-mapa" class="hidden">
+    <!-- Lo llena js/mapa.js la primera vez que se abre la vista -->
+    <div id="mapa-content"></div>
+  </section>
+</main>
 
 <script src="js/theme.js"></script>
 <script src="js/skill-card.js"></script>

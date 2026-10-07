@@ -27,19 +27,19 @@ Cuando el backend exponga estos campos, basta con reemplazar esas dos funciones.
 
 ### Otras vistas
 
-- **Mapa Visual**: vista accesible desde el sidebar con **todas** las habilidades del sistema (`GET /api/skills`), dibujadas como un grafo de nodos circulares sobre fondo rosa pálido. Cada categoría es un cluster ubicado en círculo alrededor del centro y sus habilidades se reparten en círculo alrededor del cluster (layout automático, sin coordenadas fijas), unidas por líneas grises. Color por estado: menta = dominada, rosa = en desarrollo, blanco punteado = por aprender. Incluye zoom +/− (0.5x–2x), arrastre con el mouse para mover el mapa, botón para centrar, leyenda y tooltip con la demanda de cada habilidad. Se carga la primera vez que se abre y no depende del objetivo seleccionado en el GoalSelector.
+- **Mapa Visual**: vista accesible desde la barra superior con **todas** las habilidades del sistema (`GET /api/skills`), dibujadas como un grafo de nodos circulares sobre fondo rosa pálido. Cada categoría es un cluster ubicado en círculo alrededor del centro y sus habilidades se reparten en círculo alrededor del cluster (layout automático, sin coordenadas fijas), unidas por líneas grises. Color por estado: menta = dominada, rosa = en desarrollo, blanco punteado = por aprender. Incluye zoom +/− (0.5x–2x), arrastre con el mouse para mover el mapa, botón para centrar, leyenda y tooltip con la demanda de cada habilidad. Se carga la primera vez que se abre y no depende del objetivo seleccionado en el GoalSelector.
 
 ### Navegación
 
-Sin framework de routing: cada vista es una `<section id="view-*">` en `index.html` y el sidebar muestra/oculta la sección elegida (clase `hidden`) y mueve el estado activo del item (píldora rosa sólida). Vistas actuales: `view-dashboard` (Mi Ruta) y `view-mapa` (Mapa Visual). Objetivo, Analizador y Perfil aparecen deshabilitados ("Próximamente").
+Sin framework de routing: cada vista es una `<section id="view-*">` en `index.html` y la barra superior muestra/oculta la sección elegida (clase `hidden`) y desliza el indicador del nav hasta el ítem activo. Vistas actuales: `view-dashboard` (Mi Ruta) y `view-mapa` (Mapa Visual). Objetivo, Analizador y Perfil aparecen deshabilitados ("Próximamente").
 
 ## Estructura
 
 ```
 SKILLMAP-FRONTEND/
-├── index.html          # Estructura HTML (sidebar + una <section> por vista)
+├── index.html          # Estructura HTML (barra superior + una <section> por vista)
 ├── css/
-│   └── styles.css      # Paleta, sidebar, tarjetas de Mi Ruta, gráfico y Mapa Visual
+│   └── styles.css      # Tokens, barra superior, tarjetas de Mi Ruta, gráfico y Mapa Visual
 ├── docs/mockups/       # Mockups de referencia de cada vista
 └── js/
     ├── skill-card.js   # Web Component <skill-card> (hoy sin uso en las vistas)
