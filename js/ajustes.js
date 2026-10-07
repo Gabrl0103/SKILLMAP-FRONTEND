@@ -1,5 +1,5 @@
-// Vista "Ajustes". Usa fetchSettings, loadSettings, setTheme, setReduceMotion, saveSettings, apiError, getTheme,
-// getReduceMotion y settingsState (theme.js); API_BASE_URL, fetchJobStats y las cachés de datos (dashboard.js);
+// Vista "Ajustes". Usa loadSettings, setTheme, setReduceMotion, apiError, getTheme, getReduceMotion y settingsState
+// (theme.js); API_BASE_URL, fetchJobStats y las cachés de datos (dashboard.js);
 // escapeHtml (mapa.js).
 
 const GEMINI_KEY_URL = "https://aistudio.google.com/app/apikey";
@@ -24,15 +24,12 @@ function setStatus(id, text, tone = "") {
 
 // ---------- Apariencia ----------
 
-// Radios e interruptores reflejan el estado actual (también cuando el tema cambia desde la barra superior)
+// Radios e interruptor reflejan el estado actual (también cuando el tema cambia desde la barra superior)
 function syncApariencia() {
   const theme = getTheme();
   document.querySelectorAll("input[name='ajustes-theme']").forEach(radio => { radio.checked = radio.value === theme; });
   const motion = document.querySelector(".ajustes-switch[data-setting='reduceMotion']");
   motion.setAttribute("aria-checked", String(getReduceMotion()));
-  const intro = document.querySelector(".ajustes-switch[data-setting='showIntro']");
-  intro.disabled = !settingsState; // sin backend no hay dónde guardarla
-  if (settingsState) intro.setAttribute("aria-checked", String(settingsState.showIntro));
 }
 
 function bindApariencia() {
@@ -48,20 +45,6 @@ function bindApariencia() {
     setReduceMotion(!getReduceMotion())
       .then(() => setStatus("ajustes-apariencia-status", ""))
       .catch(() => setStatus("ajustes-apariencia-status", "No se pudo guardar el ajuste: se mantiene solo hasta cerrar SkillMap.", "warning"));
-  });
-
-  // La introducción solo se guarda (la pantalla llega en otra fase): si el backend falla, el interruptor vuelve atrás
-  const intro = document.querySelector(".ajustes-switch[data-setting='showIntro']");
-  intro.addEventListener("click", async () => {
-    const next = intro.getAttribute("aria-checked") !== "true";
-    intro.setAttribute("aria-checked", String(next));
-    try {
-      await saveSettings({ showIntro: next });
-      setStatus("ajustes-apariencia-status", "");
-    } catch (err) {
-      intro.setAttribute("aria-checked", String(!next));
-      setStatus("ajustes-apariencia-status", `No se pudo guardar: ${friendlyError(err)}`, "error");
-    }
   });
 }
 

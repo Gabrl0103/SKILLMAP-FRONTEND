@@ -1,5 +1,5 @@
-// Preferencias de la app: tema (data-theme en <html>, claro por defecto), "Reducir animaciones" (data-motion="reduced")
-// e introducción al iniciar. El backend (/api/settings) es la fuente de verdad; localStorage solo guarda una copia del
+// Preferencias de la app: tema (data-theme en <html>, claro por defecto) y "Reducir animaciones" (data-motion="reduced");
+// showIntro lo lee js/intro.js. El backend (/api/settings) es la fuente de verdad; localStorage solo guarda una copia del
 // tema y de las animaciones para que el script del <head> los aplique antes del primer pintado (sin parpadeo).
 // Si el backend no responde, los cambios se aplican igual en esta sesión y quedan en la copia local.
 // Usa API_BASE_URL (dashboard.js): las peticiones salen después de DOMContentLoaded.

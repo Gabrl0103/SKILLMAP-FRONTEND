@@ -12,12 +12,90 @@
     if (savedTheme === "light" || savedTheme === "dark") document.documentElement.setAttribute("data-theme", savedTheme);
     if (localStorage.getItem("skillmap-motion") === "reduced") document.documentElement.setAttribute("data-motion", "reduced");
   } catch (e) {}
+  // Introducción (js/intro.js): con ?intro=1 se abre ya; si no, la app queda oculta hasta saber si toca mostrarla
+  document.documentElement.setAttribute("data-intro", /[?&]intro=1(&|$)/.test(location.search) ? "open" : "checking");
 </script>
 <script src="vendor/tailwind.js"></script> <!-- Tailwind Play CDN 3.4.17, copia local -->
 <script src="js/tailwind.config.js"></script> <!-- tokens semánticos -> variables CSS -->
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="min-h-screen">
+
+<!-- INTRODUCCIÓN: a pantalla completa sobre la app; js/intro.js decide si se muestra (showIntro de /api/settings).
+     Fase usuarios: pasar a marcador por usuario (se muestra a quien no tenga sesión/cuenta) -->
+<div id="intro" class="intro" role="dialog" aria-modal="true" aria-labelledby="intro-title" aria-describedby="intro-subtitle">
+  <canvas class="intro-bg" aria-hidden="true"></canvas>
+  <header class="intro-top">
+    <div class="topbar-brand">
+      <div class="logo-mark" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+      </div>
+      <span class="topbar-name">SKILLMAP</span>
+    </div>
+    <button type="button" class="intro-skip" data-intro-close aria-keyshortcuts="Escape">Omitir <kbd class="intro-kbd" aria-hidden="true">Esc</kbd></button>
+  </header>
+
+  <div class="intro-hero">
+    <div class="intro-copy">
+      <span class="ruta-eyebrow intro-eyebrow">Bienvenido</span>
+      <h1 id="intro-title" class="intro-title">Tu GPS de carrera</h1>
+      <p id="intro-subtitle" class="intro-subtitle">Mapea lo que sabes, mira qué piden las ofertas reales y traza la ruta hacia tu próximo rol.</p>
+      <button type="button" id="intro-start" class="btn-pill intro-start" data-intro-close>
+        Empezar
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+      <!-- Solo datos reales (js/intro.js): un chip sin dato o en 0 queda oculto -->
+      <ul class="intro-chips" aria-label="SkillMap en cifras">
+        <li data-intro-chip="jobs" hidden><strong></strong> <span></span></li>
+        <li data-intro-chip="skills" hidden><strong></strong> <span></span></li>
+        <li data-intro-chip="goals" hidden><strong></strong> <span></span></li>
+      </ul>
+    </div>
+
+    <!-- Ilustración decorativa (sin datos del usuario). data-slide cambia lo que resalta: 1 estados, 2 porcentajes,
+         3 barrido de análisis -->
+    <div class="intro-art" data-slide="1" aria-hidden="true">
+      <div class="intro-graph">
+        <svg class="intro-links" viewBox="0 0 460 350" width="460" height="350">
+          <path d="M337 53L413 32M337 53L92 162M337 53L372 192M92 162L32 312M92 162L202 302M202 302L372 192"/>
+          <path class="intro-route" d="M120 190Q237 310 350 205"/>
+          <circle class="intro-route-dot" cx="236" cy="254" r="6"/>
+        </svg>
+        <span class="intro-node intro-node--mastered" style="--x:337px;--y:53px;--size:92px" data-pct="78%">React</span>
+        <span class="intro-node intro-node--mastered" style="--x:413px;--y:32px;--size:60px" data-pct="41%">SQL</span>
+        <span class="intro-node intro-node--progress" style="--x:92px;--y:162px;--size:84px" data-pct="88%">TypeScript</span>
+        <span class="intro-node intro-node--pending" style="--x:372px;--y:192px;--size:78px" data-pct="71%">Next.js</span>
+        <span class="intro-node intro-node--pending" style="--x:32px;--y:312px;--size:60px" data-pct="69%">Testing</span>
+        <span class="intro-node intro-node--mastered" style="--x:202px;--y:302px;--size:72px" data-pct="54%">Docker</span>
+        <span class="intro-scan"></span>
+      </div>
+      <ul class="intro-legend">
+        <li><i class="intro-legend-dot intro-legend-dot--mastered"></i>Dominada</li>
+        <li><i class="intro-legend-dot intro-legend-dot--progress"></i>En desarrollo</li>
+        <li><i class="intro-legend-dot intro-legend-dot--pending"></i>Por aprender</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Slides: avanzan cada 4 s (barra CSS); hover o foco pausan; clic o Enter fija una -->
+  <div class="intro-slides" role="group" aria-label="Qué puedes hacer en SkillMap">
+    <button type="button" class="intro-slide" data-slide="1" aria-pressed="true">
+      <span class="intro-slide-title">1 · Mapa de habilidades</span>
+      <span class="intro-slide-text">Mira lo que sabes y lo que te falta, en un solo mapa.</span>
+      <span class="intro-slide-bar" aria-hidden="true"><span></span></span>
+    </button>
+    <button type="button" class="intro-slide" data-slide="2" aria-pressed="false">
+      <span class="intro-slide-title">2 · Demanda real</span>
+      <span class="intro-slide-text">Qué piden las ofertas de empleo, no lo que se supone.</span>
+      <span class="intro-slide-bar" aria-hidden="true"><span></span></span>
+    </button>
+    <button type="button" class="intro-slide" data-slide="3" aria-pressed="false">
+      <span class="intro-slide-title">3 · Análisis con IA</span>
+      <span class="intro-slide-text">Pega una oferta y descubre qué tan compatible eres.</span>
+      <span class="intro-slide-bar" aria-hidden="true"><span></span></span>
+    </button>
+  </div>
+</div>
 
 <!-- BARRA SUPERIOR (sticky en todas las vistas; ver .topbar en styles.css) -->
 <header class="topbar">
@@ -158,7 +236,7 @@
     </header>
 
     <div class="ajustes-grid">
-      <!-- Apariencia: tema, introducción y animaciones (js/theme.js guarda en el backend) -->
+      <!-- Apariencia: tema y animaciones (js/theme.js guarda en el backend) -->
       <section class="ruta-card ajustes-card" aria-labelledby="ajustes-apariencia-title">
         <h2 id="ajustes-apariencia-title" class="ajustes-card-title">Apariencia</h2>
         <fieldset class="ajustes-themes">
@@ -174,14 +252,6 @@
             <span class="ajustes-theme-name">Oscuro</span>
           </label>
         </fieldset>
-        <div class="ajustes-toggle">
-          <div>
-            <p id="ajustes-intro-label" class="ajustes-toggle-title">Mostrar la introducción al iniciar</p>
-            <p id="ajustes-intro-desc" class="ajustes-toggle-desc">Aparece una vez y puedes volver a verla cuando quieras.</p>
-          </div>
-          <button type="button" class="ajustes-switch" role="switch" aria-checked="false" data-setting="showIntro"
-            aria-labelledby="ajustes-intro-label" aria-describedby="ajustes-intro-desc" disabled></button>
-        </div>
         <div class="ajustes-toggle">
           <div>
             <p id="ajustes-motion-label" class="ajustes-toggle-title">Reducir animaciones</p>
@@ -230,5 +300,6 @@
 <script src="js/perfil.js"></script>
 <script src="js/analizador.js"></script>
 <script src="js/ajustes.js"></script>
+<script src="js/intro.js"></script>
 </body>
 </html>
