@@ -1,23 +1,24 @@
 // Vista "Objetivo". Usa fetchGoals, setActiveGoal y renderApiError (dashboard.js) y escapeHtml/showView (mapa.js).
 
 // Ícono y color de cada tarjeta según palabras clave del título (sin acentos, en minúsculas).
-// Gana el primer tema que coincide; sin coincidencia se usa GENERIC_THEME.
+// Gana el primer tema que coincide; sin coincidencia se usa GENERIC_THEME. El fondo del ícono lo deriva styles.css
+// del color (color-mix), así funciona en claro y oscuro.
 const ICON_STROKE = `fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
 const GOAL_THEMES = [
-  { match: /front|react|angular|vue|\bweb\b/, color: "#D95F8E", bg: "#FCE8EF",
+  { match: /front|react|angular|vue|\bweb\b/, color: "#D95F8E",
     icon: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 6l-3 12"/></svg>` },
-  { match: /data|datos|analis|analyst|machine|\bml\b|\bia\b|\bai\b/, color: "#3B82F6", bg: "#EAF2FE",
+  { match: /data|datos|analis|analyst|machine|\bml\b|\bia\b|\bai\b/, color: "#3B82F6",
     icon: `<svg viewBox="0 0 24 24" fill="currentColor"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 8.4v3.1c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V8.4c-1.5 1.2-4.3 1.9-7.5 1.9s-6-.7-7.5-1.9zm0 6v3.6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-3.6c-1.5 1.2-4.3 1.9-7.5 1.9s-6-.7-7.5-1.9z"/></svg>` },
-  { match: /disen|design|\bux\b|\bui\b/, color: "#A855F7", bg: "#F4EAFE",
+  { match: /disen|design|\bux\b|\bui\b/, color: "#A855F7",
     icon: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="m12 19 7-7 3 3-7 7z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18z"/><path d="m2 2 7.6 7.6"/><circle cx="11" cy="11" r="2"/></svg>` },
-  { match: /cloud|nube|devops|aws|azure|infra/, color: "#F97316", bg: "#FEF0E6",
+  { match: /cloud|nube|devops|aws|azure|infra/, color: "#F97316",
     icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 19H7a5 5 0 1 1 .9-9.9A6 6 0 0 1 19.3 11a4 4 0 0 1-1.8 8z"/></svg>` },
-  { match: /mobile|movil|android|\bios\b|flutter/, color: "#14B8A6", bg: "#E3F7F4",
+  { match: /mobile|movil|android|\bios\b|flutter/, color: "#14B8A6",
     icon: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg>` },
-  { match: /back|java|\bapi\b|server|servidor/, color: "#22A06B", bg: "#E6F6EE",
+  { match: /back|java|\bapi\b|server|servidor/, color: "#22A06B",
     icon: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="3.5" y="4" width="17" height="7" rx="2"/><rect x="3.5" y="13" width="17" height="7" rx="2"/><path d="M7.5 7.5h.01M7.5 16.5h.01"/></svg>` },
 ];
-const GENERIC_THEME = { color: "#8A8792", bg: "#F2EEF1",
+const GENERIC_THEME = { color: "#8A8792",
   icon: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>` };
 
 function normalizeText(text) {
@@ -36,7 +37,7 @@ function renderGoalCard(goal, index) {
   const count = goal.skills.length;
   return `
     <button type="button" class="objetivo-card" role="radio" aria-checked="false" tabindex="-1" data-goal-id="${goal.id}"
-      data-title="${escapeHtml(normalizeText(goal.title))}" style="--goal-color:${theme.color}; --goal-bg:${theme.bg}; --i:${index};">
+      data-title="${escapeHtml(normalizeText(goal.title))}" style="--goal-color:${theme.color}; --i:${index};">
       <span class="objetivo-card-icon" aria-hidden="true">${theme.icon}</span>
       <svg class="objetivo-card-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m7.5 12.3 3 3 6-6.3" pathLength="1" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span class="objetivo-card-title">${escapeHtml(goal.title)}</span>
@@ -122,7 +123,7 @@ function currentActiveGoalId(goals) {
 async function openObjetivo() {
   const container = document.getElementById("objetivo-content");
   if (!objetivoState.goals) {
-    container.innerHTML = `<p class="text-sm text-gray-400">Cargando objetivos…</p>`;
+    container.innerHTML = `<p class="text-sm text-muted-page">Cargando objetivos…</p>`;
     try {
       objetivoState.goals = await fetchGoals();
     } catch (err) {

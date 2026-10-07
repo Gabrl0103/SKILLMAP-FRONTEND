@@ -102,8 +102,9 @@ function renderGauge(r) {
       <h2 class="ruta-card-title">Nivel de Preparación</h2>
       <div class="gauge-ring ruta-gauge-ring">
         <svg viewBox="0 0 160 160" role="img" aria-label="${r.readinessPercentage}% de preparación">
+          <defs><linearGradient id="gauge-grad-ruta" x1="0" y1="0" x2="1" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs>
           <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-track"/>
-          <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-fill"
+          <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-fill" stroke="url(#gauge-grad-ruta)"
             transform="rotate(-90 80 80)" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
         </svg>
         <p class="gauge-value" aria-hidden="true" style="--pct:${Math.round(r.readinessPercentage)};"><span>${r.readinessPercentage}%</span></p>
@@ -142,7 +143,7 @@ function renderBrechas(gaps, reference, jobStats) {
     : statsText ? `<p class="ruta-sample-note">${statsText}</p>` : "";
   const body = gaps.length
     ? `<ul class="gap-list">${rows}</ul>${note}`
-    : `<p class="text-sm text-gray-400">No tienes brechas pendientes: ya dominas todas las habilidades de este objetivo.</p>`;
+    : `<p class="text-sm text-muted">No tienes brechas pendientes: ya dominas todas las habilidades de este objetivo.</p>`;
 
   return `
     <article id="brechas-card" class="ruta-card ruta-brechas" tabindex="-1">
@@ -288,10 +289,10 @@ function renderRutaSkeleton() {
 
 function renderApiError(err) {
   return `
-    <div class="card p-6 md:col-span-2 border border-dashed" style="border-color:#D95F8E;">
-      <p class="text-sm font-medium text-gray-700">No pudimos cargar tus datos</p>
-      <p class="text-xs text-gray-400 mt-1">El servidor de SkillMap no responde. Recarga la página en unos minutos para intentarlo de nuevo.</p>
-      <p class="text-xs text-gray-300 mt-2">Detalle técnico: servidor en <code>${API_BASE_URL || location.origin}</code>
+    <div class="card p-6 md:col-span-2 border border-dashed border-pink">
+      <p class="text-sm font-medium text-ink">No pudimos cargar tus datos</p>
+      <p class="text-xs text-muted mt-1">El servidor de SkillMap no responde. Recarga la página en unos minutos para intentarlo de nuevo.</p>
+      <p class="text-xs text-muted mt-2">Detalle técnico: servidor en <code>${API_BASE_URL || location.origin}</code>
       (<code>./mvnw spring-boot:run</code> desde skillmap-api) · ${err.message}</p>
     </div>`;
 }
@@ -440,7 +441,7 @@ async function init() {
     const goals = await loadGoals();
     if (goals.length === 0) {
       selector.innerHTML = `<option>Sin objetivos</option>`;
-      container.innerHTML = `<p class="text-sm text-gray-400">Aún no hay objetivos profesionales disponibles.</p>`;
+      container.innerHTML = `<p class="text-sm text-muted-page">Aún no hay objetivos profesionales disponibles.</p>`;
       return;
     }
     await loadDashboard(selector.value);

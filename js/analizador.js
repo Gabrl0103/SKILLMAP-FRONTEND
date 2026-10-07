@@ -51,8 +51,9 @@ function renderMatch(pct, detected) {
       <h2 class="analizador-card-title">Match con el perfil</h2>
       <div class="gauge-ring analizador-ring">
         <svg viewBox="0 0 160 160" role="img" aria-label="${pct}% de compatibilidad">
+          <defs><linearGradient id="gauge-grad-analizador" x1="0" y1="0" x2="1" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs>
           <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-track"/>
-          <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-fill"
+          <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-fill" stroke="url(#gauge-grad-analizador)"
             transform="rotate(-90 80 80)" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
         </svg>
         <p class="gauge-value" aria-hidden="true" style="--pct:${pct};"><span>${pct}%</span></p>
@@ -146,13 +147,13 @@ function renderAnalyzerSkeleton() {
 function renderAnalyzerError(err) {
   const offline = err.message === "No se pudo conectar con el servidor.";
   const hint = offline
-    ? `<p class="text-xs text-gray-300 mt-2">Detalle técnico: servidor en <code>${API_BASE_URL || location.origin}</code> (<code>./mvnw spring-boot:run</code> desde skillmap-api)</p>`
+    ? `<p class="text-xs text-muted mt-2">Detalle técnico: servidor en <code>${API_BASE_URL || location.origin}</code> (<code>./mvnw spring-boot:run</code> desde skillmap-api)</p>`
     : "";
   return `
     <div class="card analizador-error" role="alert">
       <div class="min-w-0">
-        <p class="text-sm font-medium text-gray-700">No pudimos analizar la oferta</p>
-        <p class="text-xs text-gray-400 mt-1">${escapeHtml(err.message)}</p>
+        <p class="text-sm font-medium text-ink">No pudimos analizar la oferta</p>
+        <p class="text-xs text-muted mt-1">${escapeHtml(err.message)}</p>
         ${hint}
       </div>
       <button type="button" class="btn-pill analizador-retry" data-retry>Reintentar</button>

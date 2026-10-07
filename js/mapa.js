@@ -231,7 +231,7 @@ function renderClusterLabel({ category, x, y, alignX, alignY }) {
 
 function renderMapa(skills) {
   if (skills.length === 0) {
-    return `<p class="mapa-status text-sm text-gray-400">Aún no hay habilidades para mostrar en el mapa.</p>`;
+    return `<p class="mapa-status text-sm text-muted-page">Aún no hay habilidades para mostrar en el mapa.</p>`;
   }
   const { nodes, links, labels, width, height } = layoutGraph(skills);
   // pathLength y --i solo sirven a la animación de entrada: cada línea se traza cuando ya apareció su segundo nodo.
@@ -533,7 +533,7 @@ let mapaRequest = null; // se reutiliza para no volver a pedir /api/skills en ca
 function loadMapa() {
   if (mapaRequest) return mapaRequest;
   const container = document.getElementById("mapa-content");
-  container.innerHTML = `<p class="mapa-status text-sm text-gray-400">Cargando tu mapa de habilidades…</p>`;
+  container.innerHTML = `<p class="mapa-status text-sm text-muted-page">Cargando tu mapa de habilidades…</p>`;
 
   mapaRequest = (async () => {
     try {

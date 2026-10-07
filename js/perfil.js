@@ -116,7 +116,7 @@ function renderSkillGroup(title, skills, tone, emptyText) {
 function renderSkillsCard(skillsState) {
   let body;
   if (skillsState.error) body = renderApiError(skillsState.error);
-  else if (!skillsState.skills) body = `<p class="text-sm text-gray-400">Cargando tus habilidades…</p>`;
+  else if (!skillsState.skills) body = `<p class="text-sm text-muted">Cargando tus habilidades…</p>`;
   else {
     const mastered = skillsState.skills.filter(s => s.status === "MASTERED");
     const learning = skillsState.skills.filter(s => s.status === "IN_PROGRESS");
