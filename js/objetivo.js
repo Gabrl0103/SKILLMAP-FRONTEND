@@ -150,4 +150,12 @@ function initObjetivo() {
   });
 }
 
+// Cambio de usuario: la vista se vuelve a armar la próxima vez que se abra
+document.addEventListener("skillmap:user", () => {
+  objetivoState.goals = null;
+  objetivoState.selectedId = null;
+  document.getElementById("objetivo-content").innerHTML = "";
+  document.getElementById("objetivo-search").value = "";
+});
+
 document.addEventListener("DOMContentLoaded", initObjetivo);

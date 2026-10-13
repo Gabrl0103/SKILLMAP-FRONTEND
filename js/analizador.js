@@ -1,4 +1,4 @@
-// Vista "Analizador". Usa API_BASE_URL (dashboard.js) y escapeHtml (mapa.js).
+// Vista "Analizador". Usa API_BASE_URL (dashboard.js), escapeHtml (mapa.js) y apiFetch (session.js).
 
 // ---------- API ----------
 
@@ -12,7 +12,7 @@ async function analyzeOffer(jobDescription) {
   const timer = setTimeout(() => controller.abort(), ANALYZER_TIMEOUT_MS);
   let res;
   try {
-    res = await fetch(`${API_BASE_URL}/api/analyzer/analyze`, {
+    res = await apiFetch("/api/analyzer/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ jobDescription }),
@@ -104,16 +104,21 @@ function renderAnalysis(r) {
 
 // ---------- Estados: vacío, cargando y error ----------
 
-// Antes del primer análisis: una sola tarjeta que explica qué aparecerá aquí.
-function renderAnalyzerEmpty() {
+// Antes del primer análisis: una sola tarjeta que explica qué aparecerá aquí. stale: había un resultado, pero el
+// progreso cambió desde entonces (habilidad marcada en el Mapa) y su porcentaje ya no vale.
+function renderAnalyzerEmpty({ stale = false } = {}) {
+  const title = stale ? "Tu progreso cambió" : "Aún no hay análisis";
+  const text = stale
+    ? "Marcaste habilidades desde el último análisis. Pulsa “Analizar Compatibilidad” para ver tu porcentaje actualizado."
+    : "Pega la descripción de una oferta y pulsa “Analizar Compatibilidad” para ver tu porcentaje de match y las habilidades que te faltan.";
   return `
     <div class="analizador-card analizador-empty">
       <span class="analizador-label-icon" aria-hidden="true">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/><path d="M8 12v-1.5M10.5 12V8.5M13 12v-2.5"/></svg>
       </span>
       <div>
-        <p class="analizador-empty-title">Aún no hay análisis</p>
-        <p class="analizador-empty-text">Pega la descripción de una oferta y pulsa “Analizar Compatibilidad” para ver tu porcentaje de match y las habilidades que te faltan.</p>
+        <p class="analizador-empty-title">${title}</p>
+        <p class="analizador-empty-text">${text}</p>
       </div>
     </div>`;
 }
@@ -162,7 +167,9 @@ function renderAnalyzerError(err) {
 
 // ---------- Eventos ----------
 
-let analyzerRequest = 0; // evita que un análisis viejo pise al más reciente
+let analyzerRequest = 0;    // evita que un análisis viejo pise al más reciente
+let analyzerShown = false;  // hay un resultado a la vista (lo que el cambio de progreso deja viejo)
+let analyzerStale = false;  // el progreso cambió después de ese resultado
 
 // Mientras analiza el botón queda deshabilitado (conserva su rosa) y el texto avisa de la espera.
 function setAnalyzing(isAnalyzing) {
@@ -214,10 +221,13 @@ async function runAnalysis() {
     const r = await analyzeOffer(text.slice(0, ANALYZER_MAX_CHARS));
     if (requestId !== analyzerRequest) return;
     result.innerHTML = renderAnalysis(r);
+    analyzerShown = true;
+    analyzerStale = false;
   } catch (err) {
     if (requestId !== analyzerRequest) return;
     failed = true;
     result.innerHTML = renderAnalyzerError(err);
+    analyzerShown = false;
   }
   setAnalyzing(false);
   // El botón pierde el foco al deshabilitarse: se devuelve a "Reintentar" si falló, o al botón principal.
@@ -238,5 +248,28 @@ function initAnalizador() {
   form.addEventListener("submit", e => { e.preventDefault(); runAnalysis(); });
   result.addEventListener("click", e => { if (e.target.closest("[data-retry]")) runAnalysis(); });
 }
+
+// Al abrir la vista (showView en mapa.js): un resultado calculado con el progreso anterior se retira. No se vuelve a
+// analizar solo: cada análisis gasta cuota de Gemini.
+function openAnalizador() {
+  if (!analyzerStale) return;
+  analyzerStale = false;
+  analyzerShown = false;
+  document.getElementById("analizador-result").innerHTML = renderAnalyzerEmpty({ stale: true });
+}
+
+document.addEventListener("skillmap:progress", () => { if (analyzerShown) analyzerStale = true; });
+
+// Cambio de usuario: ni el texto ni el resultado del anterior se quedan a la vista
+document.addEventListener("skillmap:user", () => {
+  analyzerRequest++;
+  analyzerShown = false;
+  analyzerStale = false;
+  setAnalyzing(false);
+  showEmptyWarning(false);
+  document.getElementById("analizador-text").value = "";
+  updateCounter();
+  document.getElementById("analizador-result").innerHTML = renderAnalyzerEmpty();
+});
 
 document.addEventListener("DOMContentLoaded", initAnalizador);

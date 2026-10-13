@@ -12,8 +12,11 @@
     if (savedTheme === "light" || savedTheme === "dark") document.documentElement.setAttribute("data-theme", savedTheme);
     if (localStorage.getItem("skillmap-motion") === "reduced") document.documentElement.setAttribute("data-motion", "reduced");
   } catch (e) {}
-  // Introducción (js/intro.js): con ?intro=1 se abre ya; si no, la app queda oculta hasta saber si toca mostrarla
-  document.documentElement.setAttribute("data-intro", /[?&]intro=1(&|$)/.test(location.search) ? "open" : "checking");
+  // Introducción (js/intro.js): sin sesión guardada o con ?intro=1 se abre ya; con sesión guardada la app queda oculta
+  // mientras js/session.js valida el token. Misma clave que js/session.js
+  var hasSession = false;
+  try { hasSession = Boolean(localStorage.getItem("skillmap.session")); } catch (e) {}
+  document.documentElement.setAttribute("data-intro", !hasSession || /[?&]intro=1(&|$)/.test(location.search) ? "open" : "checking");
 </script>
 <script src="vendor/tailwind.js"></script> <!-- Tailwind Play CDN 3.4.17, copia local -->
 <script src="js/tailwind.config.js"></script> <!-- tokens semánticos -> variables CSS -->
@@ -21,8 +24,7 @@
 </head>
 <body class="min-h-screen">
 
-<!-- INTRODUCCIÓN: a pantalla completa sobre la app; js/intro.js decide si se muestra (showIntro de /api/settings).
-     Fase usuarios: pasar a marcador por usuario (se muestra a quien no tenga sesión/cuenta) -->
+<!-- INTRODUCCIÓN: a pantalla completa sobre la app; se muestra a quien entra sin sesión válida (js/session.js) -->
 <div id="intro" class="intro" role="dialog" aria-modal="true" aria-labelledby="intro-title" aria-describedby="intro-subtitle">
   <canvas class="intro-bg" aria-hidden="true"></canvas>
   <header class="intro-top">
@@ -97,6 +99,61 @@
   </div>
 </div>
 
+<!-- ACCESO: iniciar sesión o crear cuenta (js/acceso.js). A pantalla completa sobre la app, sin barra superior -->
+<section id="acceso" class="acceso" aria-labelledby="acceso-title">
+  <header class="intro-top">
+    <div class="topbar-brand">
+      <div class="logo-mark" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+      </div>
+      <span class="topbar-name">SKILLMAP</span>
+    </div>
+  </header>
+
+  <div class="acceso-main">
+    <div class="ruta-card acceso-card">
+      <span class="ruta-eyebrow">Tu cuenta</span>
+      <h1 id="acceso-title" class="objetivo-title acceso-title">Bienvenido de nuevo</h1>
+      <p id="acceso-subtitle" class="objetivo-subtitle">Entra para seguir tu ruta donde la dejaste.</p>
+
+      <div class="acceso-modes" role="group" aria-label="Elige cómo entrar">
+        <button type="button" data-acceso-mode="login" aria-pressed="true">Iniciar sesión</button>
+        <button type="button" data-acceso-mode="register" aria-pressed="false">Crear cuenta</button>
+      </div>
+
+      <!-- Avisos que no son errores del formulario ("Tu sesión terminó") -->
+      <p id="acceso-notice" class="acceso-notice" role="status"></p>
+
+      <form id="acceso-form" class="acceso-form" novalidate>
+        <div id="acceso-name-field" class="acceso-field" hidden>
+          <label for="acceso-name" class="acceso-label">Nombre</label>
+          <input id="acceso-name" name="name" type="text" class="acceso-input" autocomplete="name" maxlength="60" required>
+        </div>
+        <div class="acceso-field">
+          <label for="acceso-email" class="acceso-label">Correo</label>
+          <input id="acceso-email" name="email" type="email" class="acceso-input" autocomplete="username" maxlength="254"
+            autocapitalize="off" spellcheck="false" required>
+        </div>
+        <div class="acceso-field">
+          <label for="acceso-password" class="acceso-label">Contraseña</label>
+          <div class="acceso-password">
+            <input id="acceso-password" name="password" type="password" class="acceso-input" autocomplete="current-password"
+              maxlength="72" aria-describedby="acceso-password-hint" required>
+            <button type="button" id="acceso-reveal" class="acceso-reveal" aria-pressed="false" aria-controls="acceso-password" aria-label="Mostrar contraseña">
+              <svg class="acceso-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="acceso-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.9 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            </button>
+          </div>
+          <p id="acceso-password-hint" class="acceso-hint" hidden>Mínimo 8 caracteres.</p>
+        </div>
+        <!-- Errores de validación y del backend -->
+        <p id="acceso-error" class="acceso-error" aria-live="assertive" aria-atomic="true"></p>
+        <button type="submit" id="acceso-submit" class="btn-pill acceso-submit"><span data-label>Iniciar sesión</span></button>
+      </form>
+    </div>
+  </div>
+</section>
+
 <!-- BARRA SUPERIOR (sticky en todas las vistas; ver .topbar en styles.css) -->
 <header class="topbar">
   <div class="topbar-brand">
@@ -145,6 +202,19 @@
     <button type="button" class="topbar-settings" data-view="ajustes" aria-label="Ajustes">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
     </button>
+    <!-- Usuario: nombre y "Cerrar sesión" (js/session.js) -->
+    <div class="user-menu">
+      <button type="button" id="user-button" class="user-button" aria-expanded="false" aria-controls="user-popover">
+        <span class="user-avatar" aria-hidden="true"></span>
+        <span class="user-button-name"><span class="sr-only">Cuenta de </span><span data-user-name></span></span>
+        <svg class="user-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div id="user-popover" class="user-popover" hidden>
+        <p class="user-popover-name"></p>
+        <p class="user-popover-email"></p>
+        <button type="button" id="user-logout" class="user-logout">Cerrar sesión</button>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -301,5 +371,7 @@
 <script src="js/analizador.js"></script>
 <script src="js/ajustes.js"></script>
 <script src="js/intro.js"></script>
+<script src="js/acceso.js"></script>
+<script src="js/session.js"></script> <!-- al final: arranca la app cuando las vistas ya están listas -->
 </body>
 </html>

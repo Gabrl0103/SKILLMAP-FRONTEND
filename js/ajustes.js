@@ -1,20 +1,14 @@
-// Vista "Ajustes". Usa loadSettings, setTheme, setReduceMotion, apiError, getTheme, getReduceMotion y settingsState
-// (theme.js); API_BASE_URL, fetchJobStats y las cachés de datos (dashboard.js);
-// escapeHtml (mapa.js).
+// Vista "Ajustes". Usa loadSettings, setTheme, setReduceMotion, getTheme, getReduceMotion y settingsState (theme.js);
+// fetchJobStats y las cachés de datos (dashboard.js); resetPerfilSkills (perfil.js); apiFetch, apiError y
+// friendlyError (session.js); escapeHtml (mapa.js).
 
 const GEMINI_KEY_URL = "https://aistudio.google.com/app/apikey";
-const OFFLINE_TEXT = "SkillMap no responde. Revisa que la app siga abierta e inténtalo de nuevo.";
 
 const ajustesState = {
   keyEditing: false,
   keyError: null,   // error al leer /api/settings (estado de la key desconocido)
   syncing: false,
 };
-
-// fetch falla con TypeError cuando no hay conexión con el backend: se muestra un mensaje en lugar del técnico
-function friendlyError(err) {
-  return err instanceof TypeError ? OFFLINE_TEXT : err.message;
-}
 
 function setStatus(id, text, tone = "") {
   const el = document.getElementById(id);
@@ -121,7 +115,7 @@ async function saveGeminiKey(form) {
   submit.textContent = "Guardando…";
   setStatus("ajustes-key-status", "");
   try {
-    const res = await fetch(`${API_BASE_URL}/api/settings/gemini-key`, {
+    const res = await apiFetch("/api/settings/gemini-key", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key }),
@@ -237,7 +231,7 @@ function invalidateJobData(demandChanged) {
   skillsRequest = null;
   readinessRequests.clear();
   mapaRequest = null;
-  if (!perfilState.loading) perfilState.skills = { skills: null, error: null };
+  resetPerfilSkills();
   if (getActiveGoalId()) loadDashboard(getActiveGoalId());
 }
 
@@ -253,7 +247,7 @@ async function syncJobs() {
   result.dataset.tone = "";
   result.innerHTML = `<p>Consultando las fuentes de ofertas. Puede tardar unos segundos.</p>`;
   try {
-    const res = await fetch(`${API_BASE_URL}/api/jobs/sync`, { method: "POST" });
+    const res = await apiFetch("/api/jobs/sync", { method: "POST" });
     if (!res.ok) throw await apiError(res);
     const data = await res.json();
     const anyUpdated = data.sources.some(s => s.updated);
@@ -298,5 +292,16 @@ function initAjustes() {
   document.addEventListener("skillmap:settings", syncApariencia);
   syncApariencia();
 }
+
+// Cambio de usuario: no quedan mensajes ni formularios a medias de la sesión anterior
+document.addEventListener("skillmap:user", () => {
+  ajustesState.keyEditing = false;
+  ajustesState.keyError = null;
+  renderKey();
+  ["ajustes-apariencia-status", "ajustes-key-status"].forEach(id => setStatus(id, ""));
+  const result = document.getElementById("ajustes-sync-result");
+  result.innerHTML = "";
+  result.dataset.tone = "";
+});
 
 document.addEventListener("DOMContentLoaded", initAjustes);

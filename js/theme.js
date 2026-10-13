@@ -1,8 +1,9 @@
-// Preferencias de la app: tema (data-theme en <html>, claro por defecto) y "Reducir animaciones" (data-motion="reduced");
-// showIntro lo lee js/intro.js. El backend (/api/settings) es la fuente de verdad; localStorage solo guarda una copia del
-// tema y de las animaciones para que el script del <head> los aplique antes del primer pintado (sin parpadeo).
+// Preferencias de la app: tema (data-theme en <html>, claro por defecto) y "Reducir animaciones" (data-motion="reduced").
+// El backend (/api/settings) es la fuente de verdad, pero exige sesión: antes del login (intro y Acceso) mandan las
+// copias de localStorage, que el script del <head> aplica antes del primer pintado (sin parpadeo). Al iniciar sesión
+// js/session.js llama a loadSettings y gana lo del backend.
 // Si el backend no responde, los cambios se aplican igual en esta sesión y quedan en la copia local.
-// Usa API_BASE_URL (dashboard.js): las peticiones salen después de DOMContentLoaded.
+// Usa apiFetch y apiError (session.js): las peticiones salen después de DOMContentLoaded.
 
 const THEME_KEY = "skillmap-theme";   // mismas claves que el script del <head> en index.html
 const MOTION_KEY = "skillmap-motion";
@@ -49,16 +50,10 @@ function applyReduceMotion(reduced) {
   notifySettingsChange();
 }
 
-// Mensaje listo para mostrar: el "message" del backend cuando lo hay
-async function apiError(res) {
-  const body = await res.json().catch(() => null);
-  return new Error(body?.message || `El servidor respondió con un error (${res.status}).`);
-}
-
 function fetchSettings({ fresh = false } = {}) {
   if (fresh) settingsRequest = null;
   if (!settingsRequest) {
-    settingsRequest = fetch(`${API_BASE_URL}/api/settings`)
+    settingsRequest = apiFetch("/api/settings")
       .then(async res => {
         if (!res.ok) throw await apiError(res);
         settingsState = await res.json();
@@ -81,7 +76,7 @@ async function loadSettings(options) {
 // Guarda solo los campos dados (PATCH parcial). Rechaza si el backend no responde o no lo acepta.
 async function saveSettings(changes) {
   Object.keys(changes).forEach(field => settingsTouched.add(field));
-  const res = await fetch(`${API_BASE_URL}/api/settings`, {
+  const res = await apiFetch("/api/settings", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(changes),
@@ -117,4 +112,9 @@ document.querySelectorAll("[data-theme-option]").forEach(button => {
   button.addEventListener("click", () => setTheme(button.dataset.themeOption).catch(() => { /* sin backend: solo esta sesión */ }));
 });
 syncThemeSwitch();
-document.addEventListener("DOMContentLoaded", () => loadSettings().catch(() => { /* sin backend: queda la copia local */ }));
+// Cambio de usuario: lo cambiado en la sesión anterior ya no tapa la respuesta del backend
+document.addEventListener("skillmap:user", () => {
+  settingsRequest = null;
+  settingsState = null;
+  settingsTouched.clear();
+});

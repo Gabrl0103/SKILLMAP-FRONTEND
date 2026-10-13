@@ -1,13 +1,13 @@
-// Pantalla de Introducción: a pantalla completa sobre la app (#intro). Usa fetchSettings, saveSettings y
-// prefersReducedMotion (theme.js); fetchJobStats, fetchSkills y fetchGoals (dashboard.js); showView (mapa.js).
+// Pantalla de Introducción: a pantalla completa sobre la app (#intro). Usa prefersReducedMotion (theme.js);
+// fetchJobStats, fetchSkills y fetchGoals (dashboard.js); showView (mapa.js); sessionUser y setAppInert (session.js);
+// openAcceso (acceso.js).
 //
-// Regla de aparición: hoy no hay cuentas, así que showIntro de /api/settings hace de "intro pendiente" (true por
-// defecto). Si el backend no responde o showIntro es false, no se muestra. ?intro=1 la fuerza sin tocar lo guardado.
-// Fase usuarios: pasar a marcador por usuario (se muestra a quien no tenga sesión/cuenta).
-// El script del <head> pone data-intro="checking" (la app queda oculta, sin parpadeo) u "open" con ?intro=1.
+// Regla de aparición (la decide session.js al arrancar): se muestra a quien entra sin sesión válida; con sesión
+// válida no. ?intro=1 la abre igual. "Empezar", "Omitir" y Esc llevan a Acceso, o a la app si ya hay sesión.
+// El script del <head> pone data-intro="open" si no hay token guardado o con ?intro=1, y "checking" (la app queda
+// oculta, sin parpadeo) mientras se valida el token.
 
 const INTRO_FORCED = new URLSearchParams(location.search).get("intro") === "1";
-const INTRO_TIMEOUT = 2000; // sin respuesta del backend en este tiempo, la app se muestra sin intro
 const INTRO_SLIDES = 3;
 const introNumber = new Intl.NumberFormat("es");
 
@@ -16,11 +16,6 @@ let introOpen = false;
 function setIntroState(state) {
   if (state) document.documentElement.setAttribute("data-intro", state);
   else document.documentElement.removeAttribute("data-intro");
-}
-
-// Mientras la intro está abierta, la barra superior y las vistas no reciben foco ni clics
-function setAppInert(inert) {
-  document.querySelectorAll(".topbar, .app-main").forEach(el => { el.inert = inert; });
 }
 
 // ---------- Chips: solo datos reales; si falta uno o vale 0, su chip no aparece ----------
@@ -40,7 +35,12 @@ function setIntroChip(name, value) {
   chip.querySelector("span").textContent = INTRO_CHIPS[name][value === 1 ? 0 : 1];
 }
 
+// Las cifras salen de la API, que exige sesión: sin sesión los chips no aparecen
 async function loadIntroChips() {
+  if (!sessionUser) {
+    Object.keys(INTRO_CHIPS).forEach(name => setIntroChip(name, null));
+    return;
+  }
   const [stats, skills, goals] = await Promise.all([
     fetchJobStats().catch(() => null),
     fetchSkills().catch(() => null),
@@ -193,31 +193,28 @@ function openIntro() {
   document.getElementById("intro-start").focus();
 }
 
-// Empezar, Omitir y Esc. La intro queda vista (PATCH en segundo plano: sin backend se cierra igual) y se vuelve a la
-// vista inicial de la app. Con ?intro=1 no se guarda nada y el parámetro sale de la URL.
-function closeIntro() {
+// Oculta la intro sin decidir adónde ir (también la usa Acceso si se abre encima)
+function hideIntro() {
   if (!introOpen) return;
   introOpen = false;
   stopIntroBg();
   setIntroState(null);
-  setAppInert(false);
+}
+
+// Empezar, Omitir y Esc: con sesión se vuelve a Mi Ruta; sin sesión, a Acceso. Con ?intro=1 el parámetro sale de
+// la URL para que recargar no la vuelva a abrir.
+function closeIntro() {
+  if (!introOpen) return;
+  hideIntro();
   if (INTRO_FORCED) {
     const url = new URL(location.href);
     url.searchParams.delete("intro");
     history.replaceState(history.state, "", url);
-  } else {
-    saveSettings({ showIntro: false }).catch(() => { /* sin backend: se volverá a mostrar la próxima vez */ });
   }
+  if (!sessionUser) { openAcceso(); return; }
+  setAppInert(false);
   showView("dashboard");
   document.querySelector(".nav-item[data-view='dashboard']")?.focus();
-}
-
-async function decideIntro() {
-  if (INTRO_FORCED) { openIntro(); return; }
-  const timeout = new Promise(resolve => setTimeout(() => resolve(null), INTRO_TIMEOUT));
-  const settings = await Promise.race([fetchSettings().catch(() => null), timeout]);
-  if (settings?.showIntro === true) openIntro();
-  else setIntroState(null);
 }
 
 function initIntro() {
@@ -226,7 +223,6 @@ function initIntro() {
     if (e.key === "Escape" && introOpen) closeIntro();
   });
   bindIntroSlides();
-  decideIntro();
 }
 
 document.addEventListener("DOMContentLoaded", initIntro);

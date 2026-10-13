@@ -3,7 +3,8 @@ const API_BASE_URL = location.protocol === "file:" ||
   (location.port === "5500" && ["localhost", "127.0.0.1"].includes(location.hostname))
   ? "http://localhost:8080" : "";
 
-// Vista "Mi Ruta". Usa escapeHtml y showView definidos en mapa.js (disponibles tras DOMContentLoaded).
+// Vista "Mi Ruta". Usa escapeHtml y showView definidos en mapa.js (disponibles tras DOMContentLoaded) y apiJson
+// (session.js). Los datos se piden al iniciar sesión (loadRuta, desde session.js).
 
 const STATUS_LABEL = { MASTERED: "Dominada", IN_PROGRESS: "En desarrollo", PENDING: "Por aprender" };
 const VISIBLE_GAPS = 3; // el mockup muestra 3 brechas; "Ver detalle de brechas" despliega el resto
@@ -93,7 +94,9 @@ function renderGauge(r) {
   const offset = circumference - (r.readinessPercentage / 100) * circumference;
   const remaining = r.totalCount - r.masteredCount;
   const goal = escapeHtml(r.goalTitle);
-  const message = remaining === 0
+  const message = r.totalCount === 0
+    ? `${goal} aún no tiene habilidades clave definidas.`
+    : remaining === 0
     ? `Dominas todas las habilidades clave de ${goal}.`
     : `Estás a solo ${remaining} ${remaining === 1 ? "habilidad clave" : "habilidades clave"} de alcanzar el perfil ideal para ${goal}.`;
 
@@ -322,11 +325,7 @@ let goalsRequest = null; // compartida con la vista Objetivo para no pedir /api/
 
 function fetchGoals() {
   if (!goalsRequest) {
-    goalsRequest = fetch(`${API_BASE_URL}/api/goals`)
-      .then(res => {
-        if (!res.ok) throw new Error("La API respondió " + res.status);
-        return res.json();
-      })
+    goalsRequest = apiJson("/api/goals")
       .catch(err => { goalsRequest = null; throw err; }); // si falla, se reintenta en la próxima llamada
   }
   return goalsRequest;
@@ -336,11 +335,7 @@ let skillsRequest = null; // compartida entre Mapa Visual y Perfil para no pedir
 
 function fetchSkills() {
   if (!skillsRequest) {
-    skillsRequest = fetch(`${API_BASE_URL}/api/skills`)
-      .then(res => {
-        if (!res.ok) throw new Error("La API respondió " + res.status);
-        return res.json();
-      })
+    skillsRequest = apiJson("/api/skills")
       .catch(err => { skillsRequest = null; throw err; }); // si falla, se reintenta en la próxima llamada
   }
   return skillsRequest;
@@ -350,11 +345,7 @@ let jobStatsRequest = null; // compartida entre Mi Ruta y Mapa Visual
 
 function fetchJobStats() {
   if (!jobStatsRequest) {
-    jobStatsRequest = fetch(`${API_BASE_URL}/api/jobs/stats`)
-      .then(res => {
-        if (!res.ok) throw new Error("La API respondió " + res.status);
-        return res.json();
-      })
+    jobStatsRequest = apiJson("/api/jobs/stats")
       .catch(err => { jobStatsRequest = null; throw err; }); // si falla, se reintenta en la próxima llamada
   }
   return jobStatsRequest;
@@ -365,11 +356,7 @@ const readinessRequests = new Map(); // /api/goals/{id}/readiness por objetivo, 
 function fetchReadiness(goalId) {
   const key = String(goalId);
   if (!readinessRequests.has(key)) {
-    readinessRequests.set(key, fetch(`${API_BASE_URL}/api/goals/${key}/readiness`)
-      .then(res => {
-        if (!res.ok) throw new Error("La API respondió " + res.status);
-        return res.json();
-      })
+    readinessRequests.set(key, apiJson(`/api/goals/${key}/readiness`)
       .catch(err => { readinessRequests.delete(key); throw err; })); // si falla, se reintenta en la próxima llamada
   }
   return readinessRequests.get(key);
@@ -517,6 +504,7 @@ let latestRequest = 0; // evita que una respuesta vieja pise la del objetivo rec
 async function loadDashboard(goalId) {
   const container = document.getElementById("app-content");
   const requestId = ++latestRequest;
+  rutaStale = false;
   document.getElementById("market-demand").hidden = true;
   container.innerHTML = renderRutaSkeleton();
   try {
@@ -543,19 +531,26 @@ async function loadDashboard(goalId) {
   }
 }
 
-async function init() {
-  const container = document.getElementById("app-content");
-  container.innerHTML = renderRutaSkeleton(); // mientras llegan los objetivos
+let rutaStale = false; // el progreso cambió (habilidad marcada en el Mapa): se recarga al volver a Mi Ruta
 
+function initRuta() {
+  document.getElementById("app-content").innerHTML = renderRutaSkeleton(); // hasta que haya sesión y lleguen los datos
   bindGoalPicker();
-  container.addEventListener("click", e => {
+  document.getElementById("app-content").addEventListener("click", e => {
     const action = e.target.closest("[data-action]")?.dataset.action;
     if (action === "show-gaps") showAllGaps();
     if (action === "open-map") showView("mapa");
   });
+}
 
+// Al iniciar sesión: objetivos y ruta del usuario
+async function loadRuta() {
+  const container = document.getElementById("app-content");
+  container.innerHTML = renderRutaSkeleton(); // mientras llegan los objetivos
+  const requestId = ++latestRequest;
   try {
     const goals = await loadGoals();
+    if (requestId !== latestRequest) return;
     if (goals.length === 0) {
       setGoalTitle("Sin objetivos");
       container.innerHTML = `<p class="text-sm text-muted-page">Aún no hay objetivos profesionales disponibles.</p>`;
@@ -563,10 +558,44 @@ async function init() {
     }
     await loadDashboard(activeGoalId);
   } catch (err) {
+    if (requestId !== latestRequest) return;
     setGoalTitle("Sin conexión");
     container.innerHTML = renderApiError(err);
   }
 }
 
+// Al abrir Mi Ruta desde la barra superior (showView en mapa.js)
+function openRuta() {
+  if (!rutaStale || !activeGoalId) return;
+  rutaStale = false;
+  loadDashboard(activeGoalId);
+}
+
+// Cambio de usuario: fuera las cachés y lo pintado; una respuesta en vuelo del usuario anterior se descarta
+document.addEventListener("skillmap:user", () => {
+  goalsRequest = null;
+  skillsRequest = null;
+  jobStatsRequest = null;
+  readinessRequests.clear();
+  latestRequest++;
+  rutaStale = false;
+  activeGoalId = null;
+  closeGoalList({ focusButton: false });
+  goalPicker.list().innerHTML = "";
+  goalPicker.button().disabled = true;
+  setGoalTitle("Cargando…");
+  document.getElementById("market-demand").hidden = true;
+  document.getElementById("app-content").innerHTML = renderRutaSkeleton();
+});
+
+// Progreso cambiado (habilidad marcada o quitada): habilidades y preparación se vuelven a pedir. Si Mi Ruta está a la
+// vista (se abrió mientras se guardaba), se recarga ya.
+document.addEventListener("skillmap:progress", () => {
+  skillsRequest = null;
+  readinessRequests.clear();
+  rutaStale = true;
+  if (!document.getElementById("view-dashboard").classList.contains("hidden")) openRuta();
+});
+
 // Se espera a que carguen todos los scripts porque se usan helpers de mapa.js.
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", initRuta);

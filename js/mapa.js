@@ -1,7 +1,8 @@
 // Vista "Mapa Visual": todas las habilidades del sistema como grafo de nodos agrupados por categoría, con la ruta
 // sugerida del objetivo activo y un panel de detalle de la habilidad seleccionada.
-// Usa API_BASE_URL, renderApiError, STATUS_LABEL, demandIsSample, sampleTag, SAMPLE_DEMAND_TEXT, jobStatsText,
-// fetchJobStats, fetchGoals, fetchReadiness y getActiveGoalId (dashboard.js) y currentActiveGoalId (objetivo.js).
+// Usa renderApiError, STATUS_LABEL, demandIsSample, sampleTag, SAMPLE_DEMAND_TEXT, jobStatsText, fetchJobStats,
+// fetchGoals, fetchReadiness y getActiveGoalId (dashboard.js), currentActiveGoalId (objetivo.js) y apiJson y
+// friendlyError (session.js).
 // También define la navegación entre vistas (showView) y el indicador del nav de la barra superior.
 
 const NODE_SIZE = 96;       // diámetro de cada nodo (px)
@@ -215,15 +216,19 @@ const STATUS_CLASS = { MASTERED: "mastered", IN_PROGRESS: "progress", PENDING: "
 
 // Solo el primer nodo entra en el orden de tabulación; las flechas mueven el foco entre nodos (tabindex móvil).
 // Clic o Enter/Espacio seleccionan el nodo y llenan el panel de detalle.
+function mapaNodeLabel(skill, category) {
+  return `${skill.name}, ${category}, ${STATUS_LABEL[skill.status] || STATUS_LABEL.PENDING}, `
+    + `${skill.demandPercentage}% de demanda${demandIsSample([skill]) ? " (de ejemplo)" : ""}`;
+}
+
 function renderNode({ skill, category, x, y }, index) {
   const status = STATUS_CLASS[skill.status] || "pending";
   const tooltip = `${skill.name} — ${skill.demandPercentage}% de demanda`;
-  const label = `${skill.name}, ${category}, ${STATUS_LABEL[skill.status] || STATUS_LABEL.PENDING}, `
-    + `${skill.demandPercentage}% de demanda${demandIsSample([skill]) ? " (de ejemplo)" : ""}`;
   return `
     <div class="mapa-node mapa-node--${status}" tabindex="${index === 0 ? 0 : -1}" role="button" aria-pressed="false"
       style="left:${x - NODE_SIZE / 2}px; top:${y - NODE_SIZE / 2}px; width:${NODE_SIZE}px; height:${NODE_SIZE}px; --i:${index};"
-      data-skill-id="${skill.id}" data-tooltip="${escapeHtml(tooltip)}" aria-label="${escapeHtml(label)}">
+      data-skill-id="${skill.id}" data-category="${escapeHtml(category)}" data-tooltip="${escapeHtml(tooltip)}"
+      aria-label="${escapeHtml(mapaNodeLabel(skill, category))}">
       <span class="mapa-node-label" lang="es" aria-hidden="true">${escapeHtml(skill.name)}</span>
     </div>`;
 }
@@ -293,6 +298,8 @@ let mapaSelectedId = null;    // id de la habilidad seleccionada (sobrevive a ca
 let mapaJobStats = null;      // /api/jobs/stats para la nota "Ruta calculada con N ofertas reales"
 // Objetivo activo: brechas en orden de demanda (ruta sugerida) y todas sus habilidades
 let mapaRoute = { goalId: null, goalTitle: "", gapIds: [], goalSkillIds: new Set() };
+// Marcar / quitar de dominadas: habilidad que se está guardando y último error (con la habilidad a la que pertenece)
+const mapaMark = { id: null, error: null, errorId: null };
 
 function renderMapaPanelEmpty() {
   return `
@@ -334,18 +341,31 @@ function renderMapaPanel(skill) {
     <p class="mapa-panel-demand"><span class="mapa-panel-pct">${skill.demandPercentage}</span><span class="mapa-panel-pct-label">% de las ofertas</span></p>
     <p class="mapa-panel-text">${mapaSkillText(skill)}</p>
     <div class="mapa-panel-actions">
-      <!-- Próximamente: contexto y preguntas frecuentes (Fase 6) y marcado de skills -->
+      <!-- Próximamente: contexto y preguntas frecuentes (Fase 6) -->
       <button type="button" class="btn-pill" aria-disabled="true" title="Próximamente">Ver contexto y preguntas frecuentes</button>
-      <button type="button" class="btn-pill btn-pill--outline" aria-disabled="true" title="Próximamente">Marcar como dominada</button>
+      ${renderMasterButton(skill)}
     </div>
+    ${mapaMark.errorId === skill.id ? `<p class="mapa-panel-error" role="alert">${escapeHtml(mapaMark.error)}</p>` : ""}
     ${note}`;
+}
+
+// Alterna entre "Marcar como dominada" (PATCH /api/skills/{id}/master) y "Quitar de dominadas" (DELETE, vuelve a
+// "Por aprender"). Mientras se guarda queda ocupado pero enfocable.
+function renderMasterButton(skill) {
+  const mastered = skill.status === "MASTERED";
+  const busy = mapaMark.id === skill.id;
+  const label = busy ? (mastered ? "Quitando…" : "Marcando…") : (mastered ? "Quitar de dominadas" : "Marcar como dominada");
+  return `<button type="button" class="btn-pill btn-pill--outline" data-master="${skill.id}"${busy ? ` aria-busy="true" aria-disabled="true"` : ""}>${label}</button>`;
 }
 
 function refreshMapaPanel() {
   const panel = document.getElementById("mapa-panel");
   if (!panel) return;
+  const hadFocus = panel.contains(document.activeElement);
   const skill = mapaSkills.find(s => s.id === mapaSelectedId);
   panel.innerHTML = skill ? renderMapaPanel(skill) : renderMapaPanelEmpty();
+  // Redibujar quita el foco: si estaba en el panel (botón de marcar), vuelve a ese botón
+  if (hadFocus) panel.querySelector("[data-master]")?.focus({ preventScroll: true });
 }
 
 function selectMapaNode(node) {
@@ -356,6 +376,43 @@ function selectMapaNode(node) {
   refreshMapaPanel();
   const skill = mapaSkills.find(s => s.id === id);
   if (skill) document.getElementById("mapa-live").textContent = `${skill.name} seleccionada. Detalle en el panel.`;
+}
+
+// El nodo cambia de color y de etiqueta sin redibujar el mapa (se conservan zoom, posición y foco)
+function updateMapaNode(skill) {
+  const node = document.querySelector(`#mapa-stage .mapa-node[data-skill-id="${skill.id}"]`);
+  if (!node) return;
+  Object.values(STATUS_CLASS).forEach(status => node.classList.remove(`mapa-node--${status}`));
+  node.classList.add(`mapa-node--${STATUS_CLASS[skill.status] || "pending"}`);
+  node.setAttribute("aria-label", mapaNodeLabel(skill, node.dataset.category));
+}
+
+async function toggleMapaSkill(id) {
+  if (mapaMark.id !== null) return;
+  const master = mapaSkills.find(s => s.id === id)?.status !== "MASTERED";
+  mapaMark.id = id;
+  mapaMark.errorId = null;
+  refreshMapaPanel();
+  try {
+    const updated = await apiJson(`/api/skills/${id}/master`, { method: master ? "PATCH" : "DELETE" });
+    if (mapaMark.id !== id) return; // cambió el usuario mientras se guardaba
+    const index = mapaSkills.findIndex(s => s.id === id);
+    if (index >= 0) mapaSkills[index] = { ...mapaSkills[index], ...updated };
+    const skill = index >= 0 ? mapaSkills[index] : updated;
+    updateMapaNode(skill);
+    document.getElementById("mapa-live").textContent =
+      master ? `${skill.name} marcada como dominada.` : `${skill.name} quitada de dominadas: vuelve a Por aprender.`;
+    // Mi Ruta, Perfil y Analizador descartan sus datos viejos; aquí se recalcula la ruta sugerida
+    document.dispatchEvent(new CustomEvent("skillmap:progress"));
+    mapaRoute.goalId = null;
+  } catch (err) {
+    if (mapaMark.id !== id) return;
+    mapaMark.error = `${master ? "No se pudo marcar" : "No se pudo quitar"}: ${friendlyError(err)}`;
+    mapaMark.errorId = id;
+  }
+  mapaMark.id = null;
+  refreshMapaPanel();
+  updateMapaRoute();
 }
 
 // ---------- Ruta sugerida ----------
@@ -668,7 +725,27 @@ function bindMapaEvents() {
 
 window.addEventListener("resize", applyMapaTransform);
 
+// Botones del panel (se redibuja con cada selección): un solo listener en el contenedor
+document.getElementById("mapa-content").addEventListener("click", e => {
+  const button = e.target.closest("#mapa-panel [data-master]");
+  if (button && button.getAttribute("aria-disabled") !== "true") toggleMapaSkill(Number(button.dataset.master));
+});
+
 let mapaRequest = null; // se reutiliza para no volver a pedir /api/skills en cada apertura
+
+// Cambio de usuario: el mapa se vuelve a pedir y dibujar la próxima vez que se abra
+document.addEventListener("skillmap:user", () => {
+  mapaRequest = null;
+  mapaSkills = [];
+  mapaSelectedId = null;
+  mapaJobStats = null;
+  mapaRoute = { goalId: null, goalTitle: "", gapIds: [], goalSkillIds: new Set() };
+  Object.assign(mapaMark, { id: null, error: null, errorId: null });
+  mapaZoom = 1;
+  mapaPan = { x: 0, y: 0 };
+  mapaNeedsFit = true;
+  document.getElementById("mapa-content").innerHTML = "";
+});
 
 function loadMapa() {
   if (mapaRequest) return mapaRequest;
@@ -729,6 +806,8 @@ function showView(view) {
   positionNavIndicator();
   // Si la carga terminó mientras la vista estaba oculta, se centra al volver a mostrarla; la ruta sigue al objetivo activo.
   if (view === "mapa") loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); });
+  if (view === "dashboard") openRuta();        // definido en dashboard.js
+  if (view === "analizador") openAnalizador(); // definido en analizador.js
   if (view === "objetivo") openObjetivo(); // definido en objetivo.js
   if (view === "perfil") openPerfil();     // definido en perfil.js
   if (view === "ajustes") openAjustes();   // definido en ajustes.js
