@@ -1,13 +1,12 @@
-// Vista "Perfil". Usa fetchSkills, renderApiError, sampleTag y sampleDemandNote (dashboard.js) e ICONS, pickIcon y escapeHtml (mapa.js).
+// Vista "Perfil". Usa fetchSkills, renderApiError, sampleTag y sampleDemandNote (dashboard.js), ICONS, pickIcon y
+// escapeHtml (mapa.js) y sessionUser (session.js).
 
 // ---------- Datos de ejemplo (la API todavía no los provee) ----------
 
-// DATOS DE EJEMPLO: la API no tiene usuarios, proyectos, cursos, logros ni preferencias.
-// Reemplazar por el endpoint de perfil cuando exista. La foto usa iniciales: no hay imagen del usuario.
+// DATOS DE EJEMPLO: la API solo guarda nombre y correo del usuario (esos salen de la sesión); no hay bio, enlaces,
+// proyectos, cursos, logros ni preferencias. Reemplazar por el endpoint de perfil cuando exista.
 function sampleProfileData() {
   return {
-    name: "Alex Rivera",
-    initials: "AR",
     bio: "Desarrollador Frontend con pasión por UX/UI y rendimiento web.",
     links: [
       { icon: "pin", label: "Madrid, España" },
@@ -65,20 +64,29 @@ const PROJECT_THUMBS = {
 
 // ---------- Bloques de la vista ----------
 
+// Iniciales del nombre: primera letra de la primera y de la última palabra (una sola si el nombre es de una palabra)
+function initialsOf(name) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const first = word => Array.from(word)[0] || "";
+  return (first(words[0] || "") + (words.length > 1 ? first(words[words.length - 1]) : "")).toUpperCase();
+}
+
+// Nombre e iniciales reales (sesión); bio y enlaces siguen siendo de ejemplo y llevan la etiqueta
 function renderPerfilHeader(p) {
+  const name = sessionUser?.name || sessionUser?.email || "";
   const links = p.links.map(l => `<li class="perfil-link">${perfilIcon(l.icon, 13)}${escapeHtml(l.label)}</li>`).join("");
   return `
     <article class="perfil-card perfil-header">
       <div class="perfil-photo">
-        <span class="perfil-photo-initials" role="img" aria-label="Foto de perfil de ${escapeHtml(p.name)}">${escapeHtml(p.initials)}</span>
+        <span class="perfil-photo-initials" role="img" aria-label="Foto de perfil de ${escapeHtml(name)}">${escapeHtml(initialsOf(name))}</span>
         <button type="button" class="perfil-photo-edit" aria-disabled="true" title="Próximamente" aria-label="Cambiar foto (próximamente)">${perfilIcon("camera", 14)}</button>
       </div>
       <div class="perfil-identity">
-        <div class="perfil-name-row">
-          <h1 class="perfil-name">${escapeHtml(p.name)}</h1>
+        <h1 class="perfil-name">${escapeHtml(name)}</h1>
+        <div class="perfil-sample">
           ${sampleTag}
+          <p class="perfil-bio">${escapeHtml(p.bio)}</p>
         </div>
-        <p class="perfil-bio">${escapeHtml(p.bio)}</p>
         <ul class="perfil-links">${links}</ul>
       </div>
       <div class="perfil-header-actions">
@@ -116,7 +124,7 @@ function renderSkillGroup(title, skills, tone, emptyText) {
 function renderSkillsCard(skillsState) {
   let body;
   if (skillsState.error) body = renderApiError(skillsState.error);
-  else if (!skillsState.skills) body = `<p class="text-sm text-gray-400">Cargando tus habilidades…</p>`;
+  else if (!skillsState.skills) body = `<p class="text-sm text-muted">Cargando tus habilidades…</p>`;
   else {
     const mastered = skillsState.skills.filter(s => s.status === "MASTERED");
     const learning = skillsState.skills.filter(s => s.status === "IN_PROGRESS");
@@ -206,7 +214,7 @@ function renderPreferencesCard(p) {
 
 // ---------- Carga y eventos ----------
 
-const perfilState = { profile: sampleProfileData(), skills: { skills: null, error: null }, loading: false };
+const perfilState = { profile: sampleProfileData(), skills: { skills: null, error: null }, loading: false, request: 0 };
 
 // Animaciones de entrada de la vista (keyframes compartidos card-in y bar-fill en styles.css).
 const PERFIL_ENTRANCE = ["card-in", "bar-fill"];
@@ -232,17 +240,38 @@ function renderPerfil() {
 
 async function openPerfil() {
   if (perfilState.skills.skills || perfilState.loading) return;
+  const request = ++perfilState.request;
   perfilState.loading = true;
   perfilState.skills = { skills: null, error: null };
   renderPerfil(); // los datos de ejemplo se ven de inmediato; las habilidades llegan después
+  let skills;
   try {
-    perfilState.skills = { skills: await fetchSkills(), error: null };
+    skills = { skills: await fetchSkills(), error: null };
   } catch (err) {
-    perfilState.skills = { skills: null, error: err }; // se reintenta la próxima vez que se abra la vista
+    skills = { skills: null, error: err }; // se reintenta la próxima vez que se abra la vista
   }
+  if (request !== perfilState.request) return; // cambió el usuario o su progreso mientras cargaba
   perfilState.loading = false;
+  perfilState.skills = skills;
   renderPerfil();
 }
+
+// Habilidades viejas (cambio de usuario, habilidad marcada o demanda recalculada): se vuelven a pedir al abrir Perfil.
+// Una carga en vuelo se descarta.
+function resetPerfilSkills() {
+  perfilState.request++;
+  perfilState.loading = false;
+  perfilState.skills = { skills: null, error: null };
+}
+
+document.addEventListener("skillmap:user", () => {
+  resetPerfilSkills();
+  document.getElementById("perfil-content").innerHTML = "";
+});
+document.addEventListener("skillmap:progress", () => {
+  resetPerfilSkills();
+  if (!document.getElementById("view-perfil").classList.contains("hidden")) openPerfil(); // abierto mientras se guardaba
+});
 
 function initPerfil() {
   document.getElementById("perfil-content").addEventListener("click", e => {
