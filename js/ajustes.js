@@ -62,11 +62,12 @@ function renderKeyView() {
       ? `<span class="ajustes-chip ajustes-chip--env">Definida por variable de entorno</span>`
       : `<span class="ajustes-chip ajustes-chip--ok">Guardada</span>`;
   } else {
-    field = `<span class="ajustes-key-empty">Sin key: el Analizador no funcionará hasta que añadas una</span>`;
+    // Sin key propia no es un error: el Analizador usa la IA incluida
+    field = `<span class="ajustes-key-empty">Sin key propia: el Analizador usa la IA incluida</span>`;
   }
   const action = gemini?.configured ? "Cambiar key" : "Añadir key";
   return `
-    <p id="ajustes-key-label" class="ajustes-label">Key de Gemini</p>
+    <p id="ajustes-key-label" class="ajustes-label">Key de Gemini (opcional)</p>
     <div class="ajustes-key-row">
       <div class="ajustes-key-field" role="group" aria-labelledby="ajustes-key-label">${field}</div>
       ${chip}
@@ -80,7 +81,7 @@ function renderKeyView() {
 function renderKeyForm() {
   return `
     <form class="ajustes-key-form" novalidate>
-      <label for="ajustes-key-input" class="ajustes-label">Key de Gemini</label>
+      <label for="ajustes-key-input" class="ajustes-label">Key de Gemini (opcional)</label>
       <div class="ajustes-key-row">
         <input id="ajustes-key-input" class="ajustes-key-input" type="password" autocomplete="off" spellcheck="false"
           autocapitalize="off" maxlength="200" placeholder="Pega aquí tu key" aria-describedby="ajustes-key-status">
@@ -127,7 +128,7 @@ async function saveGeminiKey(form) {
     await loadSettings({ fresh: true }).catch(() => null);
     renderKey({ focus: true });
     if (warning) setStatus("ajustes-key-status", warning, "warning");
-    else setStatus("ajustes-key-status", "Key guardada. El Analizador ya puede usarla.", "ok");
+    else setStatus("ajustes-key-status", "Key guardada. El Analizador usará tu cuota personal.", "ok");
   } catch (err) {
     setStatus("ajustes-key-status", `No se pudo guardar la key: ${friendlyError(err)}`, "error");
     submit.disabled = false;

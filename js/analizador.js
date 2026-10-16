@@ -1,9 +1,12 @@
-// Vista "Analizador". Usa API_BASE_URL (dashboard.js), escapeHtml (mapa.js) y apiFetch (session.js).
+// Vista "Analizador". Usa API_BASE_URL (dashboard.js), escapeHtml (mapa.js), apiFetch (session.js) y settingsState (theme.js).
 
 // ---------- API ----------
 
 const ANALYZER_MAX_CHARS = 8000;   // mismo tope que el backend (JobAnalyzerServiceImpl.MAX_DESCRIPTION_LENGTH)
-const ANALYZER_TIMEOUT_MS = 45000; // el backend corta a Gemini a los 35 s; esto cubre un servidor colgado
+// Sin key propia el backend usa el servicio de IA en la nube: conexión 10 s + lectura 90 s (Render tarda en despertar).
+const ANALYZER_TIMEOUT_MS = 110000;
+const ANALYZER_WAKE_NOTICE_MS = 5000; // pasado esto se avisa de que el servicio puede estar despertando
+const AI_UNAVAILABLE_MESSAGE = "El servicio de IA no está disponible. Inténtalo de nuevo en un minuto.";
 
 // POST /api/analyzer/analyze → { matchPercentage, masteredSkills[], inProgressSkills[], missingSkills[] }.
 // Si falla lanza un Error con un mensaje listo para mostrar: el "message" del backend cuando lo hay.
@@ -20,12 +23,14 @@ async function analyzeOffer(jobDescription) {
     });
   } catch (err) {
     throw new Error(err.name === "AbortError"
-      ? "El análisis tardó demasiado. Intenta de nuevo en unos segundos."
+      ? "El análisis tardó demasiado. Intenta de nuevo en un minuto."
       : "No se pudo conectar con el servidor.");
   } finally {
     clearTimeout(timer);
   }
   if (!res.ok) {
+    // 503 = IA sin configurar en el backend: la key es opcional, así que nunca se pide aquí.
+    if (res.status === 503) throw new Error(AI_UNAVAILABLE_MESSAGE);
     const body = await res.json().catch(() => null);
     throw new Error(body?.message || `El servidor respondió con un error (${res.status}).`);
   }
@@ -175,7 +180,7 @@ let analyzerStale = false;  // el progreso cambió después de ese resultado
 function setAnalyzing(isAnalyzing) {
   const button = document.getElementById("analizador-submit");
   button.disabled = isAnalyzing;
-  button.querySelector("[data-label]").textContent = isAnalyzing ? "Analizando… puede tardar hasta 30 segundos" : "Analizar Compatibilidad";
+  button.querySelector("[data-label]").textContent = isAnalyzing ? "Analizando…" : "Analizar Compatibilidad";
   button.setAttribute("aria-busy", String(isAnalyzing));
 }
 
@@ -216,6 +221,11 @@ async function runAnalysis() {
   setAnalyzing(true);
   result.innerHTML = renderAnalyzerSkeleton();
   result.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "nearest" });
+  // Sin key propia se usa la IA en la nube, que se duerme (plan gratis de Render): si tarda, se explica la espera.
+  const wakeTimer = setTimeout(() => {
+    if (requestId !== analyzerRequest || settingsState?.gemini?.configured) return;
+    result.insertAdjacentHTML("afterbegin", `<p class="analizador-wake" role="status">Despertando el servicio de IA, puede tardar hasta un minuto…</p>`);
+  }, ANALYZER_WAKE_NOTICE_MS);
   let failed = false;
   try {
     const r = await analyzeOffer(text.slice(0, ANALYZER_MAX_CHARS));
@@ -228,6 +238,8 @@ async function runAnalysis() {
     failed = true;
     result.innerHTML = renderAnalyzerError(err);
     analyzerShown = false;
+  } finally {
+    clearTimeout(wakeTimer);
   }
   setAnalyzing(false);
   // El botón pierde el foco al deshabilitarse: se devuelve a "Reintentar" si falló, o al botón principal.
@@ -250,7 +262,7 @@ function initAnalizador() {
 }
 
 // Al abrir la vista (showView en mapa.js): un resultado calculado con el progreso anterior se retira. No se vuelve a
-// analizar solo: cada análisis gasta cuota de Gemini.
+// analizar solo: cada análisis gasta cuota de IA.
 function openAnalizador() {
   if (!analyzerStale) return;
   analyzerStale = false;
