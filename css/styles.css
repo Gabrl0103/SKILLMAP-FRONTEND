@@ -531,6 +531,9 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .analizador-count--limit { color:var(--pink-ink); font-weight:600; }
 .analizador-warning { display:flex; align-items:center; gap:.45rem; font-size:.8rem; font-weight:600; color:var(--pink-ink); }
 .analizador-warning[hidden] { display:none; }
+/* Aviso de espera mientras despierta el servicio de IA en la nube (js/analizador.js) */
+.analizador-wake { margin-bottom:1rem; padding:.8rem 1.1rem; border-radius:.9rem; background:var(--chip-azul-bg); color:var(--chip-azul-fg);
+  font-size:.8rem; font-weight:600; line-height:1.5; animation:fade-in 220ms ease-out; }
 
 #analizador-result { margin-top:1.75rem; }
 .analizador-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:1.5rem; }
@@ -607,10 +610,10 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 /* Menos movimiento: sin entrada, varita ni "no" (el pulso del skeleton se apaga en la sección de Mi Ruta). Quedan los cambios de color. */
 @media (prefers-reduced-motion: reduce) {
   #analizador-result > .analizador-empty, #analizador-result > .analizador-error, .analizador-grid > *, .analizador-chip, #analizador-submit[aria-busy="true"] svg, #analizador-submit[aria-busy="true"] svg path + path,
-  .analizador-warning:not([hidden]) svg { animation:none; }
+  .analizador-warning:not([hidden]) svg, .analizador-wake { animation:none; }
   .analizador-chip:hover { transform:none; }
 }
-:root[data-motion="reduced"] #analizador-result > .analizador-empty, :root[data-motion="reduced"] #analizador-result > .analizador-error, :root[data-motion="reduced"] .analizador-grid > *, :root[data-motion="reduced"] .analizador-chip, :root[data-motion="reduced"] #analizador-submit[aria-busy="true"] svg, :root[data-motion="reduced"] #analizador-submit[aria-busy="true"] svg path + path, :root[data-motion="reduced"] .analizador-warning:not([hidden]) svg { animation:none; }
+:root[data-motion="reduced"] #analizador-result > .analizador-empty, :root[data-motion="reduced"] #analizador-result > .analizador-error, :root[data-motion="reduced"] .analizador-grid > *, :root[data-motion="reduced"] .analizador-chip, :root[data-motion="reduced"] #analizador-submit[aria-busy="true"] svg, :root[data-motion="reduced"] #analizador-submit[aria-busy="true"] svg path + path, :root[data-motion="reduced"] .analizador-warning:not([hidden]) svg, :root[data-motion="reduced"] .analizador-wake { animation:none; }
 :root[data-motion="reduced"] .analizador-chip:hover { transform:none; }
 
 /* ---------- Mi Ruta ---------- */
