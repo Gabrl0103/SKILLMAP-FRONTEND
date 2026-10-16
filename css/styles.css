@@ -1032,6 +1032,8 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .ajustes-total-label { font-size:17px; color:var(--text-2); }
 .ajustes-sources li { font-size:16px; line-height:26px; color:var(--text-2); }
 .ajustes-sources strong { font-weight:700; color:var(--text); }
+.ajustes-sources li + li { margin-top:6px; }
+.ajustes-source-meta { display:block; font-size:14px; line-height:20px; color:var(--text-2); }
 .ajustes-updated { margin-top:2px; font-size:14px; color:var(--text-2); }
 .ajustes-jobs-action { flex-shrink:0; width:344px; }
 .ajustes-jobs-action .ajustes-note { margin-top:16px; }

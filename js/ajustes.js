@@ -186,9 +186,18 @@ function formatWait(minutes) {
   return m ? `${h} h ${m} min` : `${h} h`;
 }
 
+// Debajo de cada fuente: su última actualización y, si el backend la sincroniza sola, cada cuántos días
+function sourceMeta(s) {
+  const updated = s.lastSyncAt
+    ? `Actualizada: <time datetime="${escapeHtml(s.lastSyncAt)}">${formatSyncDate(s.lastSyncAt)}</time>`
+    : "Sin actualizar";
+  const auto = s.autoSyncDays ? ` · ${escapeHtml(s.name)} se actualiza solo cada ${s.autoSyncDays} días` : "";
+  return `<span class="ajustes-source-meta">${updated}${auto}</span>`;
+}
+
 function renderJobStats(stats) {
   const sources = stats.sources.length
-    ? stats.sources.map(s => `<li><strong>${escapeHtml(s.name)}</strong> · ${offersText(s.jobs)}</li>`).join("")
+    ? stats.sources.map(s => `<li><strong>${escapeHtml(s.name)}</strong> · ${offersText(s.jobs)}${sourceMeta(s)}</li>`).join("")
     : `<li>Aún no hay fuentes sincronizadas</li>`;
   const updated = stats.lastSyncAt
     ? `Última actualización: <time datetime="${escapeHtml(stats.lastSyncAt)}">${formatSyncDate(stats.lastSyncAt)}</time>`
