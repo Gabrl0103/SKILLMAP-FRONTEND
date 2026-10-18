@@ -3,10 +3,10 @@ const API_BASE_URL = location.protocol === "file:" ||
   (location.port === "5500" && ["localhost", "127.0.0.1"].includes(location.hostname))
   ? "http://localhost:8080" : "";
 
-// Vista "Mi Ruta". Usa escapeHtml y showView definidos en mapa.js (disponibles tras DOMContentLoaded) y apiJson
-// (session.js). Los datos se piden al iniciar sesión (loadRuta, desde session.js).
+// Vista "Mi Ruta". Usa escapeHtml y showView definidos en mapa.js (disponibles tras DOMContentLoaded), apiJson y
+// sessionUser (session.js) y t, tn, statusLabel, formatNumber, errorText, tSkill y tGoalTitle (i18n.js). Los datos se
+// piden al iniciar sesión (loadRuta, desde session.js).
 
-const STATUS_LABEL = { MASTERED: "Dominada", IN_PROGRESS: "En desarrollo", PENDING: "Por aprender" };
 const VISIBLE_GAPS = 3; // el mockup muestra 3 brechas; "Ver detalle de brechas" despliega el resto
 
 // ---------- Demanda ----------
@@ -16,9 +16,9 @@ const VISIBLE_GAPS = 3; // el mockup muestra 3 brechas; "Ver detalle de brechas"
 function urgencyBadge(demand, referenceDemands) {
   const sorted = [...referenceDemands].sort((a, b) => b - a);
   const cut = third => sorted[Math.ceil((sorted.length * third) / 3) - 1];
-  if (demand > 0 && demand >= cut(1)) return { label: "Crítica", tone: "hot" };
-  if (demand > 0 && demand >= cut(2)) return { label: "Alta demanda", tone: "hot" };
-  return { label: "Media", tone: "neutral" };
+  if (demand > 0 && demand >= cut(1)) return { label: t("ruta.urgency.critical"), tone: "hot" };
+  if (demand > 0 && demand >= cut(2)) return { label: t("ruta.urgency.high"), tone: "hot" };
+  return { label: t("ruta.urgency.medium"), tone: "neutral" };
 }
 
 // "Mercado Laboral": demanda media de las habilidades del objetivo frente a la de todo el catálogo.
@@ -34,17 +34,19 @@ function averageDemandOf(skills) {
 // DATOS DE EJEMPLO: la API no guarda histórico del nivel ni de la demanda. Valores fijos.
 function sampleTrendData() {
   return {
-    months: ["Ene", "Feb", "Mar", "Abr", "May", "Jun"],
+    months: t("ruta.trend.months").split(","),
     nivel: [40, 45, 52, 58, 62, 68],
     demanda: [60, 62, 65, 70, 75, 82],
   };
 }
 
-const sampleTag = `<span class="sample-tag">Datos de ejemplo</span>`;
+// Etiqueta "Datos de ejemplo" (función: sale en el idioma vigente al pintar)
+function sampleTag() {
+  return `<span class="sample-tag">${t("common.sample")}</span>`;
+}
 
 // La demanda es real cuando el backend la calculó sobre ofertas (JOB_POSTINGS); si alguna habilidad aún tiene
-// el valor sembrado (SEEDED), Mi Ruta, Mapa Visual y Perfil la etiquetan como datos de ejemplo.
-const SAMPLE_DEMAND_TEXT = "Demanda de ejemplo: aún no proviene de vacantes reales";
+// el valor sembrado (SEEDED), Mi Ruta, Mapa Visual y Perfil la etiquetan como datos de ejemplo (demand.sample).
 
 function demandIsSample(skills) {
   return skills.some(s => s.demandSource !== "JOB_POSTINGS");
@@ -52,15 +54,15 @@ function demandIsSample(skills) {
 
 // Nota "Datos de ejemplo" + aviso de demanda, envuelta en un <p> con la clase dada. Vacía si la demanda es real.
 function sampleDemandNote(className, skills) {
-  return demandIsSample(skills) ? `<p class="${className}">${sampleTag} ${SAMPLE_DEMAND_TEXT}</p>` : "";
+  return demandIsSample(skills) ? `<p class="${className}">${sampleTag()} ${t("demand.sample")}</p>` : "";
 }
 
 // "Basado en N ofertas reales · Arbeitnow, Remotive" a partir de /api/jobs/stats. Vacío si no hay ofertas.
-// El Mapa Visual usa el inicio "Ruta calculada con".
-function jobStatsText(stats, lead = "Basado en") {
+// El Mapa Visual usa "Ruta calculada con N ofertas reales" (jobs.routeFrom).
+function jobStatsText(stats, key = "jobs.basedOn") {
   if (!stats?.totalJobs) return "";
   const sources = stats.sources.filter(s => s.jobs > 0).map(s => escapeHtml(s.name)).join(", ");
-  return `${lead} ${stats.totalJobs} ofertas reales${sources ? ` · ${sources}` : ""}`;
+  return `${t(key, { n: formatNumber(stats.totalJobs) })}${sources ? ` · ${sources}` : ""}`;
 }
 
 // ---------- Bloques de la vista ----------
@@ -73,13 +75,12 @@ function renderMarketDemand(goalSkills, catalog) {
   const goalAvg = averageDemandOf(goalSkills);
   const ratio = goalAvg / marketAvg;
   const level =
-    ratio >= MARKET_HIGH_RATIO ? { label: "Alta Demanda", tone: "high", icon: "m3 17 6-6 4 4 8-8M15 7h6v6" } :
-    ratio > MARKET_LOW_RATIO   ? { label: "Demanda Media", tone: "mid", icon: "M4 12h16M14 6l6 6-6 6" } :
-                                 { label: "Demanda Baja", tone: "low", icon: "m3 7 6 6 4-4 8 8M15 17h6v-6" };
-  const title = `Las habilidades de este objetivo aparecen en promedio en el ${Math.round(goalAvg)}% de las ofertas; `
-    + `las de todo el catálogo, en el ${Math.round(marketAvg)}%`;
+    ratio >= MARKET_HIGH_RATIO ? { label: t("ruta.market.high"), tone: "high", icon: "m3 17 6-6 4 4 8-8M15 7h6v6" } :
+    ratio > MARKET_LOW_RATIO   ? { label: t("ruta.market.mid"), tone: "mid", icon: "M4 12h16M14 6l6 6-6 6" } :
+                                 { label: t("ruta.market.low"), tone: "low", icon: "m3 7 6 6 4-4 8 8M15 17h6v-6" };
+  const title = t("ruta.market.title", { goal: Math.round(goalAvg), market: Math.round(marketAvg) });
   el.innerHTML = `
-    <p class="market-demand-label">Mercado Laboral</p>
+    <p class="market-demand-label">${t("ruta.market")}</p>
     <p class="market-demand-value market-demand-value--${level.tone}" title="${title}">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${level.icon}"/></svg>
       ${level.label}
@@ -93,19 +94,19 @@ function renderGauge(r) {
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (r.readinessPercentage / 100) * circumference;
   const remaining = r.totalCount - r.masteredCount;
-  const goal = escapeHtml(r.goalTitle);
+  const goal = escapeHtml(tGoalTitle(r.goalTitle));
   const message = r.totalCount === 0
-    ? `${goal} aún no tiene habilidades clave definidas.`
+    ? t("ruta.gauge.noSkills", { goal })
     : remaining === 0
-    ? `Dominas todas las habilidades clave de ${goal}.`
-    : `Estás a solo ${remaining} ${remaining === 1 ? "habilidad clave" : "habilidades clave"} de alcanzar el perfil ideal para ${goal}.`;
+    ? t("ruta.gauge.done", { goal })
+    : tn("ruta.gauge.remaining", remaining, { goal });
 
   // Gauge compartido con el Analizador: --pct alimenta el conteo del número (styles.css); el span es el respaldo sin CSS.
   return `
     <article class="ruta-card ruta-gauge">
-      <h2 class="ruta-card-title">Nivel de Preparación</h2>
+      <h2 class="ruta-card-title">${t("ruta.gauge.title")}</h2>
       <div class="gauge-ring ruta-gauge-ring">
-        <svg viewBox="0 0 160 160" role="img" aria-label="${r.readinessPercentage}% de preparación">
+        <svg viewBox="0 0 160 160" role="img" aria-label="${t("ruta.gauge.aria", { pct: r.readinessPercentage })}">
           <defs><linearGradient id="gauge-grad-ruta" x1="0" y1="0" x2="1" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs>
           <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-track"/>
           <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-fill" stroke="url(#gauge-grad-ruta)"
@@ -114,7 +115,7 @@ function renderGauge(r) {
         <p class="gauge-value" aria-hidden="true" style="--pct:${Math.round(r.readinessPercentage)};"><span>${r.readinessPercentage}%</span></p>
       </div>
       <p class="ruta-gauge-text">${message}</p>
-      ${r.gaps.length ? `<button type="button" class="btn-pill" data-action="show-gaps">Ver detalle de brechas</button>` : ""}
+      ${r.gaps.length ? `<button type="button" class="btn-pill" data-action="show-gaps">${t("ruta.showGaps")}</button>` : ""}
     </article>`;
 }
 
@@ -130,30 +131,30 @@ function renderBrechas(gaps, reference, jobStats) {
     return `
       <li class="gap-row"${extra ? " data-extra hidden" : ""}>
         <div class="gap-head">
-          <span class="gap-name">${escapeHtml(s.name)}</span>
+          <span class="gap-name">${escapeHtml(tSkill(s.name))}</span>
           <span class="gap-badge gap-badge--${badge.tone}">${badge.label}</span>
         </div>
         <div class="gap-bar" aria-hidden="true"><span style="width:${barWidth}%"></span></div>
         <div class="gap-meta">
-          <span>Demanda: ${s.demandPercentage}%</span>
-          <span class="gap-status">${STATUS_LABEL[s.status] || STATUS_LABEL.PENDING}</span>
+          <span>${t("ruta.gaps.demand", { pct: s.demandPercentage })}</span>
+          <span class="gap-status">${statusLabel(s.status)}</span>
         </div>
       </li>`;
   }).join("");
 
   // Demanda sembrada: aviso de ejemplo. Demanda real: de cuántas ofertas sale.
   const statsText = jobStatsText(jobStats);
-  const note = demandIsSample(gaps) ? `<p class="ruta-sample-note">${sampleTag} ${SAMPLE_DEMAND_TEXT}</p>`
+  const note = demandIsSample(gaps) ? `<p class="ruta-sample-note">${sampleTag()} ${t("demand.sample")}</p>`
     : statsText ? `<p class="ruta-sample-note">${statsText}</p>` : "";
   const body = gaps.length
     ? `<ul class="gap-list">${rows}</ul>${note}`
-    : `<p class="text-sm text-muted">No tienes brechas pendientes: ya dominas todas las habilidades de este objetivo.</p>`;
+    : `<p class="text-sm text-muted">${t("ruta.gaps.none")}</p>`;
 
   return `
     <article id="brechas-card" class="ruta-card ruta-brechas" tabindex="-1">
       <header class="ruta-card-header">
-        <h2 class="ruta-card-title">Brechas Prioritarias</h2>
-        <span class="ruta-card-hint">Ordenadas por demanda</span>
+        <h2 class="ruta-card-title">${t("ruta.gaps.title")}</h2>
+        <span class="ruta-card-hint">${t("ruta.gaps.hint")}</span>
       </header>
       ${body}
     </article>`;
@@ -161,18 +162,17 @@ function renderBrechas(gaps, reference, jobStats) {
 
 function renderNextAction(topGap, goalTitle) {
   if (!topGap) return "";
-  const verb = topGap.status === "IN_PROGRESS" ? "Avanza en" : "Empieza con";
+  const titleKey = topGap.status === "IN_PROGRESS" ? "ruta.next.progress" : "ruta.next.start";
   return `
     <article class="ruta-action">
       <div class="ruta-action-head">
-        <span class="ruta-action-eyebrow">Siguiente acción</span>
-        ${demandIsSample([topGap]) ? sampleTag : ""}
+        <span class="ruta-action-eyebrow">${t("ruta.next.eyebrow")}</span>
+        ${demandIsSample([topGap]) ? sampleTag() : ""}
       </div>
-      <h2 class="ruta-action-title">${verb} ${escapeHtml(topGap.name)}</h2>
-      <p class="ruta-action-text">Aparece en el ${topGap.demandPercentage}% de las ofertas analizadas y es tu brecha
-        con más demanda para ${escapeHtml(goalTitle)}.</p>
+      <h2 class="ruta-action-title">${t(titleKey, { skill: escapeHtml(tSkill(topGap.name)) })}</h2>
+      <p class="ruta-action-text">${t("ruta.next.text", { pct: topGap.demandPercentage, goal: escapeHtml(tGoalTitle(goalTitle)) })}</p>
       <button type="button" class="btn-pill btn-pill--light" data-action="open-map">
-        Empezar ahora
+        ${t("ruta.next.cta")}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4v16l14-8z"/></svg>
       </button>
       <svg class="ruta-action-bolt" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
@@ -198,17 +198,17 @@ function renderTrend() {
   // Zonas de hover/foco más anchas que la marca: una columna por mes.
   const hits = d.months.map((m, i) => `
     <rect x="${x(i) - step / 2}" y="${top}" width="${step}" height="${bottom - top}" class="trend-hit" data-trend-i="${i}"
-      tabindex="0" aria-label="${m}: tu nivel ${d.nivel[i]}, demanda del mercado ${d.demanda[i]}"/>`).join("");
+      tabindex="0" aria-label="${t("ruta.trend.point", { month: m, level: d.nivel[i], demand: d.demanda[i] })}"/>`).join("");
   const tableRows = d.months.map((m, i) => `<tr><th scope="row">${m}</th><td>${d.nivel[i]}</td><td>${d.demanda[i]}</td></tr>`).join("");
 
   return `
     <article class="ruta-card ruta-trend">
       <header class="ruta-card-header">
-        <h2 class="ruta-card-title">Tendencia de Habilidades</h2>
-        ${sampleTag}
+        <h2 class="ruta-card-title">${t("ruta.trend.title")}</h2>
+        ${sampleTag()}
       </header>
       <div class="trend-plot">
-        <svg viewBox="0 0 ${TREND.width} ${TREND.height}" role="img" aria-label="Tendencia de ejemplo: tu nivel frente a la demanda del mercado, enero a junio">
+        <svg viewBox="0 0 ${TREND.width} ${TREND.height}" role="img" aria-label="${t("ruta.trend.aria")}">
           ${grid}${months}
           <line class="trend-cross" x1="0" x2="0" y1="${top}" y2="${bottom}" visibility="hidden"/>
           <path d="${path(d.demanda)}" class="trend-line trend-line--demanda"/>
@@ -218,14 +218,14 @@ function renderTrend() {
         <div class="trend-tooltip" role="status" hidden></div>
       </div>
       <ul class="trend-legend">
-        <li><span class="legend-key legend-key--nivel"></span>Tu Nivel</li>
-        <li><span class="legend-key legend-key--demanda"></span>Demanda del mercado</li>
+        <li><span class="legend-key legend-key--nivel"></span>${t("ruta.trend.level")}</li>
+        <li><span class="legend-key legend-key--demanda"></span>${t("ruta.trend.demand")}</li>
       </ul>
       <!-- sr-only va en un div: una <table> ignora width:1px y su ancho real desbordaba la página en pantallas angostas -->
       <div class="sr-only">
         <table>
-          <caption>Tendencia de habilidades (datos de ejemplo)</caption>
-          <thead><tr><th scope="col">Mes</th><th scope="col">Tu nivel</th><th scope="col">Demanda del mercado</th></tr></thead>
+          <caption>${t("ruta.trend.caption")}</caption>
+          <thead><tr><th scope="col">${t("ruta.trend.month")}</th><th scope="col">${t("ruta.trend.levelCol")}</th><th scope="col">${t("ruta.trend.demand")}</th></tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
       </div>
@@ -246,8 +246,8 @@ function bindTrendHover(container) {
     cross.setAttribute("x1", cx);
     cross.setAttribute("x2", cx);
     cross.setAttribute("visibility", "visible");
-    tooltip.innerHTML = `<strong>${d.months[i]}</strong><span><i class="legend-key legend-key--nivel"></i>Tu nivel ${d.nivel[i]}</span>
-      <span><i class="legend-key legend-key--demanda"></i>Demanda ${d.demanda[i]}</span>`;
+    tooltip.innerHTML = `<strong>${d.months[i]}</strong><span><i class="legend-key legend-key--nivel"></i>${t("ruta.trend.tipLevel", { n: d.nivel[i] })}</span>
+      <span><i class="legend-key legend-key--demanda"></i>${t("ruta.trend.tipDemand", { n: d.demanda[i] })}</span>`;
     tooltip.hidden = false;
     // Posición horizontal en % del ancho; en los extremos se ancla al borde para que no se salga.
     const pct = (cx / TREND.width) * 100;
@@ -267,7 +267,7 @@ function renderRutaSkeleton() {
   const gapRow = `<div><span class="skel skel-line skel-line--half"></span><span class="skel skel-bar"></span></div>`;
   return `
     <div class="ruta-grid ruta-skeleton" role="status">
-      <span class="sr-only">Cargando tu ruta…</span>
+      <span class="sr-only">${t("ruta.loading")}</span>
       <div class="ruta-col" aria-hidden="true">
         <div class="ruta-card ruta-gauge">
           <span class="skel skel-line skel-line--title"></span>
@@ -294,10 +294,10 @@ function renderRutaSkeleton() {
 function renderApiError(err) {
   return `
     <div class="card p-6 md:col-span-2 border border-dashed border-pink">
-      <p class="text-sm font-medium text-ink">No pudimos cargar tus datos</p>
-      <p class="text-xs text-muted mt-1">El servidor de SkillMap no responde. Recarga la página en unos minutos para intentarlo de nuevo.</p>
-      <p class="text-xs text-muted mt-2">Detalle técnico: servidor en <code>${API_BASE_URL || location.origin}</code>
-      (<code>./mvnw spring-boot:run</code> desde skillmap-api) · ${err.message}</p>
+      <p class="text-sm font-medium text-ink">${t("error.loadTitle")}</p>
+      <p class="text-xs text-muted mt-1">${t("error.loadText")}</p>
+      <p class="text-xs text-muted mt-2">${t("error.techDetail", { server: `<code>${API_BASE_URL || location.origin}</code>`,
+        cmd: "<code>./mvnw spring-boot:run</code>" })} · ${escapeHtml(errorText(err))}</p>
     </div>`;
 }
 
@@ -395,7 +395,7 @@ function renderGoalOptions(goals) {
   const check = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>`;
   goalPicker.list().innerHTML = goals.map(g => `
     <li id="goal-option-${g.id}" class="goal-option" role="option" data-goal-id="${g.id}" aria-selected="false">
-      <span>${escapeHtml(g.title)}</span>${check}
+      <span>${escapeHtml(tGoalTitle(g.title))}</span>${check}
     </li>`).join("");
   goalPicker.button().disabled = goals.length === 0;
 }
@@ -403,7 +403,7 @@ function renderGoalOptions(goals) {
 function syncGoalPicker(goals) {
   goalPicker.options().forEach(o => o.setAttribute("aria-selected", String(o.dataset.goalId === activeGoalId)));
   const goal = goals?.find(g => String(g.id) === activeGoalId);
-  if (goal) setGoalTitle(goal.title);
+  if (goal) setGoalTitle(tGoalTitle(goal.title));
 }
 
 function setActiveOption(option) {
@@ -534,6 +534,7 @@ async function loadDashboard(goalId) {
 let rutaStale = false; // el progreso cambió (habilidad marcada en el Mapa): se recarga al volver a Mi Ruta
 
 function initRuta() {
+  setGoalTitle(t("common.loading"));
   document.getElementById("app-content").innerHTML = renderRutaSkeleton(); // hasta que haya sesión y lleguen los datos
   bindGoalPicker();
   document.getElementById("app-content").addEventListener("click", e => {
@@ -552,14 +553,14 @@ async function loadRuta() {
     const goals = await loadGoals();
     if (requestId !== latestRequest) return;
     if (goals.length === 0) {
-      setGoalTitle("Sin objetivos");
-      container.innerHTML = `<p class="text-sm text-muted-page">Aún no hay objetivos profesionales disponibles.</p>`;
+      setGoalTitle(t("ruta.noGoals"));
+      container.innerHTML = `<p class="text-sm text-muted-page">${t("objetivo.empty")}</p>`;
       return;
     }
     await loadDashboard(activeGoalId);
   } catch (err) {
     if (requestId !== latestRequest) return;
-    setGoalTitle("Sin conexión");
+    setGoalTitle(t("ruta.offline"));
     container.innerHTML = renderApiError(err);
   }
 }
@@ -583,8 +584,15 @@ document.addEventListener("skillmap:user", () => {
   closeGoalList({ focusButton: false });
   goalPicker.list().innerHTML = "";
   goalPicker.button().disabled = true;
-  setGoalTitle("Cargando…");
+  setGoalTitle(t("common.loading"));
   document.getElementById("market-demand").hidden = true;
+  document.getElementById("app-content").innerHTML = renderRutaSkeleton();
+});
+
+// Cambio de idioma: con sesión se vuelve a pintar todo (las peticiones están en caché); sin ella, el estado de carga
+document.addEventListener("skillmap:language", () => {
+  if (sessionUser) { loadRuta(); return; }
+  setGoalTitle(t("common.loading"));
   document.getElementById("app-content").innerHTML = renderRutaSkeleton();
 });
 

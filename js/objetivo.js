@@ -1,4 +1,5 @@
-// Vista "Objetivo". Usa fetchGoals, setActiveGoal, getActiveGoalId y renderApiError (dashboard.js) y escapeHtml/showView (mapa.js).
+// Vista "Objetivo". Usa fetchGoals, setActiveGoal, getActiveGoalId y renderApiError (dashboard.js), escapeHtml/showView
+// (mapa.js) y t, tn, tGoalTitle y tGoalDescription (i18n.js).
 
 // Ícono y color de cada tarjeta según palabras clave del título (sin acentos, en minúsculas).
 // Gana el primer tema que coincide; sin coincidencia se usa GENERIC_THEME. El fondo del ícono lo deriva styles.css
@@ -32,17 +33,19 @@ function goalTheme(title) {
 
 const objetivoState = { goals: null, selectedId: null };
 
+// La búsqueda encuentra el objetivo por su título original y por el traducido
 function renderGoalCard(goal, index) {
   const theme = goalTheme(goal.title);
   const count = goal.skills.length;
+  const title = tGoalTitle(goal.title);
   return `
     <button type="button" class="objetivo-card" role="radio" aria-checked="false" tabindex="-1" data-goal-id="${goal.id}"
-      data-title="${escapeHtml(normalizeText(goal.title))}" style="--goal-color:${theme.color}; --i:${index};">
+      data-title="${escapeHtml(normalizeText(`${goal.title} ${title}`))}" style="--goal-color:${theme.color}; --i:${index};">
       <span class="objetivo-card-icon" aria-hidden="true">${theme.icon}</span>
       <svg class="objetivo-card-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m7.5 12.3 3 3 6-6.3" pathLength="1" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span class="objetivo-card-title">${escapeHtml(goal.title)}</span>
-      <span class="objetivo-card-desc">${escapeHtml(goal.description || "")}</span>
-      <span class="objetivo-card-count">${count} ${count === 1 ? "habilidad requerida" : "habilidades requeridas"}
+      <span class="objetivo-card-title">${escapeHtml(title)}</span>
+      <span class="objetivo-card-desc">${escapeHtml(tGoalDescription(goal.title, goal.description || ""))}</span>
+      <span class="objetivo-card-count">${tn("objetivo.skills", count)}
         <svg width="12" height="12" viewBox="0 0 24 24" ${ICON_STROKE} aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </span>
     </button>`;
@@ -51,21 +54,21 @@ function renderGoalCard(goal, index) {
 function renderObjetivo(goals) {
   const cards = goals.map(renderGoalCard).join("");
   return `
-    <p class="objetivo-empty" role="status" ${goals.length ? "hidden" : ""}>${goals.length ? "" : "Aún no hay objetivos profesionales disponibles."}</p>
+    <p class="objetivo-empty" role="status" ${goals.length ? "hidden" : ""}>${goals.length ? "" : t("objetivo.empty")}</p>
     <div class="objetivo-grid">
       <!-- display:contents: las tarjetas participan de la grilla y "Otro objetivo" queda fuera del grupo de radios -->
-      <div class="objetivo-radios" role="radiogroup" aria-label="Objetivos profesionales">${cards}</div>
-      <div class="objetivo-card objetivo-card--otro" aria-disabled="true" title="Próximamente" style="--i:${goals.length};">
+      <div class="objetivo-radios" role="radiogroup" aria-label="${t("objetivo.group")}">${cards}</div>
+      <div class="objetivo-card objetivo-card--otro" aria-disabled="true" title="${t("common.soon")}" style="--i:${goals.length};">
         <span class="objetivo-otro-plus" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         </span>
-        <span class="objetivo-card-title">Otro objetivo</span>
-        <span class="objetivo-otro-text">Crea tu propio rol personalizado</span>
-        <span class="sample-tag">Próximamente</span>
+        <span class="objetivo-card-title">${t("objetivo.other")}</span>
+        <span class="objetivo-otro-text">${t("objetivo.otherText")}</span>
+        <span class="sample-tag">${t("common.soon")}</span>
       </div>
     </div>
     <div class="objetivo-actions">
-      <button type="button" class="btn-pill objetivo-cta" data-action="trazar-ruta" ${goals.length ? "" : "disabled"}>Trazar mi ruta personalizada</button>
+      <button type="button" class="btn-pill objetivo-cta" data-action="trazar-ruta" ${goals.length ? "" : "disabled"}>${t("objetivo.cta")}</button>
     </div>`;
 }
 
@@ -96,7 +99,7 @@ function filterGoalCards(query) {
   const empty = document.querySelector("#objetivo-content .objetivo-empty");
   if (empty && cards.length) {
     empty.hidden = visible > 0;
-    empty.textContent = visible ? "" : `Ningún objetivo coincide con “${query.trim()}”. Prueba con otra palabra o borra la búsqueda.`;
+    empty.textContent = visible ? "" : t("objetivo.noMatch", { query: query.trim() });
   }
   selectGoalCard(objetivoState.selectedId);
 }
@@ -122,7 +125,7 @@ function currentActiveGoalId(goals) {
 async function openObjetivo() {
   const container = document.getElementById("objetivo-content");
   if (!objetivoState.goals) {
-    container.innerHTML = `<p class="text-sm text-muted-page">Cargando objetivos…</p>`;
+    container.innerHTML = `<p class="text-sm text-muted-page">${t("objetivo.loading")}</p>`;
     try {
       objetivoState.goals = await fetchGoals();
     } catch (err) {
@@ -156,6 +159,14 @@ document.addEventListener("skillmap:user", () => {
   objetivoState.selectedId = null;
   document.getElementById("objetivo-content").innerHTML = "";
   document.getElementById("objetivo-search").value = "";
+});
+
+// Cambio de idioma: las tarjetas se vuelven a pintar conservando la selección y la búsqueda
+document.addEventListener("skillmap:language", () => {
+  if (!objetivoState.goals) return;
+  document.getElementById("objetivo-content").innerHTML = renderObjetivo(objetivoState.goals);
+  selectGoalCard(objetivoState.selectedId);
+  filterGoalCards(document.getElementById("objetivo-search").value);
 });
 
 document.addEventListener("DOMContentLoaded", initObjetivo);
