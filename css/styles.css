@@ -1108,9 +1108,9 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
   background:var(--surface-solid); border:1.5px solid var(--card-border); color:var(--text);
   transition:background var(--dur-slow) ease, color var(--dur-slow) ease, border-color var(--dur-slow) ease, box-shadow var(--dur-slow) ease; }
 .intro-node--pending { border:2px dashed var(--line-dashed); color:var(--text-mid); }
-/* Slide 1: nodos coloreados por estado (las otras slides los dejan neutros para destacar su propio efecto) */
-.intro-art[data-slide="1"] .intro-node--mastered { background:var(--mastered-bg); border-color:transparent; color:var(--mastered-fg); box-shadow:var(--intro-node-mastered-shadow); }
-.intro-art[data-slide="1"] .intro-node--progress { background:var(--progress-bg); border-color:transparent; color:var(--progress-fg); box-shadow:var(--intro-node-progress-shadow); }
+/* Nodos coloreados por estado en todas las slides; cada slide añade su efecto encima */
+.intro-node--mastered { background:var(--mastered-bg); border-color:transparent; color:var(--mastered-fg); box-shadow:var(--intro-node-mastered-shadow); }
+.intro-node--progress { background:var(--progress-bg); border-color:transparent; color:var(--progress-fg); box-shadow:var(--intro-node-progress-shadow); }
 /* Slide 2: porcentaje de demanda sobre cada nodo (ilustrativo, parte de la ilustración aria-hidden) */
 .intro-node::after { content:attr(data-pct); position:absolute; top:-12px; right:-14px; padding:3px 7px; border-radius:var(--radius-pill);
   background:var(--tooltip-bg); color:var(--tooltip-fg); font-size:11px; font-weight:700; opacity:0; scale:.8;
