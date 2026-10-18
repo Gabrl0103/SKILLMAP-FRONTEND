@@ -1,20 +1,13 @@
 // Pantalla de Acceso: iniciar sesión o crear cuenta (#acceso, a pantalla completa y sin barra superior).
 // Usa apiFetch, apiError, friendlyError, storeSessionToken, startSession y setAppInert (session.js) y hideIntro
-// (intro.js). La contraseña solo vive en su campo hasta enviar: se limpia al enviar, salga bien o mal, y nunca se
-// guarda ni se registra.
+// (intro.js) y t (i18n.js). La contraseña solo vive en su campo hasta enviar: se limpia al enviar, salga bien o mal, y
+// nunca se guarda ni se registra.
 
 const ACCESO_MIN_PASSWORD = 8; // mismo mínimo que el backend (UserFactory)
+// Textos en i18n.js: acceso.<modo>.title, .subtitle, .submit y .busy
 const ACCESO_MODES = {
-  login: {
-    title: "Bienvenido de nuevo", subtitle: "Entra para seguir tu ruta donde la dejaste.",
-    submit: "Iniciar sesión", busy: "Entrando…", path: "/api/auth/login",
-    emailAutocomplete: "username", passwordAutocomplete: "current-password",
-  },
-  register: {
-    title: "Crea tu cuenta", subtitle: "Tu progreso se guarda en este equipo, separado del de otras cuentas.",
-    submit: "Crear cuenta", busy: "Creando cuenta…", path: "/api/auth/register",
-    emailAutocomplete: "email", passwordAutocomplete: "new-password",
-  },
+  login: { path: "/api/auth/login", emailAutocomplete: "username", passwordAutocomplete: "current-password" },
+  register: { path: "/api/auth/register", emailAutocomplete: "email", passwordAutocomplete: "new-password" },
 };
 
 const acceso = {
@@ -45,6 +38,13 @@ function firstAccesoField() {
   return acceso.field(acceso.mode === "register" ? "name" : "email");
 }
 
+// Título, subtítulo y botón del modo actual en el idioma actual
+function renderAccesoTexts() {
+  document.getElementById("acceso-title").textContent = t(`acceso.${acceso.mode}.title`);
+  document.getElementById("acceso-subtitle").textContent = t(`acceso.${acceso.mode}.subtitle`);
+  document.querySelector("#acceso-submit [data-label]").textContent = t(`acceso.${acceso.mode}.${acceso.busy ? "busy" : "submit"}`);
+}
+
 function setAccesoMode(mode) {
   acceso.mode = mode;
   const m = ACCESO_MODES[mode];
@@ -52,13 +52,11 @@ function setAccesoMode(mode) {
   document.querySelectorAll("[data-acceso-mode]").forEach(button => {
     button.setAttribute("aria-pressed", String(button.dataset.accesoMode === mode));
   });
-  document.getElementById("acceso-title").textContent = m.title;
-  document.getElementById("acceso-subtitle").textContent = m.subtitle;
+  renderAccesoTexts();
   document.getElementById("acceso-name-field").hidden = !register;
   document.getElementById("acceso-password-hint").hidden = !register;
   acceso.field("email").autocomplete = m.emailAutocomplete;
   acceso.field("password").autocomplete = m.passwordAutocomplete;
-  document.querySelector("#acceso-submit [data-label]").textContent = m.submit;
   acceso.field("password").value = "";
   setPasswordVisible(false);
   setAccesoError("");
@@ -70,7 +68,7 @@ function setAccesoBusy(busy) {
   const submit = document.getElementById("acceso-submit");
   submit.setAttribute("aria-busy", String(busy));
   submit.setAttribute("aria-disabled", String(busy));
-  submit.querySelector("[data-label]").textContent = ACCESO_MODES[acceso.mode][busy ? "busy" : "submit"];
+  renderAccesoTexts();
   ["name", "email", "password"].forEach(name => { acceso.field(name).readOnly = busy; });
   document.querySelectorAll("[data-acceso-mode]").forEach(button => { button.disabled = busy; });
 }
@@ -78,16 +76,17 @@ function setAccesoBusy(busy) {
 // Validación mínima antes de enviar (el backend vuelve a validar todo). Devuelve [campo, mensaje] o null.
 function accesoInvalid(register) {
   const name = acceso.field("name"), email = acceso.field("email"), password = acceso.field("password");
-  if (register && !name.value.trim()) return [name, "Escribe tu nombre."];
-  if (!email.value.trim()) return [email, "Escribe tu correo."];
-  if (!password.value) return [password, "Escribe tu contraseña."];
+  if (register && !name.value.trim()) return [name, t("acceso.missingName")];
+  if (!email.value.trim()) return [email, t("acceso.missingEmail")];
+  if (!password.value) return [password, t("acceso.missingPassword")];
   if (register && Array.from(password.value).length < ACCESO_MIN_PASSWORD) {
-    return [password, `La contraseña debe tener al menos ${ACCESO_MIN_PASSWORD} caracteres.`];
+    return [password, t("acceso.shortPassword", { min: ACCESO_MIN_PASSWORD })];
   }
   return null;
 }
 
-// Campo al que apunta un error del backend: correo repetido o inválido, nombre inválido; si no, la contraseña
+// Campo al que apunta un error del backend (su mensaje original, en español): correo repetido o inválido, nombre
+// inválido; si no, la contraseña
 function accesoErrorField(status, message) {
   if (status === 409 || (status === 400 && /correo/i.test(message))) return acceso.field("email");
   if (status === 400 && /nombre/i.test(message)) return acceso.field("name");
@@ -132,9 +131,8 @@ async function submitAcceso(e) {
     document.querySelector(".nav-item[data-view='dashboard']")?.focus();
   } catch (err) {
     setAccesoBusy(false);
-    const message = friendlyError(err);
-    const field = status ? accesoErrorField(status, message) : password;
-    setAccesoError(message, field);
+    const field = status ? accesoErrorField(status, err.message) : password;
+    setAccesoError(friendlyError(err), field);
     field.focus();
   }
 }
@@ -174,3 +172,4 @@ function initAcceso() {
 }
 
 document.addEventListener("DOMContentLoaded", initAcceso);
+document.addEventListener("skillmap:language", renderAccesoTexts);
