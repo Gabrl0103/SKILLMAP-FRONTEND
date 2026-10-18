@@ -343,8 +343,7 @@ function renderMapaPanel(skill) {
     <p class="mapa-panel-demand"><span class="mapa-panel-pct">${skill.demandPercentage}</span><span class="mapa-panel-pct-label">${t("mapa.pctOfJobs")}</span></p>
     <p class="mapa-panel-text">${mapaSkillText(skill)}</p>
     <div class="mapa-panel-actions">
-      <!-- Próximamente: contexto y preguntas frecuentes (Fase 6) -->
-      <button type="button" class="btn-pill" aria-disabled="true" title="${t("common.soon")}">${t("mapa.context")}</button>
+      <button type="button" class="btn-pill" data-context="${skill.id}">${t("skill.context")}</button>
       ${renderMasterButton(skill)}
     </div>
     ${mapaMark.errorId === skill.id ? `<p class="mapa-panel-error" role="alert">${escapeHtml(t(mapaMark.errorMaster ? "mapa.markError" : "mapa.unmarkError",
@@ -364,11 +363,12 @@ function renderMasterButton(skill) {
 function refreshMapaPanel() {
   const panel = document.getElementById("mapa-panel");
   if (!panel) return;
-  const hadFocus = panel.contains(document.activeElement);
+  const focused = panel.contains(document.activeElement)
+    ? (document.activeElement.matches("[data-context]") ? "[data-context]" : "[data-master]") : null;
   const skill = mapaSkills.find(s => s.id === mapaSelectedId);
   panel.innerHTML = skill ? renderMapaPanel(skill) : renderMapaPanelEmpty();
-  // Redibujar quita el foco: si estaba en el panel (botón de marcar), vuelve a ese botón
-  if (hadFocus) panel.querySelector("[data-master]")?.focus({ preventScroll: true });
+  // Redibujar quita el foco: si estaba en el panel (contexto o marcar), vuelve a ese botón
+  if (focused) panel.querySelector(focused)?.focus({ preventScroll: true });
 }
 
 function selectMapaNode(node) {
@@ -730,8 +730,22 @@ window.addEventListener("resize", applyMapaTransform);
 
 // Botones del panel (se redibuja con cada selección): un solo listener en el contenedor
 document.getElementById("mapa-content").addEventListener("click", e => {
+  const context = e.target.closest("#mapa-panel [data-context]");
+  if (context) { openSkillDetail(Number(context.dataset.context), context); return; } // skill-detalle.js
   const button = e.target.closest("#mapa-panel [data-master]");
   if (button && button.getAttribute("aria-disabled") !== "true") toggleMapaSkill(Number(button.dataset.master));
+});
+
+// Habilidad marcada o quitada desde el detalle (skill-detalle.js): nodo y panel se actualizan sin redibujar el mapa y
+// la ruta sugerida se recalcula al volver a la vista. Las marcas hechas aquí mismo no traen detalle.
+document.addEventListener("skillmap:progress", e => {
+  const skill = e.detail?.skill;
+  const index = skill ? mapaSkills.findIndex(s => s.id === skill.id) : -1;
+  if (index < 0) return;
+  mapaSkills[index] = { ...mapaSkills[index], ...skill };
+  updateMapaNode(mapaSkills[index]);
+  mapaRoute.goalId = null;
+  refreshMapaPanel();
 });
 
 let mapaRequest = null; // se reutiliza para no volver a pedir /api/skills en cada apertura
@@ -814,6 +828,7 @@ function showView(view) {
   if (view === "objetivo") openObjetivo(); // definido en objetivo.js
   if (view === "perfil") openPerfil();     // definido en perfil.js
   if (view === "ajustes") openAjustes();   // definido en ajustes.js
+  // "skill" (detalle de habilidad) no tiene ítem en el nav: lo abre openSkillDetail (skill-detalle.js)
 }
 
 document.querySelectorAll(".nav-item[data-view], .topbar-settings[data-view]").forEach(item => {

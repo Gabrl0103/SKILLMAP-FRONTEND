@@ -899,7 +899,7 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .mapa-panel-actions { display:flex; flex-direction:column; gap:12px; margin-top:28px; }
 .mapa-panel-actions .btn-pill { width:100%; white-space:normal; text-align:center; }
 .btn-pill.btn-pill--outline { background:transparent; color:var(--text); border:1.5px solid var(--tag-border); box-shadow:none; }
-/* Fase 6 (contexto y preguntas): visible pero deshabilitado. Sin elevación; al presionar, un "no" lateral corto */
+/* Botón deshabilitado: sin elevación; al presionar, un "no" lateral corto */
 .mapa-panel-actions .btn-pill[aria-disabled="true"] { cursor:not-allowed; }
 .mapa-panel-actions .btn-pill[aria-disabled="true"]:hover { transform:none; }
 .mapa-panel-actions .btn-pill:not(.btn-pill--outline)[aria-disabled="true"]:hover { box-shadow:0 12px 24px var(--action-shadow-color); }
@@ -944,6 +944,73 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 :root[data-motion="reduced"] .mapa-node, :root[data-motion="reduced"] .mapa-link, :root[data-motion="reduced"] .mapa-route, :root[data-motion="reduced"] .mapa-cluster-label, :root[data-motion="reduced"] .mapa-controls, :root[data-motion="reduced"] .mapa-legend, :root[data-motion="reduced"] .mapa-panel > * { animation:none; }
 :root[data-motion="reduced"] .mapa-node:hover, :root[data-motion="reduced"] .mapa-node:focus-visible { transform:none; }
 :root[data-motion="reduced"] .mapa-panel-actions .btn-pill[aria-disabled="true"]:active { animation:none; }
+
+/* ---------- Detalle de habilidad ---------- */
+/* Encabezado (categoría, nombre, estado y demanda) y dos columnas: contenido a la izquierda; progreso y recursos a la
+   derecha. Mismas tarjetas que Mi Ruta (.ruta-card, 24px de radio) */
+.skill-back { margin-bottom:28px; padding:.7rem 1.3rem; }
+.skill-header { display:flex; flex-direction:column; align-items:flex-start; gap:16px; margin-bottom:32px; }
+.skill-title:focus { outline:none; }
+.skill-title:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
+.skill-meta { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
+.skill-demand { font-size:.95rem; color:var(--text-2-page); }
+.skill-demand strong { font-size:1.6rem; font-weight:300; letter-spacing:-.02em; color:var(--text); font-variant-numeric:tabular-nums; }
+.skill-grid { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:1.75rem; align-items:start; }
+.skill-col { display:flex; flex-direction:column; gap:1.75rem; min-width:0; }
+.skill-card-header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.5rem 1rem; margin-bottom:1.25rem; }
+.skill-card-title { margin-bottom:1rem; font-size:1.05rem; font-weight:600; letter-spacing:-.01em; color:var(--text); }
+.skill-card-header .skill-card-title { margin-bottom:0; }
+.skill-text { font-size:.9rem; line-height:1.65; color:var(--text-2); text-wrap:pretty; }
+.skill-text + .skill-text { margin-top:.75rem; }
+.skill-note { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.25rem; padding-top:1rem; border-top:1px solid var(--divider);
+  font-size:.78rem; color:var(--text-2); }
+.skill-time { padding:4px 10px; border-radius:var(--radius-pill); background:var(--chip-azul-bg); color:var(--chip-azul-fg); font-size:12px; font-weight:600; }
+/* Pasos numerados: el número va en rosa porque es camino por recorrer */
+.skill-steps { counter-reset:step; display:flex; flex-direction:column; gap:.9rem; }
+.skill-steps li { counter-increment:step; display:flex; align-items:flex-start; gap:.85rem; font-size:.9rem; line-height:1.55; color:var(--text); }
+.skill-steps li::before { content:counter(step); flex-shrink:0; display:flex; align-items:center; justify-content:center; width:28px; height:28px; margin-top:-3px;
+  border-radius:9999px; background:var(--chip-rosa-bg); color:var(--chip-rosa-fg); font-size:.8rem; font-weight:700; font-variant-numeric:tabular-nums; }
+/* Preguntas frecuentes: acordeón (botón de 44px o más con aria-expanded) */
+.skill-faq-item + .skill-faq-item { border-top:1px solid var(--divider); }
+.skill-faq-question { display:flex; align-items:center; justify-content:space-between; gap:1rem; width:100%; min-height:48px; padding:.85rem .25rem;
+  border-radius:12px; text-align:left; font-size:.92rem; font-weight:600; color:var(--text); }
+.skill-faq-question:hover { color:var(--pink-ink); }
+.skill-faq-question:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.skill-faq-chevron { flex-shrink:0; color:var(--text-2); transition:transform var(--dur) var(--ease-out); }
+.skill-faq-question[aria-expanded="true"] .skill-faq-chevron { transform:rotate(180deg); }
+.skill-faq-answer { padding:0 .25rem 1rem; font-size:.88rem; line-height:1.65; color:var(--text-2); }
+.skill-faq-answer:not([hidden]) { animation:fade-in 200ms ease-out; }
+/* Recursos: enlaces a documentación oficial, filas de 44px */
+.skill-hint { margin:-.5rem 0 .5rem; font-size:.78rem; color:var(--text-2); }
+.skill-resources li + li { border-top:1px solid var(--divider); }
+.skill-resource { display:flex; align-items:center; justify-content:space-between; gap:.75rem; min-height:44px; padding:.6rem .25rem; border-radius:10px;
+  font-size:.9rem; font-weight:600; color:var(--link); text-decoration:underline; text-underline-offset:3px; }
+.skill-resource:hover { text-decoration-thickness:2px; }
+.skill-resource:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.skill-resource svg { flex-shrink:0; }
+.skill-master { width:100%; margin-top:1.25rem; white-space:normal; text-align:center; }
+.skill-master[aria-busy="true"] { cursor:progress; }
+.skill-master[aria-busy="true"]:hover { transform:none; }
+.skill-empty { display:flex; flex-direction:column; align-items:flex-start; gap:12px; }
+.skill-empty .skill-card-title { margin-bottom:0; }
+/* Mi Ruta: enlace al detalle en cada brecha */
+.gap-context { display:inline-flex; align-items:center; gap:.4rem; min-height:44px; margin-top:.25rem; padding:0 .25rem; border-radius:10px;
+  font-size:.8rem; font-weight:600; color:var(--link); }
+.gap-context:hover { text-decoration:underline; text-underline-offset:3px; }
+.gap-context:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.gap-context svg { transition:translate var(--dur-fast) var(--ease-out); }
+.gap-context:hover svg { translate:3px 0; }
+/* Entrada: tarjetas en orden de lectura, igual que Mi Ruta */
+.skill-grid > .skill-col > * { animation:card-in 420ms var(--ease-out) backwards; }
+.skill-grid > .skill-col:nth-child(2) > * { animation-delay:60ms; }
+@media (prefers-reduced-motion: reduce) {
+  .skill-grid > .skill-col > *, .skill-faq-answer:not([hidden]) { animation:none; }
+  .skill-faq-chevron, .gap-context svg { transition:none; }
+  .gap-context:hover svg { translate:none; }
+}
+:root[data-motion="reduced"] .skill-grid > .skill-col > *, :root[data-motion="reduced"] .skill-faq-answer:not([hidden]) { animation:none; }
+:root[data-motion="reduced"] .skill-faq-chevron, :root[data-motion="reduced"] .gap-context svg { transition:none; }
+:root[data-motion="reduced"] .gap-context:hover svg { translate:none; }
 
 /* ---------- Ajustes ---------- */
 /* Valores de docs/mockups/v2 (Ajustes · modo claro): dos tarjetas arriba, Ofertas de empleo a lo ancho y el pie */
