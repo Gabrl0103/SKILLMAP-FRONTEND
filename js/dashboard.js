@@ -139,6 +139,10 @@ function renderBrechas(gaps, reference, jobStats) {
           <span>${t("ruta.gaps.demand", { pct: s.demandPercentage })}</span>
           <span class="gap-status">${statusLabel(s.status)}</span>
         </div>
+        <button type="button" class="gap-context" data-context="${s.id}" aria-label="${escapeHtml(t("skill.contextFor", { name: tSkill(s.name) }))}">
+          ${t("skill.context")}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
       </li>`;
   }).join("");
 
@@ -538,6 +542,8 @@ function initRuta() {
   document.getElementById("app-content").innerHTML = renderRutaSkeleton(); // hasta que haya sesión y lleguen los datos
   bindGoalPicker();
   document.getElementById("app-content").addEventListener("click", e => {
+    const context = e.target.closest("[data-context]");
+    if (context) { openSkillDetail(Number(context.dataset.context), context); return; } // skill-detalle.js
     const action = e.target.closest("[data-action]")?.dataset.action;
     if (action === "show-gaps") showAllGaps();
     if (action === "open-map") showView("mapa");

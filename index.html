@@ -299,6 +299,12 @@
     <div id="mapa-content"></div>
   </section>
 
+  <section id="view-skill" class="hidden">
+    <!-- Detalle de una habilidad: lo llena js/skill-detalle.js al abrirla desde el Mapa Visual o Mi Ruta -->
+    <div id="skill-content"></div>
+    <p id="skill-live" class="sr-only" aria-live="polite"></p>
+  </section>
+
   <section id="view-ajustes" class="hidden">
     <header class="ajustes-header">
       <span class="ruta-eyebrow" data-i18n="ajustes.eyebrow">Ajustes</span>
@@ -386,6 +392,8 @@
 <script src="js/perfil.js"></script>
 <script src="js/analizador.js"></script>
 <script src="js/ajustes.js"></script>
+<script src="js/skill-faq-data.js"></script> <!-- contenido estático del detalle de habilidad (es / en) -->
+<script src="js/skill-detalle.js"></script>
 <script src="js/intro.js"></script>
 <script src="js/acceso.js"></script>
 <script src="js/session.js"></script> <!-- al final: arranca la app cuando las vistas ya están listas -->
