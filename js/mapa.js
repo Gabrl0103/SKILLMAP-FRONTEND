@@ -1,8 +1,8 @@
 // Vista "Mapa Visual": todas las habilidades del sistema como grafo de nodos agrupados por categoría, con la ruta
 // sugerida del objetivo activo y un panel de detalle de la habilidad seleccionada.
-// Usa renderApiError, STATUS_LABEL, demandIsSample, sampleTag, SAMPLE_DEMAND_TEXT, jobStatsText, fetchJobStats,
-// fetchGoals, fetchReadiness y getActiveGoalId (dashboard.js), currentActiveGoalId (objetivo.js) y apiJson y
-// friendlyError (session.js).
+// Usa renderApiError, demandIsSample, sampleTag, jobStatsText, fetchJobStats, fetchGoals, fetchReadiness y
+// getActiveGoalId (dashboard.js), currentActiveGoalId (objetivo.js), apiJson y friendlyError (session.js) y t,
+// statusLabel, tSkill, tCategory, tGoalTitle y getLanguage (i18n.js).
 // También define la navegación entre vistas (showView) y el indicador del nav de la barra superior.
 
 const NODE_SIZE = 96;       // diámetro de cada nodo (px)
@@ -80,11 +80,12 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 }
 
-// Agrupa por "category" en el orden en que llegan de la API (sin lista hardcodeada).
+// Agrupa por "category" en el orden en que llegan de la API (sin lista hardcodeada). La categoría se guarda tal cual
+// llega (vacía si falta); tCategory la traduce al pintarla.
 function groupByCategory(skills) {
   const groups = new Map();
   for (const s of skills) {
-    const category = s.category || "Sin categoría";
+    const category = s.category || "";
     if (!groups.has(category)) groups.set(category, []);
     groups.get(category).push(s);
   }
@@ -144,13 +145,13 @@ function placeClusters(clusters) {
   ring.forEach((c, i) => Object.assign(c, { x: orbit * Math.cos(angles[i]), y: orbit * Math.sin(angles[i]), angle: angles[i] }));
 }
 
-// Etiqueta de categoría por fuera del cluster, en la dirección opuesta al centro del grafo.
-// alignX/alignY (en %) anclan el texto para que crezca hacia afuera y nunca tape sus nodos.
+// Etiqueta de categoría por fuera del cluster, en la dirección opuesta al centro del grafo, ya traducida (su largo
+// cuenta para el tamaño). alignX/alignY (en %) anclan el texto para que crezca hacia afuera y nunca tape sus nodos.
 function clusterLabel(cluster) {
   const cos = Math.cos(cluster.angle), sin = Math.sin(cluster.angle);
   const dist = cluster.extent + LABEL_OFFSET;
   return {
-    category: cluster.category,
+    category: tCategory(cluster.category),
     x: cluster.x + dist * cos,
     y: cluster.y + dist * sin,
     alignX: cos > 0.35 ? 0 : cos < -0.35 ? -100 : -50,
@@ -217,19 +218,19 @@ const STATUS_CLASS = { MASTERED: "mastered", IN_PROGRESS: "progress", PENDING: "
 // Solo el primer nodo entra en el orden de tabulación; las flechas mueven el foco entre nodos (tabindex móvil).
 // Clic o Enter/Espacio seleccionan el nodo y llenan el panel de detalle.
 function mapaNodeLabel(skill, category) {
-  return `${skill.name}, ${category}, ${STATUS_LABEL[skill.status] || STATUS_LABEL.PENDING}, `
-    + `${skill.demandPercentage}% de demanda${demandIsSample([skill]) ? " (de ejemplo)" : ""}`;
+  return t("mapa.node.label", { name: tSkill(skill.name), category: tCategory(category), status: statusLabel(skill.status),
+    pct: skill.demandPercentage }) + (demandIsSample([skill]) ? t("mapa.node.sample") : "");
 }
 
 function renderNode({ skill, category, x, y }, index) {
   const status = STATUS_CLASS[skill.status] || "pending";
-  const tooltip = `${skill.name} — ${skill.demandPercentage}% de demanda`;
+  const tooltip = t("mapa.node.tooltip", { name: tSkill(skill.name), pct: skill.demandPercentage });
   return `
     <div class="mapa-node mapa-node--${status}" tabindex="${index === 0 ? 0 : -1}" role="button" aria-pressed="false"
       style="left:${x - NODE_SIZE / 2}px; top:${y - NODE_SIZE / 2}px; width:${NODE_SIZE}px; height:${NODE_SIZE}px; --i:${index};"
       data-skill-id="${skill.id}" data-category="${escapeHtml(category)}" data-tooltip="${escapeHtml(tooltip)}"
       aria-label="${escapeHtml(mapaNodeLabel(skill, category))}">
-      <span class="mapa-node-label" lang="es" aria-hidden="true">${escapeHtml(skill.name)}</span>
+      <span class="mapa-node-label" lang="${getLanguage()}" aria-hidden="true">${escapeHtml(tSkill(skill.name))}</span>
     </div>`;
 }
 
@@ -239,7 +240,7 @@ function renderClusterLabel({ category, x, y, alignX, alignY }) {
 
 function renderMapa(skills) {
   if (skills.length === 0) {
-    return `<p class="text-sm text-muted-page">Aún no hay habilidades para mostrar en el mapa.</p>`;
+    return `<p class="text-sm text-muted-page">${t("mapa.empty")}</p>`;
   }
   const { nodes, links, labels, width, height } = layoutGraph(skills);
   // pathLength y --i solo sirven a la animación de entrada: cada línea se traza cuando ya apareció su segundo nodo.
@@ -255,20 +256,20 @@ function renderMapa(skills) {
       <div class="mapa-card">
         <div class="mapa-viewport" id="mapa-viewport">
           <div class="mapa-stage" id="mapa-stage" style="width:${width}px; height:${height}px;"
-            role="group" aria-label="Mapa de habilidades. Usa las flechas para recorrerlas y Enter para ver su detalle.">
+            role="group" aria-label="${t("mapa.stage")}">
             <svg class="mapa-links" width="${width}" height="${height}" aria-hidden="true">${lines}<polyline class="mapa-route" id="mapa-route" points=""/></svg>
             ${labels.map(renderClusterLabel).join("")}
             ${nodes.map(renderNode).join("")}
           </div>
 
-          <div class="mapa-controls" role="group" aria-label="Zoom del mapa">
-            <button type="button" data-zoom="in" aria-label="Acercar">
+          <div class="mapa-controls" role="group" aria-label="${t("mapa.zoom")}">
+            <button type="button" data-zoom="in" aria-label="${t("mapa.zoomIn")}">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             </button>
-            <button type="button" data-zoom="out" aria-label="Alejar">
+            <button type="button" data-zoom="out" aria-label="${t("mapa.zoomOut")}">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
             </button>
-            <button type="button" data-zoom="center" aria-label="Centrar mapa">
+            <button type="button" data-zoom="center" aria-label="${t("mapa.center")}">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
               </svg>
@@ -276,17 +277,17 @@ function renderMapa(skills) {
           </div>
 
           <div class="mapa-legend">
-            <span><i class="mapa-dot mapa-dot--mastered"></i>Dominada</span>
-            <span><i class="mapa-dot mapa-dot--progress"></i>En desarrollo</span>
-            <span><i class="mapa-dot mapa-dot--pending"></i>Por aprender</span>
-            <span id="mapa-legend-route" hidden><i class="mapa-key-route"></i>Ruta sugerida</span>
+            <span><i class="mapa-dot mapa-dot--mastered"></i>${statusLabel("MASTERED")}</span>
+            <span><i class="mapa-dot mapa-dot--progress"></i>${statusLabel("IN_PROGRESS")}</span>
+            <span><i class="mapa-dot mapa-dot--pending"></i>${statusLabel("PENDING")}</span>
+            <span id="mapa-legend-route" hidden><i class="mapa-key-route"></i>${t("mapa.route")}</span>
           </div>
 
           <div class="mapa-tooltip" id="mapa-tooltip" aria-hidden="true" hidden></div>
         </div>
       </div>
 
-      <aside class="mapa-panel" id="mapa-panel" aria-label="Detalle de la habilidad">${renderMapaPanelEmpty()}</aside>
+      <aside class="mapa-panel" id="mapa-panel" aria-label="${t("mapa.panel")}">${renderMapaPanelEmpty()}</aside>
       <p class="sr-only" id="mapa-live" aria-live="polite"></p>
     </div>`;
 }
@@ -298,8 +299,9 @@ let mapaSelectedId = null;    // id de la habilidad seleccionada (sobrevive a ca
 let mapaJobStats = null;      // /api/jobs/stats para la nota "Ruta calculada con N ofertas reales"
 // Objetivo activo: brechas en orden de demanda (ruta sugerida) y todas sus habilidades
 let mapaRoute = { goalId: null, goalTitle: "", gapIds: [], goalSkillIds: new Set() };
-// Marcar / quitar de dominadas: habilidad que se está guardando y último error (con la habilidad a la que pertenece)
-const mapaMark = { id: null, error: null, errorId: null };
+// Marcar / quitar de dominadas: habilidad que se está guardando y último error (con la habilidad a la que pertenece y
+// si era marcar o quitar; el texto se arma al pintar, en el idioma vigente)
+const mapaMark = { id: null, error: null, errorId: null, errorMaster: true };
 
 function renderMapaPanelEmpty() {
   return `
@@ -307,45 +309,46 @@ function renderMapaPanelEmpty() {
       <span class="mapa-panel-empty-icon" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="8" r="2.5"/><circle cx="10" cy="18" r="2.5"/><path d="M8.2 7l7.6.6M7.4 8.2l1.8 7.4M16.6 10.2l-5 6.2"/></svg>
       </span>
-      <h2 class="mapa-panel-empty-title">Selecciona una habilidad</h2>
-      <p class="mapa-panel-empty-text">Haz clic en un nodo del mapa (o recórrelos con las flechas y pulsa Enter) para ver su demanda y su lugar en tu ruta.</p>
+      <h2 class="mapa-panel-empty-title">${t("mapa.empty.title")}</h2>
+      <p class="mapa-panel-empty-text">${t("mapa.empty.text")}</p>
     </div>`;
 }
 
 // Texto corto armado solo con datos de la API: lugar en la ruta del objetivo activo o, si no está en él, su estado.
 function mapaSkillText(skill) {
   const { goalTitle, gapIds, goalSkillIds } = mapaRoute;
-  const goal = escapeHtml(goalTitle);
+  const goal = escapeHtml(tGoalTitle(goalTitle));
   const gap = gapIds.indexOf(skill.id);
-  if (gap === 0) return `Es tu siguiente giro hacia ${goal}: la brecha con más demanda de tu ruta.`;
-  if (gap > 0) return `Es la brecha ${gap + 1} de ${gapIds.length} en tu ruta hacia ${goal}, ordenada por demanda.`;
+  if (gap === 0) return t("mapa.text.next", { goal });
+  if (gap > 0) return t("mapa.text.gap", { n: gap + 1, total: gapIds.length, goal });
   if (goalSkillIds.has(skill.id)) {
-    return skill.status === "MASTERED" ? `Ya la dominas y suma a tu preparación para ${goal}.` : `Forma parte de tu objetivo ${goal}.`;
+    return t(skill.status === "MASTERED" ? "mapa.text.masteredInGoal" : "mapa.text.inGoal", { goal });
   }
-  const byStatus = { MASTERED: "Ya la dominas.", IN_PROGRESS: "La estás desarrollando.", PENDING: "Aún no la has empezado." };
-  const text = byStatus[skill.status] || byStatus.PENDING;
-  return goalTitle ? `${text} No forma parte de tu objetivo ${goal}.` : text;
+  const status = ["MASTERED", "IN_PROGRESS"].includes(skill.status) ? skill.status : "PENDING";
+  const text = t(`mapa.text.${status}`);
+  return goalTitle ? t("mapa.text.notInGoal", { text, goal }) : text;
 }
 
 function renderMapaPanel(skill) {
   const status = STATUS_CLASS[skill.status] || "pending";
-  const statsText = jobStatsText(mapaJobStats, "Ruta calculada con");
-  const note = demandIsSample([skill]) ? `<p class="mapa-panel-note">${sampleTag} ${SAMPLE_DEMAND_TEXT}</p>`
+  const statsText = jobStatsText(mapaJobStats, "jobs.routeFrom");
+  const note = demandIsSample([skill]) ? `<p class="mapa-panel-note">${sampleTag()} ${t("demand.sample")}</p>`
     : statsText ? `<p class="mapa-panel-note">${statsText}</p>` : "";
   return `
     <div class="mapa-panel-chips">
-      ${skill.category ? `<span class="mapa-chip mapa-chip--category">${escapeHtml(skill.category)}</span>` : ""}
-      <span class="mapa-chip mapa-chip--${status}">${STATUS_LABEL[skill.status] || STATUS_LABEL.PENDING}</span>
+      ${skill.category ? `<span class="mapa-chip mapa-chip--category">${escapeHtml(tCategory(skill.category))}</span>` : ""}
+      <span class="mapa-chip mapa-chip--${status}">${statusLabel(skill.status)}</span>
     </div>
-    <h2 class="mapa-panel-name">${escapeHtml(skill.name)}</h2>
-    <p class="mapa-panel-demand"><span class="mapa-panel-pct">${skill.demandPercentage}</span><span class="mapa-panel-pct-label">% de las ofertas</span></p>
+    <h2 class="mapa-panel-name">${escapeHtml(tSkill(skill.name))}</h2>
+    <p class="mapa-panel-demand"><span class="mapa-panel-pct">${skill.demandPercentage}</span><span class="mapa-panel-pct-label">${t("mapa.pctOfJobs")}</span></p>
     <p class="mapa-panel-text">${mapaSkillText(skill)}</p>
     <div class="mapa-panel-actions">
       <!-- Próximamente: contexto y preguntas frecuentes (Fase 6) -->
-      <button type="button" class="btn-pill" aria-disabled="true" title="Próximamente">Ver contexto y preguntas frecuentes</button>
+      <button type="button" class="btn-pill" aria-disabled="true" title="${t("common.soon")}">${t("mapa.context")}</button>
       ${renderMasterButton(skill)}
     </div>
-    ${mapaMark.errorId === skill.id ? `<p class="mapa-panel-error" role="alert">${escapeHtml(mapaMark.error)}</p>` : ""}
+    ${mapaMark.errorId === skill.id ? `<p class="mapa-panel-error" role="alert">${escapeHtml(t(mapaMark.errorMaster ? "mapa.markError" : "mapa.unmarkError",
+      { error: friendlyError(mapaMark.error) }))}</p>` : ""}
     ${note}`;
 }
 
@@ -354,7 +357,7 @@ function renderMapaPanel(skill) {
 function renderMasterButton(skill) {
   const mastered = skill.status === "MASTERED";
   const busy = mapaMark.id === skill.id;
-  const label = busy ? (mastered ? "Quitando…" : "Marcando…") : (mastered ? "Quitar de dominadas" : "Marcar como dominada");
+  const label = t(busy ? (mastered ? "mapa.unmarking" : "mapa.marking") : (mastered ? "mapa.unmark" : "mapa.mark"));
   return `<button type="button" class="btn-pill btn-pill--outline" data-master="${skill.id}"${busy ? ` aria-busy="true" aria-disabled="true"` : ""}>${label}</button>`;
 }
 
@@ -375,7 +378,7 @@ function selectMapaNode(node) {
   mapaSelectedId = id;
   refreshMapaPanel();
   const skill = mapaSkills.find(s => s.id === id);
-  if (skill) document.getElementById("mapa-live").textContent = `${skill.name} seleccionada. Detalle en el panel.`;
+  if (skill) document.getElementById("mapa-live").textContent = t("mapa.selected", { name: tSkill(skill.name) });
 }
 
 // El nodo cambia de color y de etiqueta sin redibujar el mapa (se conservan zoom, posición y foco)
@@ -400,14 +403,14 @@ async function toggleMapaSkill(id) {
     if (index >= 0) mapaSkills[index] = { ...mapaSkills[index], ...updated };
     const skill = index >= 0 ? mapaSkills[index] : updated;
     updateMapaNode(skill);
-    document.getElementById("mapa-live").textContent =
-      master ? `${skill.name} marcada como dominada.` : `${skill.name} quitada de dominadas: vuelve a Por aprender.`;
+    document.getElementById("mapa-live").textContent = t(master ? "mapa.marked" : "mapa.unmarked", { name: tSkill(skill.name) });
     // Mi Ruta, Perfil y Analizador descartan sus datos viejos; aquí se recalcula la ruta sugerida
     document.dispatchEvent(new CustomEvent("skillmap:progress"));
     mapaRoute.goalId = null;
   } catch (err) {
     if (mapaMark.id !== id) return;
-    mapaMark.error = `${master ? "No se pudo marcar" : "No se pudo quitar"}: ${friendlyError(err)}`;
+    mapaMark.error = err;
+    mapaMark.errorMaster = master;
     mapaMark.errorId = id;
   }
   mapaMark.id = null;
@@ -740,7 +743,7 @@ document.addEventListener("skillmap:user", () => {
   mapaSelectedId = null;
   mapaJobStats = null;
   mapaRoute = { goalId: null, goalTitle: "", gapIds: [], goalSkillIds: new Set() };
-  Object.assign(mapaMark, { id: null, error: null, errorId: null });
+  Object.assign(mapaMark, { id: null, error: null, errorId: null, errorMaster: true });
   mapaZoom = 1;
   mapaPan = { x: 0, y: 0 };
   mapaNeedsFit = true;
@@ -750,7 +753,7 @@ document.addEventListener("skillmap:user", () => {
 function loadMapa() {
   if (mapaRequest) return mapaRequest;
   const container = document.getElementById("mapa-content");
-  container.innerHTML = `<p class="text-sm text-muted-page">Cargando tu mapa de habilidades…</p>`;
+  container.innerHTML = `<p class="text-sm text-muted-page">${t("mapa.loading")}</p>`;
 
   mapaRequest = (async () => {
     try {
@@ -822,6 +825,18 @@ document.querySelectorAll(".nav-item[data-view], .topbar-settings[data-view]").f
 positionNavIndicator();
 document.fonts?.ready.then(positionNavIndicator);
 window.addEventListener("resize", positionNavIndicator);
+document.addEventListener("skillmap:language", positionNavIndicator); // los textos del nav cambian de ancho
+
+// Cambio de idioma: el mapa se vuelve a dibujar (ya, si está a la vista; si no, al abrirlo) con la ruta recalculada.
+// Las peticiones están en caché; el zoom vuelve al ajuste automático.
+document.addEventListener("skillmap:language", () => {
+  if (!mapaRequest) return;
+  mapaRequest = null;
+  mapaRoute.goalId = null;
+  if (!document.getElementById("view-mapa").classList.contains("hidden")) {
+    loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); });
+  }
+});
 if ("ResizeObserver" in window) {
   const nav = document.querySelector(".topnav");
   if (nav) new ResizeObserver(positionNavIndicator).observe(nav);

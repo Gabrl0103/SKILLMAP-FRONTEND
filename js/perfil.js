@@ -1,33 +1,32 @@
 // Vista "Perfil". Usa fetchSkills, renderApiError, sampleTag y sampleDemandNote (dashboard.js), ICONS, pickIcon y
-// escapeHtml (mapa.js) y sessionUser (session.js).
+// escapeHtml (mapa.js), sessionUser (session.js) y t y tSkill (i18n.js).
 
 // ---------- Datos de ejemplo (la API todavía no los provee) ----------
 
 // DATOS DE EJEMPLO: la API solo guarda nombre y correo del usuario (esos salen de la sesión); no hay bio, enlaces,
 // proyectos, cursos, logros ni preferencias. Reemplazar por el endpoint de perfil cuando exista.
+// Los textos son claves de i18n.js (se traducen al pintar); enlaces y nombres de proyecto no se traducen.
 function sampleProfileData() {
   return {
-    bio: "Desarrollador Frontend con pasión por UX/UI y rendimiento web.",
+    bio: "perfil.sample.bio",
     links: [
-      { icon: "pin", label: "Madrid, España" },
+      { icon: "pin", key: "perfil.sample.location" },
       { icon: "link", label: "portfolio.alex.dev" },
       { icon: "repo", label: "alexrivera-dev" },
     ],
     projects: [
-      { title: "E-commerce Flow UI Kit", thumb: "shop", tags: ["React", "UI/UX"],
-        description: "Diseño y desarrollo de un sistema de componentes para tiendas online con React y Tailwind." },
-      { title: "SaaS Analytics Dashboard", thumb: "chart", tags: ["Next.js", "Plotly"],
-        description: "Dashboard interactivo con visualización de datos en tiempo real usando Plotly y Next.js." },
+      { title: "E-commerce Flow UI Kit", thumb: "shop", tags: ["React", "UI/UX"], description: "perfil.sample.project1" },
+      { title: "SaaS Analytics Dashboard", thumb: "chart", tags: ["Next.js", "Plotly"], description: "perfil.sample.project2" },
     ],
     courses: { completed: 8, total: 11 },
     achievements: [
-      { label: "Primer objetivo alcanzado", icon: "award", tone: "mint" },
-      { label: "Racha de 7 días de estudio", icon: "bolt", tone: "pink" },
-      { label: "10 proyectos de código", icon: "code", tone: "blue" },
+      { label: "perfil.sample.achievement1", icon: "award", tone: "mint" },
+      { label: "perfil.sample.achievement2", icon: "bolt", tone: "pink" },
+      { label: "perfil.sample.achievement3", icon: "code", tone: "blue" },
     ],
     preferences: [
-      { label: "Búsqueda Activa", on: true },
-      { label: "Perfil Público", on: true },
+      { label: "perfil.sample.pref1", on: true },
+      { label: "perfil.sample.pref2", on: true },
     ],
   };
 }
@@ -74,24 +73,24 @@ function initialsOf(name) {
 // Nombre e iniciales reales (sesión); bio y enlaces siguen siendo de ejemplo y llevan la etiqueta
 function renderPerfilHeader(p) {
   const name = sessionUser?.name || sessionUser?.email || "";
-  const links = p.links.map(l => `<li class="perfil-link">${perfilIcon(l.icon, 13)}${escapeHtml(l.label)}</li>`).join("");
+  const links = p.links.map(l => `<li class="perfil-link">${perfilIcon(l.icon, 13)}${escapeHtml(l.key ? t(l.key) : l.label)}</li>`).join("");
   return `
     <article class="perfil-card perfil-header">
       <div class="perfil-photo">
-        <span class="perfil-photo-initials" role="img" aria-label="Foto de perfil de ${escapeHtml(name)}">${escapeHtml(initialsOf(name))}</span>
-        <button type="button" class="perfil-photo-edit" aria-disabled="true" title="Próximamente" aria-label="Cambiar foto (próximamente)">${perfilIcon("camera", 14)}</button>
+        <span class="perfil-photo-initials" role="img" aria-label="${t("perfil.photo", { name: escapeHtml(name) })}">${escapeHtml(initialsOf(name))}</span>
+        <button type="button" class="perfil-photo-edit" aria-disabled="true" title="${t("common.soon")}" aria-label="${t("perfil.changePhoto")}">${perfilIcon("camera", 14)}</button>
       </div>
       <div class="perfil-identity">
         <h1 class="perfil-name">${escapeHtml(name)}</h1>
         <div class="perfil-sample">
-          ${sampleTag}
-          <p class="perfil-bio">${escapeHtml(p.bio)}</p>
+          ${sampleTag()}
+          <p class="perfil-bio">${escapeHtml(t(p.bio))}</p>
         </div>
         <ul class="perfil-links">${links}</ul>
       </div>
       <div class="perfil-header-actions">
-        <button type="button" class="btn-pill" aria-disabled="true" title="Próximamente">Editar Perfil</button>
-        <button type="button" class="btn-pill perfil-btn-outline" aria-disabled="true" title="Próximamente">Exportar CV</button>
+        <button type="button" class="btn-pill" aria-disabled="true" title="${t("common.soon")}">${t("perfil.edit")}</button>
+        <button type="button" class="btn-pill perfil-btn-outline" aria-disabled="true" title="${t("common.soon")}">${t("perfil.exportCv")}</button>
       </div>
     </article>`;
 }
@@ -105,11 +104,11 @@ function renderSkillGroup(title, skills, tone, emptyText) {
     <li class="perfil-skill perfil-skill--${tone}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
         aria-hidden="true">${ICONS[pickIcon(s.name, s.category)]}</svg>
-      <span>${escapeHtml(s.name)}</span>
+      <span>${escapeHtml(tSkill(s.name))}</span>
     </li>`).join("");
   // La API no mide el nivel de dominio: a la derecha va la demanda media real del grupo.
   const metric = skills.length
-    ? `<span class="perfil-group-metric perfil-group-metric--${tone}" title="Demanda promedio en vacantes de estas habilidades">Demanda media ${averageDemand(skills)}%</span>`
+    ? `<span class="perfil-group-metric perfil-group-metric--${tone}" title="${t("perfil.groupMetricTitle")}">${t("perfil.groupMetric", { n: averageDemand(skills) })}</span>`
     : "";
   return `
     <section class="perfil-group">
@@ -124,18 +123,18 @@ function renderSkillGroup(title, skills, tone, emptyText) {
 function renderSkillsCard(skillsState) {
   let body;
   if (skillsState.error) body = renderApiError(skillsState.error);
-  else if (!skillsState.skills) body = `<p class="text-sm text-muted">Cargando tus habilidades…</p>`;
+  else if (!skillsState.skills) body = `<p class="text-sm text-muted">${t("perfil.loadingSkills")}</p>`;
   else {
     const mastered = skillsState.skills.filter(s => s.status === "MASTERED");
     const learning = skillsState.skills.filter(s => s.status === "IN_PROGRESS");
-    body = renderSkillGroup("Dominadas", mastered, "mastered", "Aún no tienes habilidades dominadas.")
-      + renderSkillGroup("En aprendizaje", learning, "learning", "No estás aprendiendo ninguna habilidad ahora mismo.")
+    body = renderSkillGroup(t("perfil.mastered"), mastered, "mastered", t("perfil.masteredEmpty"))
+      + renderSkillGroup(t("perfil.learning"), learning, "learning", t("perfil.learningEmpty"))
       // "Demanda media" se marca como ejemplo mientras alguna habilidad tenga demanda sembrada (demandIsSample).
       + (mastered.length || learning.length ? sampleDemandNote("perfil-sample-note", [...mastered, ...learning]) : "");
   }
   return `
     <article class="perfil-card">
-      <h2 class="perfil-card-title">Mis Habilidades</h2>
+      <h2 class="perfil-card-title">${t("perfil.skills")}</h2>
       ${body}
     </article>`;
 }
@@ -146,16 +145,16 @@ function renderProjectsCard(p) {
       <svg class="perfil-project-thumb" viewBox="0 0 64 64" aria-hidden="true">${PROJECT_THUMBS[pr.thumb]}</svg>
       <div class="min-w-0">
         <h3 class="perfil-project-title">${escapeHtml(pr.title)}</h3>
-        <p class="perfil-project-desc">${escapeHtml(pr.description)}</p>
+        <p class="perfil-project-desc">${escapeHtml(t(pr.description))}</p>
         <ul class="perfil-project-tags">${pr.tags.map(t => `<li>${escapeHtml(t)}</li>`).join("")}</ul>
       </div>
     </li>`).join("");
   return `
     <article class="perfil-card">
       <header class="perfil-card-header">
-        <h2 class="perfil-card-title">Proyectos Destacados</h2>
-        ${sampleTag}
-        <button type="button" class="perfil-add" aria-disabled="true" title="Próximamente">+ Añadir Proyecto</button>
+        <h2 class="perfil-card-title">${t("perfil.projects")}</h2>
+        ${sampleTag()}
+        <button type="button" class="perfil-add" aria-disabled="true" title="${t("common.soon")}">${t("perfil.addProject")}</button>
       </header>
       <ul class="perfil-projects">${rows}</ul>
     </article>`;
@@ -171,42 +170,42 @@ function renderStatBar(label, value, pct, tone) {
 
 function renderStatsCard(p, skillsState) {
   // Real: habilidades dominadas sobre el total de /api/skills.
-  let mastered = `<div class="perfil-stat"><div class="perfil-stat-head"><span>Habilidades Dominadas</span><strong>…</strong></div></div>`;
+  let mastered = `<div class="perfil-stat"><div class="perfil-stat-head"><span>${t("perfil.masteredStat")}</span><strong>…</strong></div></div>`;
   if (skillsState.skills) {
     const total = skillsState.skills.length;
     const done = skillsState.skills.filter(s => s.status === "MASTERED").length;
-    mastered = renderStatBar("Habilidades Dominadas", `${done} / ${total}`, total ? (done / total) * 100 : 0, "mint");
+    mastered = renderStatBar(t("perfil.masteredStat"), `${done} / ${total}`, total ? (done / total) * 100 : 0, "mint");
   } else if (skillsState.error) {
-    mastered = `<div class="perfil-stat"><div class="perfil-stat-head"><span>Habilidades Dominadas</span><strong>—</strong></div></div>`;
+    mastered = `<div class="perfil-stat"><div class="perfil-stat-head"><span>${t("perfil.masteredStat")}</span><strong>—</strong></div></div>`;
   }
-  const courses = renderStatBar("Cursos Completados", p.courses.completed, (p.courses.completed / p.courses.total) * 100, "pink");
+  const courses = renderStatBar(t("perfil.courses"), p.courses.completed, (p.courses.completed / p.courses.total) * 100, "pink");
   const achievements = p.achievements.map(a => `
-    <li class="perfil-achievement perfil-achievement--${a.tone}" title="${escapeHtml(a.label)}">
-      ${perfilIcon(a.icon, 15)}<span class="sr-only">${escapeHtml(a.label)}</span>
+    <li class="perfil-achievement perfil-achievement--${a.tone}" title="${escapeHtml(t(a.label))}">
+      ${perfilIcon(a.icon, 15)}<span class="sr-only">${escapeHtml(t(a.label))}</span>
     </li>`).join("");
   return `
     <article class="perfil-stats">
-      <h2 class="perfil-stats-title">Estadísticas de Carrera</h2>
+      <h2 class="perfil-stats-title">${t("perfil.stats")}</h2>
       ${mastered}
       ${courses}
       <hr class="perfil-stats-divider">
-      <h3 class="perfil-stats-eyebrow">Logros recientes</h3>
+      <h3 class="perfil-stats-eyebrow">${t("perfil.achievements")}</h3>
       <ul class="perfil-achievements">${achievements}</ul>
-      <p class="perfil-stats-note">${sampleTag} Cursos y logros</p>
+      <p class="perfil-stats-note">${sampleTag()} ${t("perfil.coursesNote")}</p>
     </article>`;
 }
 
 function renderPreferencesCard(p) {
   const rows = p.preferences.map((pref, i) => `
     <li class="perfil-pref">
-      <span id="perfil-pref-${i}">${escapeHtml(pref.label)}</span>
+      <span id="perfil-pref-${i}">${escapeHtml(t(pref.label))}</span>
       <button type="button" class="perfil-switch" role="switch" aria-checked="${pref.on}" aria-labelledby="perfil-pref-${i}" data-pref="${i}"></button>
     </li>`).join("");
   return `
     <article class="perfil-card">
       <header class="perfil-card-header">
-        <h2 class="perfil-card-title">Preferencias</h2>
-        ${sampleTag}
+        <h2 class="perfil-card-title">${t("perfil.preferences")}</h2>
+        ${sampleTag()}
       </header>
       <ul class="perfil-prefs">${rows}</ul>
     </article>`;
@@ -283,5 +282,10 @@ function initPerfil() {
     toggle.setAttribute("aria-checked", String(pref.on));
   });
 }
+
+// Cambio de idioma: si la vista ya se pintó, se vuelve a pintar (las preferencias conservan su estado)
+document.addEventListener("skillmap:language", () => {
+  if (document.getElementById("perfil-content").childElementCount) renderPerfil();
+});
 
 document.addEventListener("DOMContentLoaded", initPerfil);

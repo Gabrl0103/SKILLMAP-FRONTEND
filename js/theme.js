@@ -1,9 +1,11 @@
-// Preferencias de la app: tema (data-theme en <html>, claro por defecto) y "Reducir animaciones" (data-motion="reduced").
+// Preferencias de la app: tema (data-theme en <html>, claro por defecto), "Reducir animaciones" (data-motion="reduced")
+// e idioma (applyLanguage en i18n.js, español por defecto).
 // El backend (/api/settings) es la fuente de verdad, pero exige sesión: antes del login (intro y Acceso) mandan las
 // copias de localStorage, que el script del <head> aplica antes del primer pintado (sin parpadeo). Al iniciar sesión
 // js/session.js llama a loadSettings y gana lo del backend.
 // Si el backend no responde, los cambios se aplican igual en esta sesión y quedan en la copia local.
-// Usa apiFetch y apiError (session.js): las peticiones salen después de DOMContentLoaded.
+// Usa apiFetch y apiError (session.js): las peticiones salen después de DOMContentLoaded. Usa applyLanguage y
+// getLanguage (i18n.js).
 
 const THEME_KEY = "skillmap-theme";   // mismas claves que el script del <head> en index.html
 const MOTION_KEY = "skillmap-motion";
@@ -69,6 +71,7 @@ async function loadSettings(options) {
   const settings = await fetchSettings(options);
   if (!settingsTouched.has("theme") && settings.theme !== getTheme()) applyTheme(settings.theme);
   if (!settingsTouched.has("reduceMotion") && settings.reduceMotion !== getReduceMotion()) applyReduceMotion(settings.reduceMotion);
+  if (!settingsTouched.has("language") && settings.language && settings.language !== getLanguage()) applyLanguage(settings.language);
   notifySettingsChange();
   return settings;
 }
@@ -86,7 +89,7 @@ async function saveSettings(changes) {
   return settingsState;
 }
 
-// Tema y animaciones se aplican al instante; el guardado va detrás y, si falla, el cambio dura igual en esta sesión
+// Tema, animaciones e idioma se aplican al instante; el guardado va detrás y, si falla, el cambio dura igual en esta sesión
 function setTheme(theme) {
   if (!THEMES.includes(theme)) return Promise.resolve();
   settingsTouched.add("theme");
@@ -98,6 +101,14 @@ function setReduceMotion(reduced) {
   settingsTouched.add("reduceMotion");
   applyReduceMotion(reduced);
   return saveSettings({ reduceMotion: reduced });
+}
+
+function setLanguage(language) {
+  if (!LANGUAGES.includes(language)) return Promise.resolve();
+  settingsTouched.add("language");
+  applyLanguage(language);
+  notifySettingsChange();
+  return saveSettings({ language });
 }
 
 // Sol y luna: el botón del tema activo queda presionado

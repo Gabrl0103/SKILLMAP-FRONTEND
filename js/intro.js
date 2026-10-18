@@ -1,6 +1,6 @@
 // Pantalla de Introducción: a pantalla completa sobre la app (#intro). Usa prefersReducedMotion (theme.js);
 // fetchJobStats, fetchSkills y fetchGoals (dashboard.js); showView (mapa.js); sessionUser y setAppInert (session.js);
-// openAcceso (acceso.js).
+// openAcceso (acceso.js); tn y formatNumber (i18n.js).
 //
 // Regla de aparición (la decide session.js al arrancar): se muestra a quien entra sin sesión válida; con sesión
 // válida no. ?intro=1 la abre igual. "Empezar", "Omitir" y Esc llevan a Acceso, o a la app si ya hay sesión.
@@ -9,7 +9,6 @@
 
 const INTRO_FORCED = new URLSearchParams(location.search).get("intro") === "1";
 const INTRO_SLIDES = 3;
-const introNumber = new Intl.NumberFormat("es");
 
 let introOpen = false;
 
@@ -20,25 +19,23 @@ function setIntroState(state) {
 
 // ---------- Chips: solo datos reales; si falta uno o vale 0, su chip no aparece ----------
 
-const INTRO_CHIPS = {
-  jobs: ["oferta real", "ofertas reales"],
-  skills: ["habilidad", "habilidades"],
-  goals: ["objetivo", "objetivos"],
-};
+const INTRO_CHIPS = ["jobs", "skills", "goals"]; // textos: intro.chip.<nombre>.one / .other (i18n.js)
+const introChipValues = {}; // último valor de cada chip, para repintarlos al cambiar de idioma
 
 function setIntroChip(name, value) {
+  introChipValues[name] = value;
   const chip = document.querySelector(`[data-intro-chip="${name}"]`);
   const ok = Number.isFinite(value) && value > 0;
   chip.hidden = !ok;
   if (!ok) return;
-  chip.querySelector("strong").textContent = introNumber.format(value);
-  chip.querySelector("span").textContent = INTRO_CHIPS[name][value === 1 ? 0 : 1];
+  chip.querySelector("strong").textContent = formatNumber(value);
+  chip.querySelector("span").textContent = tn(`intro.chip.${name}`, value);
 }
 
 // Las cifras salen de la API, que exige sesión: sin sesión los chips no aparecen
 async function loadIntroChips() {
   if (!sessionUser) {
-    Object.keys(INTRO_CHIPS).forEach(name => setIntroChip(name, null));
+    INTRO_CHIPS.forEach(name => setIntroChip(name, null));
     return;
   }
   const [stats, skills, goals] = await Promise.all([
@@ -226,3 +223,4 @@ function initIntro() {
 }
 
 document.addEventListener("DOMContentLoaded", initIntro);
+document.addEventListener("skillmap:language", () => INTRO_CHIPS.forEach(name => setIntroChip(name, introChipValues[name])));

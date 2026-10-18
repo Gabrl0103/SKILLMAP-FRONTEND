@@ -6,12 +6,10 @@
 //   Introducción (intro.js) y de ahí se pasa a Acceso (acceso.js). ?intro=1 abre la intro igual.
 // Evento "skillmap:user": entra o sale un usuario. Cada vista vacía sus datos en memoria para no mostrar los de otro.
 // Usa API_BASE_URL y loadRuta (dashboard.js), loadSettings (theme.js), openIntro e INTRO_FORCED (intro.js),
-// openAcceso (acceso.js) y showView (mapa.js).
+// openAcceso (acceso.js), showView (mapa.js) y t, i18nError y errorText (i18n.js).
 
 const SESSION_KEY = "skillmap.session";  // misma clave que el script del <head>
 const SESSION_CHECK_TIMEOUT = 2500;      // sin respuesta de /api/auth/me en este tiempo, se sigue como sin sesión
-const OFFLINE_TEXT = "SkillMap no responde. Revisa que la app siga abierta e inténtalo de nuevo.";
-const SESSION_ENDED_TEXT = "Tu sesión terminó. Inicia sesión de nuevo.";
 
 let sessionUser = null; // { id, name, email } mientras hay una sesión válida y la app está abierta
 
@@ -41,10 +39,10 @@ async function apiFetch(path, { auth = true, headers = {}, ...options } = {}) {
   return res;
 }
 
-// Mensaje listo para mostrar: el "message" del backend cuando lo hay
+// El "message" del backend tal cual llega (en español; errorText lo traduce al mostrarlo) o un error propio con el código
 async function apiError(res) {
   const body = await res.json().catch(() => null);
-  return new Error(body?.message || `El servidor respondió con un error (${res.status}).`);
+  return body?.message ? new Error(body.message) : i18nError("error.server", { status: res.status });
 }
 
 // JSON de una llamada que debe salir bien; si no, Error con el mensaje del backend
@@ -54,9 +52,10 @@ async function apiJson(path, options) {
   return res.status === 204 ? null : res.json();
 }
 
-// fetch falla con TypeError cuando no hay conexión con el backend: se muestra un mensaje en lugar del técnico
+// fetch falla con TypeError cuando no hay conexión con el backend: se muestra un mensaje en lugar del técnico.
+// Los demás, en el idioma actual (errorText).
 function friendlyError(err) {
-  return err instanceof TypeError ? OFFLINE_TEXT : err.message;
+  return err instanceof TypeError ? t("error.offline") : errorText(err);
 }
 
 // ---------- Pantallas ----------
@@ -88,7 +87,7 @@ function endSession() {
   clearSessionToken();
   closeUserMenu();
   notifyUserChange();
-  openAcceso({ notice: SESSION_ENDED_TEXT, email });
+  openAcceso({ notice: t("session.ended"), email });
 }
 
 // Cerrar sesión: avisa al backend y, responda o no, borra el token y vuelve a la intro
@@ -97,7 +96,7 @@ async function logout() {
   const button = document.getElementById("user-logout");
   button.disabled = true;
   button.setAttribute("aria-busy", "true");
-  button.textContent = "Cerrando sesión…";
+  button.textContent = t("user.loggingOut");
   sessionUser = null; // desde aquí un 401 (p. ej. la sesión ya había caducado) no lleva a Acceso
   try {
     await apiFetch("/api/auth/logout", { method: "POST" });
@@ -106,7 +105,7 @@ async function logout() {
   closeUserMenu({ focusButton: false });
   button.disabled = false;
   button.removeAttribute("aria-busy");
-  button.textContent = "Cerrar sesión";
+  button.textContent = t("user.logout");
   notifyUserChange();
   openIntro();
 }
