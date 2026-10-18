@@ -11,7 +11,7 @@
 const SESSION_KEY = "skillmap.session";  // misma clave que el script del <head>
 const SESSION_CHECK_TIMEOUT = 2500;      // sin respuesta de /api/auth/me en este tiempo, se sigue como sin sesión
 
-let sessionUser = null; // { id, name, email } mientras hay una sesión válida y la app está abierta
+let sessionUser = null; // { id, name, email, headline } mientras hay una sesión válida y la app está abierta (perfil.js lo actualiza al editar)
 
 function readSessionToken() {
   try { return localStorage.getItem(SESSION_KEY); } catch { return null; }
@@ -80,14 +80,15 @@ function startSession(user) {
   setAppInert(false);
 }
 
-// 401 con la app abierta: la sesión ya no vale en el backend
-function endSession() {
-  const email = sessionUser?.email || "";
+// La sesión ya no vale en el backend: 401 con la app abierta (aviso "Tu sesión terminó" y el correo escrito) o cuenta
+// eliminada (perfil.js, con su propio aviso y sin correo)
+function endSession({ notice = t("session.ended"), keepEmail = true } = {}) {
+  const email = keepEmail ? sessionUser?.email || "" : "";
   sessionUser = null;
   clearSessionToken();
   closeUserMenu();
   notifyUserChange();
-  openAcceso({ notice: t("session.ended"), email });
+  openAcceso({ notice, email });
 }
 
 // Cerrar sesión: avisa al backend y, responda o no, borra el token y vuelve a la intro
