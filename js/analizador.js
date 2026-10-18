@@ -1,4 +1,5 @@
-// Vista "Analizador". Usa API_BASE_URL (dashboard.js), escapeHtml (mapa.js), apiFetch (session.js) y settingsState (theme.js).
+// Vista "Analizador". Usa API_BASE_URL (dashboard.js), escapeHtml (mapa.js), apiFetch (session.js), settingsState
+// (theme.js) y t, i18nError, errorText, formatNumber y tSkill (i18n.js). La IA no cambia con el idioma: solo la interfaz.
 
 // ---------- API ----------
 
@@ -6,10 +7,9 @@ const ANALYZER_MAX_CHARS = 8000;   // mismo tope que el backend (JobAnalyzerServ
 // Sin key propia el backend usa el servicio de IA en la nube: conexión 10 s + lectura 90 s (Render tarda en despertar).
 const ANALYZER_TIMEOUT_MS = 110000;
 const ANALYZER_WAKE_NOTICE_MS = 5000; // pasado esto se avisa de que el servicio puede estar despertando
-const AI_UNAVAILABLE_MESSAGE = "El servicio de IA no está disponible. Inténtalo de nuevo en un minuto.";
 
 // POST /api/analyzer/analyze → { matchPercentage, masteredSkills[], inProgressSkills[], missingSkills[] }.
-// Si falla lanza un Error con un mensaje listo para mostrar: el "message" del backend cuando lo hay.
+// Si falla lanza un Error: el "message" del backend cuando lo hay (errorText lo traduce) o uno propio (i18nError).
 async function analyzeOffer(jobDescription) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ANALYZER_TIMEOUT_MS);
@@ -22,17 +22,15 @@ async function analyzeOffer(jobDescription) {
       signal: controller.signal,
     });
   } catch (err) {
-    throw new Error(err.name === "AbortError"
-      ? "El análisis tardó demasiado. Intenta de nuevo en un minuto."
-      : "No se pudo conectar con el servidor.");
+    throw i18nError(err.name === "AbortError" ? "analyzer.timeout" : "analyzer.offline");
   } finally {
     clearTimeout(timer);
   }
   if (!res.ok) {
     // 503 = IA sin configurar en el backend: la key es opcional, así que nunca se pide aquí.
-    if (res.status === 503) throw new Error(AI_UNAVAILABLE_MESSAGE);
+    if (res.status === 503) throw i18nError("analyzer.aiUnavailable");
     const body = await res.json().catch(() => null);
-    throw new Error(body?.message || `El servidor respondió con un error (${res.status}).`);
+    throw body?.message ? new Error(body.message) : i18nError("error.server", { status: res.status });
   }
   return res.json();
 }
@@ -40,10 +38,10 @@ async function analyzeOffer(jobDescription) {
 // ---------- Resultado ----------
 
 function matchMessage(pct, detected) {
-  if (!detected) return "No reconocimos habilidades del catálogo en esta oferta. Prueba con la descripción completa, incluyendo requisitos y tecnologías.";
-  if (pct >= 70) return "Tienes una compatibilidad alta. Dominas los requisitos principales pero te faltan un par de herramientas secundarias.";
-  if (pct >= 40) return "Tienes una compatibilidad media. Cubres parte de los requisitos; enfócate en las habilidades faltantes para acercarte al perfil.";
-  return "Tienes una compatibilidad baja. Esta vacante pide varias habilidades que aún no dominas: úsala como guía para tu ruta.";
+  if (!detected) return t("analyzer.match.none");
+  if (pct >= 70) return t("analyzer.match.high");
+  if (pct >= 40) return t("analyzer.match.mid");
+  return t("analyzer.match.low");
 }
 
 function renderMatch(pct, detected) {
@@ -53,9 +51,9 @@ function renderMatch(pct, detected) {
   // Mismo gauge que Mi Ruta: --pct alimenta el conteo del número (styles.css); el span es el respaldo sin CSS.
   return `
     <article class="analizador-card analizador-match">
-      <h2 class="analizador-card-title">Match con el perfil</h2>
+      <h2 class="analizador-card-title">${t("analyzer.match.title")}</h2>
       <div class="gauge-ring analizador-ring">
-        <svg viewBox="0 0 160 160" role="img" aria-label="${pct}% de compatibilidad">
+        <svg viewBox="0 0 160 160" role="img" aria-label="${t("analyzer.match.aria", { pct })}">
           <defs><linearGradient id="gauge-grad-analizador" x1="0" y1="0" x2="1" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs>
           <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-track"/>
           <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-fill" stroke="url(#gauge-grad-analizador)"
@@ -75,8 +73,8 @@ const BREAKDOWN_ICONS = {
 
 function renderBreakdownGroup(label, items, tone) {
   const chips = items.length
-    ? `<ul class="analizador-chips">${items.map((name, i) => `<li class="analizador-chip analizador-chip--${tone}" style="--i:${i};">${escapeHtml(name)}</li>`).join("")}</ul>`
-    : `<p class="analizador-group-empty">Ninguna en esta vacante.</p>`;
+    ? `<ul class="analizador-chips">${items.map((name, i) => `<li class="analizador-chip analizador-chip--${tone}" style="--i:${i};">${escapeHtml(tSkill(name))}</li>`).join("")}</ul>`
+    : `<p class="analizador-group-empty">${t("analyzer.groupEmpty")}</p>`;
   return `
     <section class="analizador-group">
       <h3 class="analizador-group-title analizador-group-title--${tone}">${BREAKDOWN_ICONS[tone]}${label} (${items.length})</h3>
@@ -87,10 +85,10 @@ function renderBreakdownGroup(label, items, tone) {
 function renderBreakdown(mastered, inProgress, missing) {
   return `
     <article class="analizador-card analizador-breakdown">
-      <h2 class="analizador-card-title">Desglose de Habilidades</h2>
-      ${renderBreakdownGroup("Habilidades dominadas", mastered, "mastered")}
-      ${renderBreakdownGroup("En desarrollo", inProgress, "progress")}
-      ${renderBreakdownGroup("Faltantes", missing, "missing")}
+      <h2 class="analizador-card-title">${t("analyzer.breakdown")}</h2>
+      ${renderBreakdownGroup(t("analyzer.mastered"), mastered, "mastered")}
+      ${renderBreakdownGroup(t("analyzer.progress"), inProgress, "progress")}
+      ${renderBreakdownGroup(t("analyzer.missing"), missing, "missing")}
     </article>`;
 }
 
@@ -112,10 +110,8 @@ function renderAnalysis(r) {
 // Antes del primer análisis: una sola tarjeta que explica qué aparecerá aquí. stale: había un resultado, pero el
 // progreso cambió desde entonces (habilidad marcada en el Mapa) y su porcentaje ya no vale.
 function renderAnalyzerEmpty({ stale = false } = {}) {
-  const title = stale ? "Tu progreso cambió" : "Aún no hay análisis";
-  const text = stale
-    ? "Marcaste habilidades desde el último análisis. Pulsa “Analizar Compatibilidad” para ver tu porcentaje actualizado."
-    : "Pega la descripción de una oferta y pulsa “Analizar Compatibilidad” para ver tu porcentaje de match y las habilidades que te faltan.";
+  const title = t(stale ? "analyzer.stale.title" : "analyzer.empty.title");
+  const text = t(stale ? "analyzer.stale.text" : "analyzer.empty.text");
   return `
     <div class="analizador-card analizador-empty">
       <span class="analizador-label-icon" aria-hidden="true">
@@ -137,7 +133,7 @@ function renderAnalyzerSkeleton() {
     </div>`;
   return `
     <div class="analizador-grid analizador-skeleton" role="status">
-      <span class="sr-only">Analizando la oferta…</span>
+      <span class="sr-only">${t("analyzer.skeleton")}</span>
       <div class="analizador-card analizador-match" aria-hidden="true">
         <span class="skel skel-line skel-line--title"></span>
         <span class="skel skel-ring"></span>
@@ -155,18 +151,19 @@ function renderAnalyzerSkeleton() {
 
 // Mismo aviso que los errores de la API en Mi Ruta (tarjeta con borde rosa punteado), con el mensaje del backend y "Reintentar".
 function renderAnalyzerError(err) {
-  const offline = err.message === "No se pudo conectar con el servidor.";
+  const offline = err.i18nKey === "analyzer.offline";
   const hint = offline
-    ? `<p class="text-xs text-muted mt-2">Detalle técnico: servidor en <code>${API_BASE_URL || location.origin}</code> (<code>./mvnw spring-boot:run</code> desde skillmap-api)</p>`
+    ? `<p class="text-xs text-muted mt-2">${t("error.techDetail", { server: `<code>${API_BASE_URL || location.origin}</code>`,
+      cmd: "<code>./mvnw spring-boot:run</code>" })}</p>`
     : "";
   return `
     <div class="card analizador-error" role="alert">
       <div class="min-w-0">
-        <p class="text-sm font-medium text-ink">No pudimos analizar la oferta</p>
-        <p class="text-xs text-muted mt-1">${escapeHtml(err.message)}</p>
+        <p class="text-sm font-medium text-ink">${t("analyzer.error.title")}</p>
+        <p class="text-xs text-muted mt-1">${escapeHtml(errorText(err))}</p>
         ${hint}
       </div>
-      <button type="button" class="btn-pill analizador-retry" data-retry>Reintentar</button>
+      <button type="button" class="btn-pill analizador-retry" data-retry>${t("analyzer.retry")}</button>
     </div>`;
 }
 
@@ -175,12 +172,21 @@ function renderAnalyzerError(err) {
 let analyzerRequest = 0;    // evita que un análisis viejo pise al más reciente
 let analyzerShown = false;  // hay un resultado a la vista (lo que el cambio de progreso deja viejo)
 let analyzerStale = false;  // el progreso cambió después de ese resultado
+// Lo que muestra el área de resultado, para volver a pintarlo al cambiar de idioma: "empty" ({ stale }), "result" (la
+// respuesta) o "error" (el Error). Durante un análisis vale null: el skeleton se reemplaza al terminar.
+let analyzerView = null;
+
+function showAnalyzerResult(kind, data) {
+  analyzerView = { kind, data };
+  const render = { empty: renderAnalyzerEmpty, result: renderAnalysis, error: renderAnalyzerError }[kind];
+  document.getElementById("analizador-result").innerHTML = render(data);
+}
 
 // Mientras analiza el botón queda deshabilitado (conserva su rosa) y el texto avisa de la espera.
 function setAnalyzing(isAnalyzing) {
   const button = document.getElementById("analizador-submit");
   button.disabled = isAnalyzing;
-  button.querySelector("[data-label]").textContent = isAnalyzing ? "Analizando…" : "Analizar Compatibilidad";
+  button.querySelector("[data-label]").textContent = t(isAnalyzing ? "analyzer.analyzing" : "analyzer.submit");
   button.setAttribute("aria-busy", String(isAnalyzing));
 }
 
@@ -188,19 +194,15 @@ function showEmptyWarning(show) {
   document.getElementById("analizador-warning").hidden = !show;
 }
 
-// "1234 / 8.000". Al llegar al tope el contador se pone rosa y se avisa una vez al lector de pantalla.
-function formatCount(n) {
-  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
-
+// "1234 / 8.000" ("8,000" en inglés). Al llegar al tope el contador se pone rosa y se avisa una vez al lector de pantalla.
 function updateCounter() {
   const length = document.getElementById("analizador-text").value.length;
   const atLimit = length >= ANALYZER_MAX_CHARS;
   const counter = document.getElementById("analizador-count");
-  counter.textContent = `${formatCount(length)} / ${formatCount(ANALYZER_MAX_CHARS)}`;
+  counter.textContent = `${formatNumber(length)} / ${formatNumber(ANALYZER_MAX_CHARS)}`;
   counter.classList.toggle("analizador-count--limit", atLimit);
   const live = document.getElementById("analizador-count-live");
-  const message = atLimit ? `Llegaste al límite de ${formatCount(ANALYZER_MAX_CHARS)} caracteres.` : "";
+  const message = atLimit ? t("analyzer.limit", { max: formatNumber(ANALYZER_MAX_CHARS) }) : "";
   if (live.textContent !== message) live.textContent = message;
 }
 
@@ -219,24 +221,25 @@ async function runAnalysis() {
   const requestId = ++analyzerRequest;
   const hadFocus = document.activeElement === button || result.contains(document.activeElement);
   setAnalyzing(true);
+  analyzerView = null;
   result.innerHTML = renderAnalyzerSkeleton();
   result.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "nearest" });
   // Sin key propia se usa la IA en la nube, que se duerme (plan gratis de Render): si tarda, se explica la espera.
   const wakeTimer = setTimeout(() => {
     if (requestId !== analyzerRequest || settingsState?.gemini?.configured) return;
-    result.insertAdjacentHTML("afterbegin", `<p class="analizador-wake" role="status">Despertando el servicio de IA, puede tardar hasta un minuto…</p>`);
+    result.insertAdjacentHTML("afterbegin", `<p class="analizador-wake" role="status">${t("analyzer.wake")}</p>`);
   }, ANALYZER_WAKE_NOTICE_MS);
   let failed = false;
   try {
     const r = await analyzeOffer(text.slice(0, ANALYZER_MAX_CHARS));
     if (requestId !== analyzerRequest) return;
-    result.innerHTML = renderAnalysis(r);
+    showAnalyzerResult("result", r);
     analyzerShown = true;
     analyzerStale = false;
   } catch (err) {
     if (requestId !== analyzerRequest) return;
     failed = true;
-    result.innerHTML = renderAnalyzerError(err);
+    showAnalyzerResult("error", err);
     analyzerShown = false;
   } finally {
     clearTimeout(wakeTimer);
@@ -251,7 +254,7 @@ function initAnalizador() {
   const text = document.getElementById("analizador-text");
   const result = document.getElementById("analizador-result");
   text.maxLength = ANALYZER_MAX_CHARS;
-  result.innerHTML = renderAnalyzerEmpty();
+  showAnalyzerResult("empty", {});
   updateCounter();
   text.addEventListener("input", () => {
     if (text.value.trim()) showEmptyWarning(false);
@@ -267,7 +270,7 @@ function openAnalizador() {
   if (!analyzerStale) return;
   analyzerStale = false;
   analyzerShown = false;
-  document.getElementById("analizador-result").innerHTML = renderAnalyzerEmpty({ stale: true });
+  showAnalyzerResult("empty", { stale: true });
 }
 
 document.addEventListener("skillmap:progress", () => { if (analyzerShown) analyzerStale = true; });
@@ -281,7 +284,14 @@ document.addEventListener("skillmap:user", () => {
   showEmptyWarning(false);
   document.getElementById("analizador-text").value = "";
   updateCounter();
-  document.getElementById("analizador-result").innerHTML = renderAnalyzerEmpty();
+  showAnalyzerResult("empty", {});
+});
+
+// Cambio de idioma: botón, contador y lo que esté a la vista (un análisis en curso se pinta al terminar)
+document.addEventListener("skillmap:language", () => {
+  setAnalyzing(document.getElementById("analizador-submit").disabled);
+  updateCounter();
+  if (analyzerView) showAnalyzerResult(analyzerView.kind, analyzerView.data);
 });
 
 document.addEventListener("DOMContentLoaded", initAnalizador);
