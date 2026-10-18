@@ -1,6 +1,6 @@
-// Vista "Ajustes". Usa loadSettings, setTheme, setReduceMotion, getTheme, getReduceMotion y settingsState (theme.js);
-// fetchJobStats y las cachés de datos (dashboard.js); resetPerfilSkills (perfil.js); apiFetch, apiError y
-// friendlyError (session.js); escapeHtml (mapa.js).
+// Vista "Ajustes". Usa loadSettings, setTheme, setReduceMotion, setLanguage, getTheme, getReduceMotion y settingsState
+// (theme.js); fetchJobStats y las cachés de datos (dashboard.js); resetPerfilSkills (perfil.js); apiFetch, apiError y
+// friendlyError (session.js); escapeHtml (mapa.js); t, tn, tError, getLanguage y formatNumber (i18n.js).
 
 const GEMINI_KEY_URL = "https://aistudio.google.com/app/apikey";
 
@@ -8,6 +8,7 @@ const ajustesState = {
   keyEditing: false,
   keyError: null,   // error al leer /api/settings (estado de la key desconocido)
   syncing: false,
+  syncResult: null, // último recálculo: { data } o { error }, para volver a pintarlo al cambiar de idioma
 };
 
 function setStatus(id, text, tone = "") {
@@ -22,6 +23,7 @@ function setStatus(id, text, tone = "") {
 function syncApariencia() {
   const theme = getTheme();
   document.querySelectorAll("input[name='ajustes-theme']").forEach(radio => { radio.checked = radio.value === theme; });
+  document.querySelectorAll("input[name='ajustes-language']").forEach(radio => { radio.checked = radio.value === getLanguage(); });
   const motion = document.querySelector(".ajustes-switch[data-setting='reduceMotion']");
   motion.setAttribute("aria-checked", String(getReduceMotion()));
 }
@@ -31,21 +33,30 @@ function bindApariencia() {
     radio.addEventListener("change", () => {
       setTheme(radio.value)
         .then(() => setStatus("ajustes-apariencia-status", ""))
-        .catch(() => setStatus("ajustes-apariencia-status", "No se pudo guardar el tema: se mantiene solo hasta cerrar SkillMap.", "warning"));
+        .catch(() => setStatus("ajustes-apariencia-status", t("ajustes.themeError"), "warning"));
+    });
+  });
+
+  // Idioma: se aplica al instante (toda la app se vuelve a pintar) y se guarda en el backend como el tema
+  document.querySelectorAll("input[name='ajustes-language']").forEach(radio => {
+    radio.addEventListener("change", () => {
+      setLanguage(radio.value)
+        .then(() => setStatus("ajustes-apariencia-status", ""))
+        .catch(() => setStatus("ajustes-apariencia-status", t("ajustes.languageError"), "warning"));
     });
   });
 
   document.querySelector(".ajustes-switch[data-setting='reduceMotion']").addEventListener("click", () => {
     setReduceMotion(!getReduceMotion())
       .then(() => setStatus("ajustes-apariencia-status", ""))
-      .catch(() => setStatus("ajustes-apariencia-status", "No se pudo guardar el ajuste: se mantiene solo hasta cerrar SkillMap.", "warning"));
+      .catch(() => setStatus("ajustes-apariencia-status", t("ajustes.settingError"), "warning"));
   });
 }
 
 // ---------- Key de Gemini ----------
 
 function keyLink() {
-  return `<a class="ajustes-link" href="${GEMINI_KEY_URL}" target="_blank" rel="noopener noreferrer">¿Cómo conseguir una key?<span class="sr-only"> (se abre en otra pestaña)</span></a>`;
+  return `<a class="ajustes-link" href="${GEMINI_KEY_URL}" target="_blank" rel="noopener noreferrer">${t("ajustes.keyHelp")}<span class="sr-only">${t("common.newTab")}</span></a>`;
 }
 
 // La key nunca llega al navegador: con key, el campo muestra puntos fijos; sin ella, un texto
@@ -53,21 +64,19 @@ function renderKeyView() {
   const gemini = settingsState?.gemini;
   let field, chip = "";
   if (!settingsState) {
-    field = ajustesState.keyError
-      ? `<span class="ajustes-key-empty">Estado desconocido</span>`
-      : `<span class="ajustes-key-empty">Cargando…</span>`;
+    field = `<span class="ajustes-key-empty">${t(ajustesState.keyError ? "ajustes.keyUnknown" : "common.loading")}</span>`;
   } else if (gemini.configured) {
-    field = `<span class="ajustes-key-dots" aria-hidden="true">••••••••••••••••••••</span><span class="sr-only">Key guardada, oculta</span>`;
+    field = `<span class="ajustes-key-dots" aria-hidden="true">••••••••••••••••••••</span><span class="sr-only">${t("ajustes.keySavedHidden")}</span>`;
     chip = gemini.source === "env"
-      ? `<span class="ajustes-chip ajustes-chip--env">Definida por variable de entorno</span>`
-      : `<span class="ajustes-chip ajustes-chip--ok">Guardada</span>`;
+      ? `<span class="ajustes-chip ajustes-chip--env">${t("ajustes.keyEnv")}</span>`
+      : `<span class="ajustes-chip ajustes-chip--ok">${t("ajustes.keySaved")}</span>`;
   } else {
     // Sin key propia no es un error: el Analizador usa la IA incluida
-    field = `<span class="ajustes-key-empty">Sin key propia: el Analizador usa la IA incluida</span>`;
+    field = `<span class="ajustes-key-empty">${t("ajustes.keyNone")}</span>`;
   }
-  const action = gemini?.configured ? "Cambiar key" : "Añadir key";
+  const action = t(gemini?.configured ? "ajustes.keyChange" : "ajustes.keyAdd");
   return `
-    <p id="ajustes-key-label" class="ajustes-label">Key de Gemini (opcional)</p>
+    <p id="ajustes-key-label" class="ajustes-label">${t("ajustes.keyLabel")}</p>
     <div class="ajustes-key-row">
       <div class="ajustes-key-field" role="group" aria-labelledby="ajustes-key-label">${field}</div>
       ${chip}
@@ -81,14 +90,14 @@ function renderKeyView() {
 function renderKeyForm() {
   return `
     <form class="ajustes-key-form" novalidate>
-      <label for="ajustes-key-input" class="ajustes-label">Key de Gemini (opcional)</label>
+      <label for="ajustes-key-input" class="ajustes-label">${t("ajustes.keyLabel")}</label>
       <div class="ajustes-key-row">
         <input id="ajustes-key-input" class="ajustes-key-input" type="password" autocomplete="off" spellcheck="false"
-          autocapitalize="off" maxlength="200" placeholder="Pega aquí tu key" aria-describedby="ajustes-key-status">
+          autocapitalize="off" maxlength="200" placeholder="${t("ajustes.keyPlaceholder")}" aria-describedby="ajustes-key-status">
       </div>
       <div class="ajustes-key-actions">
-        <button type="submit" class="btn-pill">Guardar</button>
-        <button type="button" class="btn-pill btn-pill--outline" data-key-action="cancel">Cancelar</button>
+        <button type="submit" class="btn-pill">${t("ajustes.save")}</button>
+        <button type="button" class="btn-pill btn-pill--outline" data-key-action="cancel">${t("ajustes.cancel")}</button>
         ${keyLink()}
       </div>
     </form>`;
@@ -107,13 +116,13 @@ async function saveGeminiKey(form) {
   const submit = form.querySelector("button[type='submit']");
   let key = input.value.trim();
   if (!key) {
-    setStatus("ajustes-key-status", "Pega tu key antes de guardar.", "error");
+    setStatus("ajustes-key-status", t("ajustes.keyMissing"), "error");
     input.focus();
     return;
   }
   submit.disabled = true;
   submit.setAttribute("aria-busy", "true");
-  submit.textContent = "Guardando…";
+  submit.textContent = t("ajustes.saving");
   setStatus("ajustes-key-status", "");
   try {
     const res = await apiFetch("/api/settings/gemini-key", {
@@ -127,13 +136,13 @@ async function saveGeminiKey(form) {
     ajustesState.keyEditing = false;
     await loadSettings({ fresh: true }).catch(() => null);
     renderKey({ focus: true });
-    if (warning) setStatus("ajustes-key-status", warning, "warning");
-    else setStatus("ajustes-key-status", "Key guardada. El Analizador usará tu cuota personal.", "ok");
+    if (warning) setStatus("ajustes-key-status", tError(warning), "warning");
+    else setStatus("ajustes-key-status", t("ajustes.keyOk"), "ok");
   } catch (err) {
-    setStatus("ajustes-key-status", `No se pudo guardar la key: ${friendlyError(err)}`, "error");
+    setStatus("ajustes-key-status", t("ajustes.keyError", { error: friendlyError(err) }), "error");
     submit.disabled = false;
     submit.removeAttribute("aria-busy");
-    submit.textContent = "Guardar";
+    submit.textContent = t("ajustes.save");
     input.focus();
   } finally {
     // La key no se queda en el campo ni en memoria, salga bien o mal
@@ -166,18 +175,16 @@ function bindKey() {
 
 // ---------- Ofertas de empleo ----------
 
-const numberFormat = new Intl.NumberFormat("es");
-const dateFormat = new Intl.DateTimeFormat("es", { day: "numeric", month: "short", year: "numeric" });
-const timeFormat = new Intl.DateTimeFormat("es", { hour: "2-digit", minute: "2-digit" });
-
 function offersText(n) {
-  return `${numberFormat.format(n)} ${n === 1 ? "oferta" : "ofertas"}`;
+  return tn("ajustes.offers", n, { n: formatNumber(n) });
 }
 
-// Hora local: "3 oct 2026 · 02:16"
+// Hora local en el idioma actual: "3 oct 2026 · 02:16" o "Oct 3, 2026 · 02:16"
 function formatSyncDate(iso) {
   const date = new Date(iso);
-  return `${dateFormat.format(date).replace(/\./g, "")} · ${timeFormat.format(date)}`;
+  const day = new Intl.DateTimeFormat(getLanguage(), { day: "numeric", month: "short", year: "numeric" }).format(date);
+  const time = new Intl.DateTimeFormat(getLanguage(), { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(date);
+  return `${day.replace(/\./g, "")} · ${time}`;
 }
 
 function formatWait(minutes) {
@@ -189,22 +196,22 @@ function formatWait(minutes) {
 // Debajo de cada fuente: su última actualización y, si el backend la sincroniza sola, cada cuántos días
 function sourceMeta(s) {
   const updated = s.lastSyncAt
-    ? `Actualizada: <time datetime="${escapeHtml(s.lastSyncAt)}">${formatSyncDate(s.lastSyncAt)}</time>`
-    : "Sin actualizar";
-  const auto = s.autoSyncDays ? ` · ${escapeHtml(s.name)} se actualiza solo cada ${s.autoSyncDays} días` : "";
+    ? t("ajustes.sourceUpdated", { date: `<time datetime="${escapeHtml(s.lastSyncAt)}">${formatSyncDate(s.lastSyncAt)}</time>` })
+    : t("ajustes.sourceNever");
+  const auto = s.autoSyncDays ? ` · ${t("ajustes.autoSync", { name: escapeHtml(s.name), n: s.autoSyncDays })}` : "";
   return `<span class="ajustes-source-meta">${updated}${auto}</span>`;
 }
 
 function renderJobStats(stats) {
   const sources = stats.sources.length
     ? stats.sources.map(s => `<li><strong>${escapeHtml(s.name)}</strong> · ${offersText(s.jobs)}${sourceMeta(s)}</li>`).join("")
-    : `<li>Aún no hay fuentes sincronizadas</li>`;
+    : `<li>${t("ajustes.noSources")}</li>`;
   const updated = stats.lastSyncAt
-    ? `Última actualización: <time datetime="${escapeHtml(stats.lastSyncAt)}">${formatSyncDate(stats.lastSyncAt)}</time>`
-    : "Aún no se ha actualizado";
+    ? t("ajustes.lastUpdate", { date: `<time datetime="${escapeHtml(stats.lastSyncAt)}">${formatSyncDate(stats.lastSyncAt)}</time>` })
+    : t("ajustes.neverUpdated");
   return `
-    <p class="ajustes-total"><span class="ajustes-total-num">${numberFormat.format(stats.totalJobs)}</span>
-      <span class="ajustes-total-label">${stats.totalJobs === 1 ? "oferta real" : "ofertas reales"}</span></p>
+    <p class="ajustes-total"><span class="ajustes-total-num">${formatNumber(stats.totalJobs)}</span>
+      <span class="ajustes-total-label">${tn("ajustes.realOffers", stats.totalJobs)}</span></p>
     <div class="ajustes-sources">
       <ul>${sources}</ul>
       <p class="ajustes-updated">${updated}</p>
@@ -216,21 +223,35 @@ async function loadJobStats() {
   try {
     container.innerHTML = renderJobStats(await fetchJobStats());
   } catch (err) {
-    container.innerHTML = `<p class="ajustes-status" data-tone="error">No pudimos leer las ofertas: ${escapeHtml(friendlyError(err))}</p>`;
+    container.innerHTML = `<p class="ajustes-status" data-tone="error">${t("ajustes.jobsError", { error: escapeHtml(friendlyError(err)) })}</p>`;
   }
 }
 
 function syncSourceText(s) {
-  const name = escapeHtml(s.source);
+  const name = `<strong>${escapeHtml(s.source)}</strong>`;
   if (s.status === "SYNCED") {
-    return `<strong>${name}</strong>: actualizada · ${s.added ? `${offersText(s.added)} ${s.added === 1 ? "nueva" : "nuevas"}` : "sin ofertas nuevas"}`;
+    const detail = s.added ? tn("ajustes.newOffers", s.added, { n: formatNumber(s.added) }) : t("ajustes.noNewOffers");
+    return t("ajustes.synced", { name, detail });
   }
   if (s.status === "SKIPPED") {
     return s.minutesUntilNextSync > 0
-      ? `<strong>${name}</strong>: ya está al día · podrás actualizarla en ${formatWait(s.minutesUntilNextSync)}`
-      : `<strong>${name}</strong>: ya está al día`;
+      ? t("ajustes.upToDateWait", { name, wait: formatWait(s.minutesUntilNextSync) })
+      : t("ajustes.upToDate", { name });
   }
-  return `<strong>${name}</strong>: no se pudo actualizar${s.message ? ` · ${escapeHtml(s.message)}` : ""}`;
+  return t("ajustes.syncFailed", { name }) + (s.message ? ` · ${escapeHtml(tError(s.message))}` : "");
+}
+
+// Resultado del último recálculo (o su error) en el idioma actual
+function renderSyncResult() {
+  const result = document.getElementById("ajustes-sync-result");
+  const last = ajustesState.syncResult;
+  result.dataset.tone = last?.error ? "error" : "";
+  if (!last) { result.innerHTML = ""; return; }
+  if (last.error) { result.innerHTML = `<p>${t("ajustes.syncError", { error: escapeHtml(friendlyError(last.error)) })}</p>`; return; }
+  const data = last.data;
+  const anyUpdated = data.sources.some(s => s.updated);
+  const summary = t(data.demandRecalculated ? "ajustes.syncRecalculated" : anyUpdated ? "ajustes.syncNotEnough" : "ajustes.syncSame");
+  result.innerHTML = `<p class="ajustes-sync-summary">${summary}</p><ul>${data.sources.map(s => `<li>${syncSourceText(s)}</li>`).join("")}</ul>`;
 }
 
 // Tras recalcular, los datos guardados en memoria quedan viejos: se descartan para que cada vista los vuelva a pedir.
@@ -253,28 +274,26 @@ async function syncJobs() {
   const result = document.getElementById("ajustes-sync-result");
   button.disabled = true;
   button.setAttribute("aria-busy", "true");
-  label.textContent = "Recalculando…";
+  label.textContent = t("ajustes.syncing");
+  ajustesState.syncResult = null;
   result.dataset.tone = "";
-  result.innerHTML = `<p>Consultando las fuentes de ofertas. Puede tardar unos segundos.</p>`;
+  result.innerHTML = `<p>${t("ajustes.syncConsulting")}</p>`;
   try {
     const res = await apiFetch("/api/jobs/sync", { method: "POST" });
     if (!res.ok) throw await apiError(res);
     const data = await res.json();
-    const anyUpdated = data.sources.some(s => s.updated);
-    const summary = data.demandRecalculated
-      ? "Tu ruta se recalculó con las ofertas nuevas."
-      : anyUpdated ? "Hay ofertas nuevas, pero aún no bastan para recalcular la ruta." : "Tu ruta sigue igual.";
-    result.innerHTML = `<p class="ajustes-sync-summary">${summary}</p><ul>${data.sources.map(s => `<li>${syncSourceText(s)}</li>`).join("")}</ul>`;
-    invalidateJobData(data.demandRecalculated || anyUpdated);
+    ajustesState.syncResult = { data };
+    renderSyncResult();
+    invalidateJobData(data.demandRecalculated || data.sources.some(s => s.updated));
     await loadJobStats();
   } catch (err) {
-    result.dataset.tone = "error";
-    result.innerHTML = `<p>No se pudo recalcular: ${escapeHtml(friendlyError(err))}</p>`;
+    ajustesState.syncResult = { error: err };
+    renderSyncResult();
   } finally {
     ajustesState.syncing = false;
     button.disabled = false;
     button.removeAttribute("aria-busy");
-    label.textContent = "Recalcular ruta con ofertas nuevas";
+    label.textContent = t("ajustes.sync");
   }
 }
 
@@ -288,7 +307,7 @@ function openAjustes() {
     .then(() => { ajustesState.keyError = null; setStatus("ajustes-apariencia-status", ""); })
     .catch(err => {
       ajustesState.keyError = err;
-      setStatus("ajustes-apariencia-status", `No pudimos leer tus ajustes: ${friendlyError(err)} Los cambios de tema y animaciones se aplican solo en esta sesión.`, "warning");
+      setStatus("ajustes-apariencia-status", t("ajustes.readError", { error: friendlyError(err) }), "warning");
     })
     .finally(() => { syncApariencia(); if (!ajustesState.keyEditing) renderKey(); });
   loadJobStats();
@@ -309,9 +328,19 @@ document.addEventListener("skillmap:user", () => {
   ajustesState.keyError = null;
   renderKey();
   ["ajustes-apariencia-status", "ajustes-key-status"].forEach(id => setStatus(id, ""));
-  const result = document.getElementById("ajustes-sync-result");
-  result.innerHTML = "";
-  result.dataset.tone = "";
+  ajustesState.syncResult = null;
+  renderSyncResult();
+});
+
+// Cambio de idioma: se vuelve a pintar lo dibujado con JS. Los avisos de guardado se borran (eran del otro idioma);
+// el formulario de la key, si está abierto, no se toca para no perder lo escrito.
+document.addEventListener("skillmap:language", () => {
+  ["ajustes-apariencia-status", "ajustes-key-status"].forEach(id => setStatus(id, ""));
+  if (!ajustesState.keyEditing) renderKey();
+  document.querySelector("#ajustes-sync [data-label]").textContent = t(ajustesState.syncing ? "ajustes.syncing" : "ajustes.sync");
+  if (!ajustesState.syncing) renderSyncResult();
+  if (!document.getElementById("view-ajustes").classList.contains("hidden")) loadJobStats();
+  syncApariencia();
 });
 
 document.addEventListener("DOMContentLoaded", initAjustes);

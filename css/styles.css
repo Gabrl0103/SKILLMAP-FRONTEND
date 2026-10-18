@@ -985,6 +985,13 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .ajustes-preview--dark i:nth-child(1) { background:var(--preview-dark-accent); }
 .ajustes-preview--dark i:nth-child(2) { background:var(--preview-dark-track); }
 .ajustes-preview--dark i:nth-child(3) { background:var(--preview-dark-bar); }
+/* Idioma: las mismas tarjetas del tema, en fila y con el código del idioma en lugar de la vista previa */
+.ajustes-languages { margin-top:28px; }
+.ajustes-languages > legend { margin:0 0 12px; }
+.ajustes-language { flex-direction:row; align-items:center; gap:12px; padding:12px 14px; }
+.ajustes-language-code { display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:28px; padding:0 10px;
+  border-radius:var(--radius-pill); background:var(--surface-2); color:var(--text-mid); font-size:12px; font-weight:700; letter-spacing:.08em; }
+.ajustes-language:has(input:checked) .ajustes-language-code { background:var(--chip-rosa-bg); color:var(--chip-rosa-fg); }
 
 /* Interruptores: encendido con el gradiente de acción */
 .ajustes-toggle { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-top:24px; }
