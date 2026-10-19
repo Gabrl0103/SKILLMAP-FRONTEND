@@ -2,15 +2,14 @@
 // demanda reales. Se abre desde el panel del Mapa Visual y desde las brechas de Mi Ruta (openSkillDetail) y el botón
 // "Volver" regresa a la vista de origen.
 // Usa SKILL_FAQ (skill-faq-data.js), showView y escapeHtml (mapa.js), fetchSkills, fetchGoals, renderApiError,
-// demandIsSample y sampleTag (dashboard.js), currentActiveGoalId (objetivo.js), apiJson y friendlyError (session.js) y
-// t, statusLabel, tSkill, tCategory, tGoalTitle y getLanguage (i18n.js).
+// demandIsSample y sampleTag (dashboard.js), currentActiveGoalId (objetivo.js), renderStatusPicker, bindStatusPicker,
+// focusStatusPicker, saveSkillStatus y SKILL_STATE_CLASS (skill-status.js), friendlyError (session.js) y t, statusLabel,
+// tSkill, tCategory, tGoalTitle y getLanguage (i18n.js).
 
-const SKILL_STATUS_CLASS = { MASTERED: "mastered", IN_PROGRESS: "progress", PENDING: "pending" };
-
-// Habilidad abierta, vista de origen, botón que la abrió (recibe el foco al volver), preguntas abiertas y
-// marcar / quitar de dominadas (ocupado y último error, con si era marcar o quitar)
+// Habilidad abierta, vista de origen, botón que la abrió (recibe el foco al volver), preguntas abiertas y cambio de
+// estado (ocupado y último error)
 const skillDetail = { id: null, from: "dashboard", opener: null, skill: null, goal: null, catalog: [],
-  open: new Set(), busy: false, error: null, errorMaster: true };
+  open: new Set(), busy: false, error: null };
 let skillDetailRequest = 0; // descarta respuestas de una habilidad abierta antes
 
 // Contenido estático en el idioma vigente; null si la habilidad no tiene entrada (p. ej. una nueva)
@@ -29,9 +28,9 @@ function renderSkillBack() {
     </button>`;
 }
 
-// Estado (menta = dominada, rosa = en desarrollo, punteado = aún no) y demanda real del backend
+// Estado (menta = dominada, rosa = aprendiendo, punteado = pendiente) y demanda real del backend
 function renderSkillMeta(skill) {
-  const status = SKILL_STATUS_CLASS[skill.status] || "pending";
+  const status = SKILL_STATE_CLASS[skill.status] || "pending";
   return `
     <span class="mapa-chip mapa-chip--${status}">${statusLabel(skill.status)}</span>
     <p class="skill-demand"><strong>${skill.demandPercentage}%</strong> ${t("skill.ofJobs")}</p>
@@ -117,19 +116,15 @@ function renderSkillResources(content) {
     </section>`;
 }
 
-// Tu progreso: texto según el estado y "Marcar como dominada" / "Quitar de dominadas" (mismas llamadas que el Mapa)
+// Tu progreso: texto según el estado y el selector Pendiente / Aprendiendo / Dominada (el mismo del Mapa)
 function renderSkillProgress(skill) {
-  const mastered = skill.status === "MASTERED";
-  const busy = skillDetail.busy;
-  const label = t(busy ? (mastered ? "mapa.unmarking" : "mapa.marking") : (mastered ? "mapa.unmark" : "mapa.mark"));
   const status = ["MASTERED", "IN_PROGRESS"].includes(skill.status) ? skill.status : "PENDING";
   const error = skillDetail.error
-    ? `<p class="mapa-panel-error" role="alert">${escapeHtml(t(skillDetail.errorMaster ? "mapa.markError" : "mapa.unmarkError",
-      { error: friendlyError(skillDetail.error) }))}</p>` : "";
+    ? `<p class="mapa-panel-error" role="alert">${escapeHtml(t("state.error", { error: friendlyError(skillDetail.error) }))}</p>` : "";
   return `
     <h2 class="skill-card-title">${t("skill.progress")}</h2>
     <p class="skill-text">${t(`mapa.text.${status}`)}</p>
-    <button type="button" class="btn-pill skill-master${mastered ? " btn-pill--outline" : ""}" data-skill-master${busy ? ` aria-busy="true" aria-disabled="true"` : ""}>${label}</button>
+    <div class="skill-status">${renderStatusPicker(skill, skillDetail.busy)}</div>
     ${error}`;
 }
 
@@ -178,7 +173,7 @@ function refreshSkillStatus() {
   const hadFocus = progress.contains(document.activeElement);
   meta.innerHTML = renderSkillMeta(skillDetail.skill);
   progress.innerHTML = renderSkillProgress(skillDetail.skill);
-  if (hadFocus) progress.querySelector("[data-skill-master]").focus();
+  if (hadFocus) focusStatusPicker(progress);
 }
 
 function paintSkillDetail({ focus = false } = {}) {
@@ -234,22 +229,23 @@ function closeSkillDetail() {
   target?.focus();
 }
 
-async function toggleSkillDetailMaster() {
-  const skill = skillDetail.skill;
-  if (!skill || skillDetail.busy) return;
-  const master = skill.status !== "MASTERED";
-  Object.assign(skillDetail, { busy: true, error: null });
+// El estado cambia al instante; si el backend falla, vuelve al anterior y se muestra el error
+async function setSkillDetailStatus(id, status) {
+  const previous = skillDetail.skill;
+  if (!previous || previous.id !== id || skillDetail.busy || previous.status === status) return;
+  Object.assign(skillDetail, { skill: { ...previous, status }, busy: true, error: null });
   refreshSkillStatus();
   try {
-    const updated = await apiJson(`/api/skills/${skill.id}/master`, { method: master ? "PATCH" : "DELETE" });
-    if (skillDetail.id !== skill.id) return; // otra habilidad u otro usuario mientras se guardaba
+    const updated = await saveSkillStatus(id, status);
+    if (skillDetail.id !== id) return; // otra habilidad u otro usuario mientras se guardaba
     skillDetail.skill = { ...skillDetail.skill, ...updated };
-    document.getElementById("skill-live").textContent = t(master ? "mapa.marked" : "mapa.unmarked", { name: tSkill(skill.name) });
+    document.getElementById("skill-live").textContent = t("state.saved",
+      { name: tSkill(updated.name), status: statusLabel(updated.status) });
     // Mi Ruta, Perfil y Analizador descartan sus datos viejos; el Mapa actualiza el nodo de esta habilidad
     document.dispatchEvent(new CustomEvent("skillmap:progress", { detail: { skill: skillDetail.skill } }));
   } catch (err) {
-    if (skillDetail.id !== skill.id) return;
-    Object.assign(skillDetail, { error: err, errorMaster: master });
+    if (skillDetail.id !== id) return;
+    Object.assign(skillDetail, { skill: previous, error: err });
   }
   skillDetail.busy = false;
   refreshSkillStatus();
@@ -259,8 +255,6 @@ async function toggleSkillDetailMaster() {
 
 document.getElementById("skill-content").addEventListener("click", e => {
   if (e.target.closest("[data-skill-back]")) { closeSkillDetail(); return; }
-  const master = e.target.closest("[data-skill-master]");
-  if (master) { if (master.getAttribute("aria-disabled") !== "true") toggleSkillDetailMaster(); return; }
   const question = e.target.closest("[data-faq]");
   if (!question) return;
   const i = Number(question.dataset.faq);
@@ -269,6 +263,7 @@ document.getElementById("skill-content").addEventListener("click", e => {
   document.getElementById(question.getAttribute("aria-controls")).hidden = !open;
   if (open) skillDetail.open.add(i); else skillDetail.open.delete(i);
 });
+bindStatusPicker(document.getElementById("skill-content"), setSkillDetailStatus);
 
 // Cambio de idioma: textos y contenido se vuelven a pintar con los datos ya cargados (el foco vuelve al título)
 document.addEventListener("skillmap:language", () => {
