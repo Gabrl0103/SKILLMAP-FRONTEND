@@ -3,7 +3,8 @@
 // el de foco. Usa SKILL_STATE_CLASS (skill-status.js).
 //   .route-rail + .route-stop  brechas de Mi Ruta unidas en vertical, un punto de control por brecha
 //   .route-dest                destino al final del riel (el objetivo)
-//   .route-divider             divisor corto con un punto en el extremo (Perfil, Ajustes, Analizador)
+//   .route-divider             divisor corto con un punto en el extremo (Perfil, Ajustes, Analizador, Objetivo)
+//   .route-glyph               tramo mínimo con su punto, dentro de los botones "Cambiar objetivo"
 //   .route-draw                línea que se dibuja sola en estados vacíos y de carga (loop: se repite mientras carga)
 //   .topnav-trail              estela del indicador del nav (positionNavIndicator en mapa.js)
 
@@ -20,6 +21,11 @@ function routeDestination(label, order = 0) {
 
 function routeDivider() {
   return `<span class="route-divider" aria-hidden="true"></span>`;
+}
+
+// Mismo SVG que el botón "Cambiar objetivo" de Mi Ruta (index.html)
+function routeGlyph() {
+  return `<svg class="route-glyph" width="24" height="8" viewBox="0 0 24 8" aria-hidden="true" focusable="false"><path d="M0 4H14"/><circle cx="20" cy="4" r="4"/></svg>`;
 }
 
 // La línea punteada se revela con stroke-dashoffset sobre una máscara (el punteado no puede usar su propio dasharray
