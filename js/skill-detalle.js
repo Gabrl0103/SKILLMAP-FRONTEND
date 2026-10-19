@@ -3,7 +3,7 @@
 // "Volver" regresa a la vista de origen.
 // Usa SKILL_FAQ (skill-faq-data.js), showView y escapeHtml (mapa.js), fetchSkills, fetchGoals, renderApiError,
 // demandIsSample y sampleTag (dashboard.js), currentActiveGoalId (objetivo.js), renderStatusPicker, bindStatusPicker,
-// focusStatusPicker, saveSkillStatus y SKILL_STATE_CLASS (skill-status.js), friendlyError (session.js) y t, statusLabel,
+// focusStatusPicker, saveSkillStatus y SKILL_STATE_CLASS (skill-status.js), routeDraw (route-motif.js), friendlyError (session.js) y t, statusLabel,
 // tSkill, tCategory, tGoalTitle y getLanguage (i18n.js).
 
 // Habilidad abierta, vista de origen, botón que la abrió (recibe el foco al volver), preguntas abiertas y cambio de
@@ -191,7 +191,7 @@ function paintSkillDetail({ focus = false } = {}) {
 async function loadSkillDetail({ focus = false } = {}) {
   const container = document.getElementById("skill-content");
   const requestId = ++skillDetailRequest;
-  container.innerHTML = `${renderSkillBack()}<p class="skill-text" role="status">${t("skill.loading")}</p>`;
+  container.innerHTML = `${renderSkillBack()}<p class="route-state skill-text" role="status">${routeDraw({ loop: true })}${t("skill.loading")}</p>`;
   try {
     // Sin objetivos la pantalla se muestra igual, sin la parte del objetivo
     const [skills, goals] = await Promise.all([fetchSkills(), fetchGoals().catch(() => [])]);

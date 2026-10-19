@@ -1,5 +1,5 @@
 // Vista "Objetivo". Usa fetchGoals, setActiveGoal, getActiveGoalId y renderApiError (dashboard.js), escapeHtml/showView
-// (mapa.js) y t, tn, tGoalTitle y tGoalDescription (i18n.js).
+// (mapa.js), routeDraw (route-motif.js) y t, tn, tGoalTitle y tGoalDescription (i18n.js).
 
 // Ícono y color de cada tarjeta según palabras clave del título (sin acentos, en minúsculas).
 // Gana el primer tema que coincide; sin coincidencia se usa GENERIC_THEME. El fondo del ícono lo deriva styles.css
@@ -125,7 +125,7 @@ function currentActiveGoalId(goals) {
 async function openObjetivo() {
   const container = document.getElementById("objetivo-content");
   if (!objetivoState.goals) {
-    container.innerHTML = `<p class="text-sm text-muted-page">${t("objetivo.loading")}</p>`;
+    container.innerHTML = `<p class="route-state text-sm text-muted-page">${routeDraw({ loop: true })}${t("objetivo.loading")}</p>`;
     try {
       objetivoState.goals = await fetchGoals();
     } catch (err) {
