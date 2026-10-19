@@ -1,8 +1,9 @@
 // Vista "Mapa Visual": todas las habilidades del sistema como grafo de nodos agrupados por categoría, con la ruta
 // sugerida del objetivo activo y un panel de detalle de la habilidad seleccionada.
 // Usa renderApiError, demandIsSample, sampleTag, jobStatsText, fetchJobStats, fetchGoals, fetchReadiness y
-// getActiveGoalId (dashboard.js), currentActiveGoalId (objetivo.js), apiJson y friendlyError (session.js) y t,
-// statusLabel, tSkill, tCategory, tGoalTitle y getLanguage (i18n.js).
+// getActiveGoalId (dashboard.js), currentActiveGoalId (objetivo.js), renderStatusPicker, bindStatusPicker,
+// focusStatusPicker y saveSkillStatus (skill-status.js), friendlyError (session.js) y t, statusLabel, tSkill, tCategory,
+// tGoalTitle y getLanguage (i18n.js).
 // También define la navegación entre vistas (showView) y el indicador del nav de la barra superior.
 
 const NODE_SIZE = 96;       // diámetro de cada nodo (px)
@@ -299,9 +300,9 @@ let mapaSelectedId = null;    // id de la habilidad seleccionada (sobrevive a ca
 let mapaJobStats = null;      // /api/jobs/stats para la nota "Ruta calculada con N ofertas reales"
 // Objetivo activo: brechas en orden de demanda (ruta sugerida) y todas sus habilidades
 let mapaRoute = { goalId: null, goalTitle: "", gapIds: [], goalSkillIds: new Set() };
-// Marcar / quitar de dominadas: habilidad que se está guardando y último error (con la habilidad a la que pertenece y
-// si era marcar o quitar; el texto se arma al pintar, en el idioma vigente)
-const mapaMark = { id: null, error: null, errorId: null, errorMaster: true };
+// Cambio de estado: habilidad que se está guardando y último error, con la habilidad a la que pertenece (el texto se
+// arma al pintar, en el idioma vigente)
+const mapaMark = { id: null, error: null, errorId: null };
 
 function renderMapaPanelEmpty() {
   return `
@@ -343,32 +344,24 @@ function renderMapaPanel(skill) {
     <p class="mapa-panel-demand"><span class="mapa-panel-pct">${skill.demandPercentage}</span><span class="mapa-panel-pct-label">${t("mapa.pctOfJobs")}</span></p>
     <p class="mapa-panel-text">${mapaSkillText(skill)}</p>
     <div class="mapa-panel-actions">
+      ${renderStatusPicker(skill, mapaMark.id === skill.id)}
       <button type="button" class="btn-pill" data-context="${skill.id}">${t("skill.context")}</button>
-      ${renderMasterButton(skill)}
     </div>
-    ${mapaMark.errorId === skill.id ? `<p class="mapa-panel-error" role="alert">${escapeHtml(t(mapaMark.errorMaster ? "mapa.markError" : "mapa.unmarkError",
+    ${mapaMark.errorId === skill.id ? `<p class="mapa-panel-error" role="alert">${escapeHtml(t("state.error",
       { error: friendlyError(mapaMark.error) }))}</p>` : ""}
     ${note}`;
-}
-
-// Alterna entre "Marcar como dominada" (PATCH /api/skills/{id}/master) y "Quitar de dominadas" (DELETE, vuelve a
-// "Por aprender"). Mientras se guarda queda ocupado pero enfocable.
-function renderMasterButton(skill) {
-  const mastered = skill.status === "MASTERED";
-  const busy = mapaMark.id === skill.id;
-  const label = t(busy ? (mastered ? "mapa.unmarking" : "mapa.marking") : (mastered ? "mapa.unmark" : "mapa.mark"));
-  return `<button type="button" class="btn-pill btn-pill--outline" data-master="${skill.id}"${busy ? ` aria-busy="true" aria-disabled="true"` : ""}>${label}</button>`;
 }
 
 function refreshMapaPanel() {
   const panel = document.getElementById("mapa-panel");
   if (!panel) return;
   const focused = panel.contains(document.activeElement)
-    ? (document.activeElement.matches("[data-context]") ? "[data-context]" : "[data-master]") : null;
+    ? (document.activeElement.matches("[data-context]") ? "context" : "status") : null;
   const skill = mapaSkills.find(s => s.id === mapaSelectedId);
   panel.innerHTML = skill ? renderMapaPanel(skill) : renderMapaPanelEmpty();
-  // Redibujar quita el foco: si estaba en el panel (contexto o marcar), vuelve a ese botón
-  if (focused) panel.querySelector(focused)?.focus({ preventScroll: true });
+  // Redibujar quita el foco: si estaba en el panel, vuelve al botón de contexto o a la opción elegida del selector
+  if (focused === "context") panel.querySelector("[data-context]")?.focus({ preventScroll: true });
+  if (focused === "status") focusStatusPicker(panel);
 }
 
 function selectMapaNode(node) {
@@ -390,30 +383,32 @@ function updateMapaNode(skill) {
   node.setAttribute("aria-label", mapaNodeLabel(skill, node.dataset.category));
 }
 
-async function toggleMapaSkill(id) {
-  if (mapaMark.id !== null) return;
-  const master = mapaSkills.find(s => s.id === id)?.status !== "MASTERED";
-  mapaMark.id = id;
-  mapaMark.errorId = null;
+// Nodo y panel cambian al instante; si el backend falla, vuelven al estado anterior y el panel muestra el error.
+// Mientras se guarda no se elige otro estado.
+async function setMapaSkillStatus(id, status) {
+  const index = mapaSkills.findIndex(s => s.id === id);
+  if (mapaMark.id !== null || index < 0 || mapaSkills[index].status === status) return;
+  const previous = mapaSkills[index];
+  mapaSkills[index] = { ...previous, status };
+  Object.assign(mapaMark, { id, errorId: null });
+  updateMapaNode(mapaSkills[index]);
   refreshMapaPanel();
   try {
-    const updated = await apiJson(`/api/skills/${id}/master`, { method: master ? "PATCH" : "DELETE" });
+    const updated = await saveSkillStatus(id, status);
     if (mapaMark.id !== id) return; // cambió el usuario mientras se guardaba
-    const index = mapaSkills.findIndex(s => s.id === id);
-    if (index >= 0) mapaSkills[index] = { ...mapaSkills[index], ...updated };
-    const skill = index >= 0 ? mapaSkills[index] : updated;
-    updateMapaNode(skill);
-    document.getElementById("mapa-live").textContent = t(master ? "mapa.marked" : "mapa.unmarked", { name: tSkill(skill.name) });
+    mapaSkills[index] = { ...mapaSkills[index], ...updated };
+    document.getElementById("mapa-live").textContent = t("state.saved",
+      { name: tSkill(updated.name), status: statusLabel(updated.status) });
     // Mi Ruta, Perfil y Analizador descartan sus datos viejos; aquí se recalcula la ruta sugerida
     document.dispatchEvent(new CustomEvent("skillmap:progress"));
     mapaRoute.goalId = null;
   } catch (err) {
     if (mapaMark.id !== id) return;
-    mapaMark.error = err;
-    mapaMark.errorMaster = master;
-    mapaMark.errorId = id;
+    mapaSkills[index] = previous;
+    Object.assign(mapaMark, { error: err, errorId: id });
   }
   mapaMark.id = null;
+  updateMapaNode(mapaSkills[index]);
   refreshMapaPanel();
   updateMapaRoute();
 }
@@ -731,13 +726,12 @@ window.addEventListener("resize", applyMapaTransform);
 // Botones del panel (se redibuja con cada selección): un solo listener en el contenedor
 document.getElementById("mapa-content").addEventListener("click", e => {
   const context = e.target.closest("#mapa-panel [data-context]");
-  if (context) { openSkillDetail(Number(context.dataset.context), context); return; } // skill-detalle.js
-  const button = e.target.closest("#mapa-panel [data-master]");
-  if (button && button.getAttribute("aria-disabled") !== "true") toggleMapaSkill(Number(button.dataset.master));
+  if (context) openSkillDetail(Number(context.dataset.context), context); // skill-detalle.js
 });
+bindStatusPicker(document.getElementById("mapa-content"), setMapaSkillStatus);
 
-// Habilidad marcada o quitada desde el detalle (skill-detalle.js): nodo y panel se actualizan sin redibujar el mapa y
-// la ruta sugerida se recalcula al volver a la vista. Las marcas hechas aquí mismo no traen detalle.
+// Estado cambiado desde el detalle (skill-detalle.js): nodo y panel se actualizan sin redibujar el mapa y la ruta
+// sugerida se recalcula al volver a la vista. Los cambios hechos aquí mismo no traen detalle.
 document.addEventListener("skillmap:progress", e => {
   const skill = e.detail?.skill;
   const index = skill ? mapaSkills.findIndex(s => s.id === skill.id) : -1;
@@ -757,7 +751,7 @@ document.addEventListener("skillmap:user", () => {
   mapaSelectedId = null;
   mapaJobStats = null;
   mapaRoute = { goalId: null, goalTitle: "", gapIds: [], goalSkillIds: new Set() };
-  Object.assign(mapaMark, { id: null, error: null, errorId: null, errorMaster: true });
+  Object.assign(mapaMark, { id: null, error: null, errorId: null });
   mapaZoom = 1;
   mapaPan = { x: 0, y: 0 };
   mapaNeedsFit = true;

@@ -18,9 +18,16 @@ const I18N = {
     "common.soon": "Próximamente",
     "common.sample": "Datos de ejemplo",
     "common.newTab": " (se abre en otra pestaña)",
+    // status.*: leyenda de la Introducción. state.*: el resto de la app (statusLabel y el selector de estado)
     "status.MASTERED": "Dominada",
     "status.IN_PROGRESS": "En desarrollo",
     "status.PENDING": "Por aprender",
+    "state.MASTERED": "Dominada",
+    "state.IN_PROGRESS": "Aprendiendo",
+    "state.PENDING": "Pendiente",
+    "state.group": "Estado de {name}",
+    "state.saved": "{name}: {status}.",
+    "state.error": "No se pudo cambiar el estado: {error}",
     "category.none": "Sin categoría",
     "error.offline": "SkillMap no responde. Revisa que la app siga abierta e inténtalo de nuevo.",
     "error.server": "El servidor respondió con un error ({status}).",
@@ -169,15 +176,7 @@ const I18N = {
     "mapa.text.PENDING": "Aún no la has empezado.",
     "mapa.text.notInGoal": "{text} No forma parte de tu objetivo {goal}.",
     "mapa.pctOfJobs": "% de las ofertas",
-    "mapa.marking": "Marcando…",
-    "mapa.unmarking": "Quitando…",
-    "mapa.mark": "Marcar como dominada",
-    "mapa.unmark": "Quitar de dominadas",
     "mapa.selected": "{name} seleccionada. Detalle en el panel.",
-    "mapa.marked": "{name} marcada como dominada.",
-    "mapa.unmarked": "{name} quitada de dominadas: vuelve a Por aprender.",
-    "mapa.markError": "No se pudo marcar: {error}",
-    "mapa.unmarkError": "No se pudo quitar: {error}",
 
     // Detalle de habilidad
     "skill.context": "Ver contexto y preguntas frecuentes",
@@ -439,6 +438,12 @@ const I18N = {
     "status.MASTERED": "Mastered",
     "status.IN_PROGRESS": "In progress",
     "status.PENDING": "To learn",
+    "state.MASTERED": "Mastered",
+    "state.IN_PROGRESS": "Learning",
+    "state.PENDING": "Pending",
+    "state.group": "Status of {name}",
+    "state.saved": "{name}: {status}.",
+    "state.error": "Couldn't change the status: {error}",
     "category.none": "Uncategorized",
     "error.offline": "SkillMap isn't responding. Check that the app is still open and try again.",
     "error.server": "The server responded with an error ({status}).",
@@ -581,15 +586,7 @@ const I18N = {
     "mapa.text.PENDING": "You haven't started it yet.",
     "mapa.text.notInGoal": "{text} It isn't part of your goal {goal}.",
     "mapa.pctOfJobs": "% of job postings",
-    "mapa.marking": "Marking…",
-    "mapa.unmarking": "Removing…",
-    "mapa.mark": "Mark as mastered",
-    "mapa.unmark": "Remove from mastered",
     "mapa.selected": "{name} selected. Details in the panel.",
-    "mapa.marked": "{name} marked as mastered.",
-    "mapa.unmarked": "{name} removed from mastered: back to To learn.",
-    "mapa.markError": "Couldn't mark it: {error}",
-    "mapa.unmarkError": "Couldn't remove it: {error}",
 
     "skill.context": "See context and FAQ",
     "skill.contextFor": "See context and FAQ for {name}",
@@ -883,6 +880,7 @@ const BACKEND_ERRORS_EN = {
   "La descripción de la oferta no puede estar vacía.": "The job description can't be empty.",
   "La descripción de la oferta supera el máximo de 8.000 caracteres.": "The job description exceeds the 8,000-character limit.",
   "El tema no es válido. Valores permitidos: light, dark.": "The theme isn't valid. Allowed values: light, dark.",
+  "El estado no es válido. Valores permitidos: PENDING, IN_PROGRESS, MASTERED.": "The status isn't valid. Allowed values: PENDING, IN_PROGRESS, MASTERED.",
   "El idioma no es válido. Valores permitidos: es, en.": "The language isn't valid. Allowed values: es, en.",
   "La key de Gemini no puede estar vacía.": "The Gemini key can't be empty.",
   "La key de Gemini no puede contener espacios.": "The Gemini key can't contain spaces.",
@@ -953,9 +951,9 @@ function tn(key, n, params = {}) {
   return t(`${key}.${n === 1 ? "one" : "other"}`, { n, ...params });
 }
 
-// MASTERED, IN_PROGRESS o PENDING; un estado desconocido cuenta como PENDING
+// MASTERED, IN_PROGRESS o PENDING (Dominada, Aprendiendo, Pendiente); un estado desconocido cuenta como PENDING
 function statusLabel(status) {
-  return t(`status.${status}` in I18N.es ? `status.${status}` : "status.PENDING");
+  return t(`state.${status}` in I18N.es ? `state.${status}` : "state.PENDING");
 }
 
 // "1.234" en español y "1,234" en inglés (también con 4 cifras, como el contador del Analizador)
