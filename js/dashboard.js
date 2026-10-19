@@ -4,7 +4,8 @@ const API_BASE_URL = location.protocol === "file:" ||
   ? "http://localhost:8080" : "";
 
 // Vista "Mi Ruta". Usa escapeHtml y showView definidos en mapa.js (disponibles tras DOMContentLoaded), apiJson y
-// sessionUser (session.js) y t, tn, statusLabel, formatNumber, errorText, tSkill y tGoalTitle (i18n.js). Los datos se
+// sessionUser (session.js), SKILL_STATE_CLASS (skill-status.js) y t, tn, statusLabel, formatNumber, errorText, tSkill y
+// tGoalTitle (i18n.js). Los datos se
 // piden al iniciar sesión (loadRuta, desde session.js).
 
 const VISIBLE_GAPS = 3; // el mockup muestra 3 brechas; "Ver detalle de brechas" despliega el resto
@@ -137,7 +138,7 @@ function renderBrechas(gaps, reference, jobStats) {
         <div class="gap-bar" aria-hidden="true"><span style="width:${barWidth}%"></span></div>
         <div class="gap-meta">
           <span>${t("ruta.gaps.demand", { pct: s.demandPercentage })}</span>
-          <span class="gap-status">${statusLabel(s.status)}</span>
+          <span class="mapa-chip mapa-chip--${SKILL_STATE_CLASS[s.status] || "pending"} gap-status">${statusLabel(s.status)}</span>
         </div>
         <button type="button" class="gap-context" data-context="${s.id}" aria-label="${escapeHtml(t("skill.contextFor", { name: tSkill(s.name) }))}">
           ${t("skill.context")}
