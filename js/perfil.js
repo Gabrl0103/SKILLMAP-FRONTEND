@@ -1,4 +1,4 @@
-// Vista "Perfil". Usa fetchSkills, fetchGoals, fetchReadiness, getActiveGoalId, readSavedGoalId, renderApiError y
+// Vista "Perfil". Usa fetchSkills, fetchGoals, fetchReadiness, getActiveGoalId, savedGoalId, renderApiError y
 // sampleDemandNote (dashboard.js), ICONS, pickIcon y escapeHtml (mapa.js), sessionUser, apiJson, apiFetch, apiError,
 // friendlyError, renderUserMenu y endSession (session.js), routeDivider y routeDraw (route-motif.js) y t, tSkill, tGoalTitle y getLanguage (i18n.js).
 // Todo es real: nombre, titular y correo (sesión), habilidades dominadas y en desarrollo (/api/skills), objetivo activo
@@ -245,7 +245,9 @@ function renderStatsCard(skillsState, goalState) {
   else {
     const r = goalState.readiness;
     goal = renderStatBar(t("perfil.goalStat", { goal: escapeHtml(tGoalTitle(r.goalTitle)) }), `${r.readinessPercentage}%`,
-      r.readinessPercentage, "pink");
+      r.readinessPercentage, "pink")
+      // Abre la selección de objetivos (objetivo.js); el progreso se conserva
+      + `<button type="button" class="perfil-stats-action" data-action="change-goal">${routeGlyph()}${t("ruta.changeGoal")}</button>`;
   }
   const achievements = perfilAchievements();
   const done = achievements.filter(a => a.done).length;
@@ -661,7 +663,7 @@ function refreshPerfilItems() {
 // Objetivo activo: el de Mi Ruta; si aún no cargó, el guardado o el primero
 async function fetchActiveReadiness() {
   const goals = await fetchGoals();
-  const id = getActiveGoalId() || readSavedGoalId();
+  const id = getActiveGoalId() || savedGoalId(goals);
   const goal = goals.find(g => String(g.id) === String(id)) || goals[0];
   return goal ? fetchReadiness(goal.id) : null;
 }
@@ -971,6 +973,7 @@ function handlePerfilClick(e) {
     "open-cv": () => setCvOpen(true),
     "close-cv": () => setCvOpen(false),
     "print-cv": printCv,
+    "change-goal": openGoalSelection,
     "add-item": () => setItemMode({ edit: { kind, id: "new" } }, `${card} form input`),
     "edit-item": () => setItemMode({ edit: { kind, id } }, `${card} form input`),
     "delete-item": () => setItemMode({ confirm: { kind, id } }, `${card} .perfil-confirm [type='submit']`),
