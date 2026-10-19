@@ -166,6 +166,7 @@
 
   <!-- El indicador se desliza hasta el ítem activo (positionNavIndicator en mapa.js) -->
   <nav class="topnav" aria-label="Navegación principal" data-i18n-aria-label="nav.label">
+    <span class="topnav-trail" aria-hidden="true"></span> <!-- estela del Motivo de Ruta (drawNavTrail en mapa.js) -->
     <span class="topnav-indicator" aria-hidden="true"></span>
     <button type="button" class="nav-item" data-view="objetivo" aria-label="Objetivo" data-i18n-aria-label="nav.objetivo">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>
@@ -262,6 +263,7 @@
     <header class="mb-8">
       <h1 class="objetivo-title" data-i18n="analyzer.title">Analizador de Vacantes</h1>
       <p class="objetivo-subtitle" data-i18n="analyzer.subtitle">Pega la descripción de una oferta laboral para analizar tu compatibilidad y detectar nuevas brechas.</p>
+      <span class="route-divider mt-4" aria-hidden="true"></span> <!-- Motivo de Ruta (styles.css) -->
     </header>
     <form id="analizador-form" class="analizador-card analizador-input">
       <label for="analizador-text" class="analizador-label">
@@ -314,6 +316,7 @@
       <span class="ruta-eyebrow" data-i18n="ajustes.eyebrow">Ajustes</span>
       <h1 class="objetivo-title" data-i18n="ajustes.title">Tu cabina de mando</h1>
       <p class="objetivo-subtitle" data-i18n="ajustes.subtitle">Personaliza SKILLMAP y mantén tu ruta al día.</p>
+      <span class="route-divider" aria-hidden="true"></span> <!-- Motivo de Ruta (styles.css) -->
     </header>
 
     <div class="ajustes-grid">
@@ -383,6 +386,7 @@
       </section>
     </div>
 
+    <span class="route-divider" aria-hidden="true"></span>
     <p class="ajustes-footer" data-i18n="ajustes.footer">SKILLMAP v0.1 · Tus datos viven solo en este equipo.</p>
   </section>
 </main>
@@ -391,6 +395,7 @@
 <script src="js/theme.js"></script>
 <script src="js/skill-card.js"></script>
 <script src="js/skill-status.js"></script> <!-- selector Pendiente / Aprendiendo / Dominada (Mapa y detalle) -->
+<script src="js/route-motif.js"></script> <!-- Motivo de Ruta: riel, divisor y línea que se dibuja (usa skill-status.js) -->
 <script src="js/dashboard.js"></script>
 <script src="js/mapa.js"></script>
 <script src="js/objetivo.js"></script>
