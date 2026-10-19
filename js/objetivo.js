@@ -1,5 +1,8 @@
-// Vista "Objetivo". Usa fetchGoals, setActiveGoal, getActiveGoalId y renderApiError (dashboard.js), escapeHtml/showView
-// (mapa.js), routeDraw (route-motif.js) y t, tn, tGoalTitle y tGoalDescription (i18n.js).
+// Vista "Objetivo": elegir el objetivo profesional la primera vez y cambiarlo después ("Cambiar objetivo" en Mi Ruta y
+// Perfil). El progreso por habilidad es del usuario, no del objetivo: cambiar es reversible y no pide confirmación.
+// Usa fetchGoals, setActiveGoal, getActiveGoalId, savedGoalId y renderApiError (dashboard.js), escapeHtml/showView
+// (mapa.js), routeDraw y routeDivider (route-motif.js), friendlyError (session.js) y t, tn, tGoalTitle y
+// tGoalDescription (i18n.js).
 
 // Ícono y color de cada tarjeta según palabras clave del título (sin acentos, en minúsculas).
 // Gana el primer tema que coincide; sin coincidencia se usa GENERIC_THEME. El fondo del ícono lo deriva styles.css
@@ -31,7 +34,8 @@ function goalTheme(title) {
   return GOAL_THEMES.find(theme => theme.match.test(t)) || GENERIC_THEME;
 }
 
-const objetivoState = { goals: null, selectedId: null };
+// focusOnOpen: al abrir desde "Cambiar objetivo", el foco va a la tarjeta elegida. busy y error: guardando el cambio.
+const objetivoState = { goals: null, selectedId: null, focusOnOpen: false, busy: false, error: null };
 
 // La búsqueda encuentra el objetivo por su título original y por el traducido
 function renderGoalCard(goal, index) {
@@ -44,6 +48,7 @@ function renderGoalCard(goal, index) {
       <span class="objetivo-card-icon" aria-hidden="true">${theme.icon}</span>
       <svg class="objetivo-card-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m7.5 12.3 3 3 6-6.3" pathLength="1" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span class="objetivo-card-title">${escapeHtml(title)}</span>
+      <span class="ruta-eyebrow objetivo-card-current" hidden>${t("objetivo.current")}</span>
       <span class="objetivo-card-desc">${escapeHtml(tGoalDescription(goal.title, goal.description || ""))}</span>
       <span class="objetivo-card-count">${tn("objetivo.skills", count)}
         <svg width="12" height="12" viewBox="0 0 24 24" ${ICON_STROKE} aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -68,19 +73,34 @@ function renderObjetivo(goals) {
       </div>
     </div>
     <div class="objetivo-actions">
+      ${goals.length ? `<p class="objetivo-note">${routeDivider()}<span>${t("objetivo.keepProgress")}</span></p>` : ""}
       <button type="button" class="btn-pill objetivo-cta" data-action="trazar-ruta" ${goals.length ? "" : "disabled"}>${t("objetivo.cta")}</button>
+      <p class="objetivo-error" role="alert" hidden></p>
     </div>`;
+}
+
+// Botón y error del pie según el estado del guardado (el texto del error se arma en el idioma vigente)
+function refreshObjetivoActions() {
+  const cta = document.querySelector("#objetivo-content [data-action='trazar-ruta']");
+  const error = document.querySelector("#objetivo-content .objetivo-error");
+  if (!cta) return;
+  cta.textContent = t(objetivoState.busy ? "objetivo.saving" : "objetivo.cta");
+  cta.toggleAttribute("aria-busy", objetivoState.busy);
+  error.hidden = !objetivoState.error;
+  error.textContent = objetivoState.error ? t("goal.error", { error: friendlyError(objetivoState.error) }) : "";
 }
 
 // Marca la tarjeta elegida; solo ella queda en el orden de tabulación (patrón radio group).
 function selectGoalCard(goalId, { focus = false } = {}) {
   objetivoState.selectedId = goalId == null ? null : String(goalId);
   const cards = [...document.querySelectorAll("#objetivo-content .objetivo-card[role='radio']")];
+  const current = objetivoState.goals ? currentActiveGoalId(objetivoState.goals) : null;
   let selected = null;
   cards.forEach(card => {
     const isSelected = card.dataset.goalId === objetivoState.selectedId;
     card.setAttribute("aria-checked", String(isSelected));
     card.tabIndex = isSelected ? 0 : -1;
+    card.querySelector(".objetivo-card-current").hidden = card.dataset.goalId !== current;
     if (isSelected) selected = card;
   });
   // Sin selección visible, la primera tarjeta visible recibe el foco del Tab.
@@ -118,8 +138,9 @@ function handleObjetivoKeys(e) {
 
 // Objetivo activo actual: el del selector de Mi Ruta; si aún no cargó, el guardado; si no, el primero.
 function currentActiveGoalId(goals) {
-  const candidates = [getActiveGoalId(), readSavedGoalId()]; // getActiveGoalId en dashboard.js
-  return candidates.find(id => goals.some(g => String(g.id) === id)) ?? (goals[0] ? String(goals[0].id) : null);
+  const active = getActiveGoalId(); // dashboard.js
+  if (goals.some(g => String(g.id) === active)) return active;
+  return savedGoalId(goals) ?? (goals[0] ? String(goals[0].id) : null);
 }
 
 async function openObjetivo() {
@@ -136,6 +157,40 @@ async function openObjetivo() {
   }
   selectGoalCard(currentActiveGoalId(objetivoState.goals));
   filterGoalCards(document.getElementById("objetivo-search").value);
+  objetivoState.error = null;
+  refreshObjetivoActions();
+  if (objetivoState.focusOnOpen) {
+    objetivoState.focusOnOpen = false;
+    document.querySelector("#objetivo-content .objetivo-card[aria-checked='true']")?.focus();
+  }
+}
+
+// "Cambiar objetivo" (Mi Ruta y Perfil): la misma selección del primer uso, con el objetivo actual marcado y enfocado
+function openGoalSelection() {
+  objetivoState.focusOnOpen = true;
+  showView("objetivo");
+  window.scrollTo(0, 0);
+}
+
+// "Trazar mi ruta": guarda el objetivo elegido (si cambió) y lleva a Mi Ruta, con el foco en el título del objetivo
+async function traceGoalRoute() {
+  const goalId = objetivoState.selectedId;
+  if (!goalId || objetivoState.busy) return;
+  if (goalId !== getActiveGoalId()) {
+    Object.assign(objetivoState, { busy: true, error: null });
+    refreshObjetivoActions();
+    try {
+      await setActiveGoal(goalId);
+    } catch (err) {
+      objetivoState.error = err;
+    }
+    objetivoState.busy = false;
+    refreshObjetivoActions();
+    if (objetivoState.error) return;
+  }
+  showView("dashboard");
+  window.scrollTo(0, 0);
+  document.getElementById("goal-button").focus();
 }
 
 function initObjetivo() {
@@ -145,18 +200,13 @@ function initObjetivo() {
   container.addEventListener("click", e => {
     const card = e.target.closest(".objetivo-card[role='radio']");
     if (card) { selectGoalCard(card.dataset.goalId); return; }
-    if (e.target.closest("[data-action='trazar-ruta']") && objetivoState.selectedId) {
-      setActiveGoal(objetivoState.selectedId);
-      showView("dashboard");
-      window.scrollTo(0, 0);
-    }
+    if (e.target.closest("[data-action='trazar-ruta']")) traceGoalRoute();
   });
 }
 
 // Cambio de usuario: la vista se vuelve a armar la próxima vez que se abra
 document.addEventListener("skillmap:user", () => {
-  objetivoState.goals = null;
-  objetivoState.selectedId = null;
+  Object.assign(objetivoState, { goals: null, selectedId: null, focusOnOpen: false, busy: false, error: null });
   document.getElementById("objetivo-content").innerHTML = "";
   document.getElementById("objetivo-search").value = "";
 });
@@ -167,6 +217,7 @@ document.addEventListener("skillmap:language", () => {
   document.getElementById("objetivo-content").innerHTML = renderObjetivo(objetivoState.goals);
   selectGoalCard(objetivoState.selectedId);
   filterGoalCards(document.getElementById("objetivo-search").value);
+  refreshObjetivoActions();
 });
 
 document.addEventListener("DOMContentLoaded", initObjetivo);

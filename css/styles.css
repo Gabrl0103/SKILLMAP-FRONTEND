@@ -340,7 +340,16 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .objetivo-card--otro .objetivo-card-title { margin-top:0; }
 .objetivo-otro-text { font-size:.75rem; color:var(--muted); margin-bottom:.6rem; }
 
-.objetivo-actions { display:flex; justify-content:center; margin-top:2.75rem; }
+/* Objetivo actual: el rótulo de Mi Ruta dentro de su tarjeta (la elegida puede ser otra) */
+.objetivo-card-current { margin-top:8px; }
+.objetivo-card-current[hidden] { display:none; }
+
+.objetivo-actions { display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:2.75rem; }
+/* Aviso de que el progreso se conserva, tras un divisor del Motivo de Ruta */
+.objetivo-note { display:flex; align-items:center; gap:16px; max-width:40rem; font-size:14px; line-height:1.5; color:var(--text-2-page); }
+.objetivo-error { max-width:40rem; font-size:14px; font-weight:600; line-height:1.5; color:var(--pink-ink); text-align:center; }
+.objetivo-error[hidden] { display:none; }
+.objetivo-cta[aria-busy] { cursor:progress; }
 .objetivo-cta { padding:1rem 2.4rem; white-space:normal; text-align:center; }
 .objetivo-cta:disabled { opacity:.5; cursor:not-allowed; transform:none; }
 /* Deshabilitado: hover y active de .btn-pill sin efecto */
@@ -492,6 +501,15 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 .perfil-stat-bar--mint span { background:var(--mastered-bg); }
 .perfil-stat-bar--pink span { background:var(--progress-bg); }
 .perfil-stats > .route-divider { margin:24px 0 16px; }
+/* "Cambiar objetivo" bajo la preparación: secundario sobre la tarjeta oscura */
+.perfil-stats-action { display:inline-flex; align-items:center; gap:8px; min-height:44px; margin-top:16px; padding:8px 16px;
+  border-radius:var(--radius-pill); border:1.5px solid rgba(255,255,255,.28); color:#fff; font-size:13px; font-weight:600;
+  transition:background-color var(--dur-fast) ease, border-color var(--dur-fast) ease; }
+.perfil-stats-action:hover { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.48); }
+.perfil-stats-action:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.perfil-stats-action .route-glyph path { stroke:var(--stats-muted); }
+@media (prefers-reduced-motion: reduce) { .perfil-stats-action { transition:none; } }
+:root[data-motion="reduced"] .perfil-stats-action { transition:none; }
 
 /* Logros: desbloqueado en menta, pendiente con borde punteado ("todavía no"). No son clicables: sin hover */
 .perfil-achievements { display:grid; grid-template-columns:repeat(auto-fill,minmax(14rem,1fr)); gap:.75rem; }
@@ -693,6 +711,11 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 /* Encabezado: objetivo a la izquierda y demanda de mercado a la derecha, alineados abajo como el mockup */
 .ruta-header { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:32px; }
 .ruta-goal { display:flex; flex-direction:column; align-items:flex-start; gap:16px; }
+/* Rótulo y "Cambiar objetivo" (abre la selección completa; la lista del título cambia rápido sin salir) */
+.ruta-goal-top { display:flex; flex-wrap:wrap; align-items:center; gap:16px; }
+.btn-pill.ruta-change-goal { gap:8px; padding:8px 16px; font-size:13px; font-weight:600; }
+.goal-error { font-size:14px; font-weight:600; line-height:1.5; color:var(--pink-ink); }
+.goal-error[hidden] { display:none; }
 
 /* Selector de objetivo: el h1 con gradiente + chevron es un botón que abre una lista simple (role=listbox) */
 .goal-picker { position:relative; max-width:100%; }
@@ -893,6 +916,10 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 /* Divisor corto: 48px de punteado y el punto en el extremo. .route-sep pone uno al inicio de cada hijo desde el segundo */
 .route-divider, .route-sep > * + * { background:var(--route-dot) 56px 0 / 8px 8px no-repeat, var(--route-dash-x) 0 3px / 48px 2px no-repeat; }
 .route-divider { display:block; flex-shrink:0; width:64px; height:8px; }
+/* Glifo de los botones "Cambiar objetivo": 16px de punteado y el punto */
+.route-glyph { flex-shrink:0; }
+.route-glyph path { stroke:var(--line-dashed); stroke-width:2; stroke-dasharray:4 4; }
+.route-glyph circle { fill:var(--pink); }
 .route-sep > * + * { margin-top:16px; padding-top:24px; }
 
 /* Línea que se dibuja sola (estados vacíos y de carga): el punteado se revela con una máscara cuyo trazo avanza con

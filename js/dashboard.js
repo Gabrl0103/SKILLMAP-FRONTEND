@@ -319,15 +319,18 @@ function showAllGaps() {
   card.focus({ preventScroll: true });
 }
 
-// Objetivo elegido por el usuario. La API no guarda el objetivo activo, así que vive en el navegador.
+// Objetivo elegido: lo guarda el backend por usuario (goalId de /api/auth/me). Antes vivía en el navegador; esa copia
+// solo se lee, como respaldo para las cuentas que todavía no eligieron objetivo desde entonces.
 const GOAL_STORAGE_KEY = "skillmap.goalId";
 
 function readSavedGoalId() {
   try { return localStorage.getItem(GOAL_STORAGE_KEY); } catch { return null; }
 }
 
-function saveGoalId(goalId) {
-  try { localStorage.setItem(GOAL_STORAGE_KEY, String(goalId)); } catch { /* sin storage: solo dura la sesión */ }
+// Objetivo guardado del usuario de la sesión, o el del navegador si no tiene; null si ninguno está en goals
+function savedGoalId(goals) {
+  const candidates = [sessionUser?.goalId, readSavedGoalId()].map(id => (id == null ? null : String(id)));
+  return candidates.find(id => goals.some(g => String(g.id) === id)) ?? null;
 }
 
 let goalsRequest = null; // compartida con la vista Objetivo para no pedir /api/goals dos veces
@@ -443,7 +446,7 @@ function closeGoalList({ focusButton = true } = {}) {
 
 function chooseGoal(option) {
   closeGoalList();
-  if (option && option.dataset.goalId !== activeGoalId) setActiveGoal(option.dataset.goalId);
+  if (option && option.dataset.goalId !== activeGoalId) changeGoalFromRuta(option.dataset.goalId);
 }
 
 function bindGoalPicker() {
@@ -492,20 +495,41 @@ function bindGoalPicker() {
 async function loadGoals() {
   const goals = await fetchGoals();
   renderGoalOptions(goals);
-  const saved = readSavedGoalId();
-  activeGoalId = goals.some(g => String(g.id) === saved) ? saved : goals[0] ? String(goals[0].id) : null;
+  activeGoalId = savedGoalId(goals) ?? (goals[0] ? String(goals[0].id) : null);
   syncGoalPicker(goals);
   return goals;
 }
 
-// Cambia el objetivo activo: lo guarda, lo aplica al selector de Mi Ruta y recarga el dashboard.
+// Cambia el objetivo activo: lo guarda en el backend (PUT /api/auth/me/goal; el progreso por habilidad es del usuario y
+// no cambia), lo aplica al selector y recarga Mi Ruta. Mapa Visual, Perfil y el detalle de habilidad lo leen al abrirse
+// (getActiveGoalId) y se recalculan solos. Si el backend falla, sigue el objetivo anterior y el error llega a quien llamó.
 async function setActiveGoal(goalId) {
-  saveGoalId(goalId);
+  const user = await apiJson("/api/auth/me/goal", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ goalId: Number(goalId) }),
+  });
+  if (sessionUser?.id !== user.id) return; // cambió el usuario mientras se guardaba
+  sessionUser.goalId = user.goalId;
   // Si el selector no cargó (p. ej. la API falló al abrir la app), se vuelve a llenar antes de elegir.
   const goals = await (goalPicker.options().length ? fetchGoals() : loadGoals()).catch(() => null);
   activeGoalId = String(goalId);
   syncGoalPicker(goals);
   loadDashboard(goalId);
+  const goal = goals?.find(g => String(g.id) === activeGoalId);
+  if (goal) document.getElementById("ruta-live").textContent = t("goal.changed", { goal: tGoalTitle(goal.title) });
+}
+
+// Desde la lista del título: el error se muestra bajo el encabezado de Mi Ruta
+async function changeGoalFromRuta(goalId) {
+  const error = document.getElementById("goal-error");
+  error.hidden = true;
+  try {
+    await setActiveGoal(goalId);
+  } catch (err) {
+    error.textContent = t("goal.error", { error: friendlyError(err) });
+    error.hidden = false;
+  }
 }
 
 let latestRequest = 0; // evita que una respuesta vieja pise la del objetivo recién elegido
@@ -546,6 +570,7 @@ function initRuta() {
   setGoalTitle(t("common.loading"));
   document.getElementById("app-content").innerHTML = renderRutaSkeleton(); // hasta que haya sesión y lleguen los datos
   bindGoalPicker();
+  document.getElementById("change-goal").addEventListener("click", openGoalSelection); // objetivo.js
   document.getElementById("app-content").addEventListener("click", e => {
     const context = e.target.closest("[data-context]");
     if (context) { openSkillDetail(Number(context.dataset.context), context); return; } // skill-detalle.js
@@ -596,6 +621,7 @@ document.addEventListener("skillmap:user", () => {
   goalPicker.list().innerHTML = "";
   goalPicker.button().disabled = true;
   setGoalTitle(t("common.loading"));
+  document.getElementById("goal-error").hidden = true;
   document.getElementById("market-demand").hidden = true;
   document.getElementById("app-content").innerHTML = renderRutaSkeleton();
 });
