@@ -2,9 +2,9 @@
 // sugerida del objetivo activo y un panel de detalle de la habilidad seleccionada.
 // Usa renderApiError, demandIsSample, sampleTag, jobStatsText, fetchJobStats, fetchGoals, fetchReadiness y
 // getActiveGoalId (dashboard.js), currentActiveGoalId (objetivo.js), renderStatusPicker, bindStatusPicker,
-// focusStatusPicker y saveSkillStatus (skill-status.js), friendlyError (session.js) y t, statusLabel, tSkill, tCategory,
+// focusStatusPicker y saveSkillStatus (skill-status.js), routeDraw (route-motif.js), friendlyError (session.js) y t, statusLabel, tSkill, tCategory,
 // tGoalTitle y getLanguage (i18n.js).
-// También define la navegación entre vistas (showView) y el indicador del nav de la barra superior.
+// También define la navegación entre vistas (showView) y el indicador del nav de la barra superior, con su estela.
 
 const NODE_SIZE = 96;       // diámetro de cada nodo (px)
 const NODE_GAP = 20;        // separación mínima entre nodos vecinos de un mismo cluster
@@ -312,6 +312,7 @@ function renderMapaPanelEmpty() {
       </span>
       <h2 class="mapa-panel-empty-title">${t("mapa.empty.title")}</h2>
       <p class="mapa-panel-empty-text">${t("mapa.empty.text")}</p>
+      ${routeDraw()}
     </div>`;
 }
 
@@ -761,7 +762,7 @@ document.addEventListener("skillmap:user", () => {
 function loadMapa() {
   if (mapaRequest) return mapaRequest;
   const container = document.getElementById("mapa-content");
-  container.innerHTML = `<p class="text-sm text-muted-page">${t("mapa.loading")}</p>`;
+  container.innerHTML = `<p class="route-state text-sm text-muted-page">${routeDraw({ loop: true })}${t("mapa.loading")}</p>`;
 
   mapaRequest = (async () => {
     try {
@@ -786,6 +787,8 @@ function loadMapa() {
 // Indicador del nav: píldora con el gradiente de acción que se desliza (transform + width) hasta el ítem activo.
 // El primer posicionado no se anima; con animaciones reducidas el CSS quita la transición y salta directo.
 // En Ajustes (fuera del nav) ningún ítem está activo y el indicador se oculta.
+let navTrailFrom = null; // último ítem activo y su centro, de donde sale la estela al cambiar de sección
+
 function positionNavIndicator() {
   const nav = document.querySelector(".topnav");
   if (!nav) return;
@@ -795,12 +798,28 @@ function positionNavIndicator() {
   const indicator = nav.querySelector(".topnav-indicator");
   indicator.style.width = `${active.offsetWidth}px`;
   indicator.style.transform = `translateX(${active.offsetLeft}px)`;
+  const center = active.offsetLeft + active.offsetWidth / 2;
   if (!nav.classList.contains("is-ready")) {
     void indicator.offsetWidth; // fija la posición inicial antes de activar la transición
     nav.classList.add("is-ready");
+  } else if (navTrailFrom && navTrailFrom.item !== active && !prefersReducedMotion()) {
+    drawNavTrail(nav, navTrailFrom.center, center);
   }
+  navTrailFrom = { item: active, center };
   // Nav con scroll horizontal (pantallas angostas): el ítem activo siempre a la vista
   if (nav.scrollWidth > nav.clientWidth) active.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+// Estela del Motivo de Ruta: tramo punteado entre el ítem anterior y el actual que se recoge hacia el actual (styles.css)
+function drawNavTrail(nav, from, to) {
+  const trail = nav.querySelector(".topnav-trail");
+  if (!trail) return;
+  trail.style.left = `${Math.min(from, to)}px`;
+  trail.style.width = `${Math.abs(to - from)}px`;
+  trail.style.transformOrigin = to > from ? "right" : "left";
+  trail.classList.remove("is-on");
+  void trail.offsetWidth; // reinicia la animación si se cambia de sección antes de que termine
+  trail.classList.add("is-on");
 }
 
 // Navegación sin router: muestra la sección elegida, oculta las demás y marca el item activo (nav o botón Ajustes).

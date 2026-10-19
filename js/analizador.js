@@ -1,5 +1,5 @@
 // Vista "Analizador". Usa API_BASE_URL (dashboard.js), escapeHtml (mapa.js), apiFetch (session.js), settingsState
-// (theme.js) y t, i18nError, errorText, formatNumber y tSkill (i18n.js). La IA no cambia con el idioma: solo la interfaz.
+// (theme.js), routeDivider y routeDraw (route-motif.js) y t, i18nError, errorText, formatNumber y tSkill (i18n.js). La IA no cambia con el idioma: solo la interfaz.
 
 // ---------- API ----------
 
@@ -87,7 +87,9 @@ function renderBreakdown(mastered, inProgress, missing) {
     <article class="analizador-card analizador-breakdown">
       <h2 class="analizador-card-title">${t("analyzer.breakdown")}</h2>
       ${renderBreakdownGroup(t("analyzer.mastered"), mastered, "mastered")}
+      ${routeDivider()}
       ${renderBreakdownGroup(t("analyzer.progress"), inProgress, "progress")}
+      ${routeDivider()}
       ${renderBreakdownGroup(t("analyzer.missing"), missing, "missing")}
     </article>`;
 }
@@ -120,6 +122,7 @@ function renderAnalyzerEmpty({ stale = false } = {}) {
       <div>
         <p class="analizador-empty-title">${title}</p>
         <p class="analizador-empty-text">${text}</p>
+        ${routeDraw()}
       </div>
     </div>`;
 }
@@ -141,7 +144,7 @@ function renderAnalyzerSkeleton() {
         <span class="skel skel-line skel-line--shorter"></span>
       </div>
       <div class="analizador-card analizador-breakdown" aria-hidden="true">
-        <span class="skel skel-line skel-line--title analizador-skel-title"></span>
+        <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span>${routeDraw({ loop: true })}</div>
         ${group([5, 6.5, 6, 5.5, 4.5])}
         ${group([4.5, 6])}
         ${group([5.5, 6.5, 5])}

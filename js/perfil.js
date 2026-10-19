@@ -1,6 +1,6 @@
 // Vista "Perfil". Usa fetchSkills, fetchGoals, fetchReadiness, getActiveGoalId, readSavedGoalId, renderApiError y
 // sampleDemandNote (dashboard.js), ICONS, pickIcon y escapeHtml (mapa.js), sessionUser, apiJson, apiFetch, apiError,
-// friendlyError, renderUserMenu y endSession (session.js) y t, tSkill, tGoalTitle y getLanguage (i18n.js).
+// friendlyError, renderUserMenu y endSession (session.js), routeDivider y routeDraw (route-motif.js) y t, tSkill, tGoalTitle y getLanguage (i18n.js).
 // Todo es real: nombre, titular y correo (sesión), habilidades dominadas y en desarrollo (/api/skills), objetivo activo
 // con su preparación (/api/goals/{id}/readiness) y enlaces y proyectos (/api/profile/links y /api/profile/projects).
 // Los logros se calculan aquí con esos datos, sin guardar nada. Exportar CV abre una vista imprimible (window.print).
@@ -178,14 +178,16 @@ const skillsWithStatus = (skillsState, status) => skillsState?.skills?.filter(s 
 function renderSkillsCard(skillsState) {
   let body;
   if (skillsState?.error) body = renderApiError(skillsState.error);
-  else if (!skillsState) body = `<p class="text-sm text-muted">${t("perfil.loadingSkills")}</p>`;
+  else if (!skillsState) body = `<p class="route-state text-sm text-muted">${routeDraw({ loop: true })}${t("perfil.loadingSkills")}</p>`;
   else {
     const mastered = skillsWithStatus(skillsState, "MASTERED");
     const learning = skillsWithStatus(skillsState, "IN_PROGRESS");
+    const note = mastered.length || learning.length ? sampleDemandNote("perfil-sample-note", [...mastered, ...learning]) : "";
     body = renderSkillGroup(t("perfil.mastered"), mastered, "mastered", t("perfil.masteredEmpty"))
       + renderSkillGroup(t("perfil.learning"), learning, "learning", t("perfil.learningEmpty"))
-      // "Demanda media" se marca como ejemplo mientras alguna habilidad tenga demanda sembrada (demandIsSample).
-      + (mastered.length || learning.length ? sampleDemandNote("perfil-sample-note", [...mastered, ...learning]) : "");
+      // "Demanda media" se marca como ejemplo mientras alguna habilidad tenga demanda sembrada (demandIsSample), tras un
+      // divisor del Motivo de Ruta.
+      + (note ? routeDivider() + note : "");
   }
   return `
     <article id="perfil-skills" class="perfil-card">
@@ -252,7 +254,7 @@ function renderStatsCard(skillsState, goalState) {
       <h2 class="perfil-stats-title">${t("perfil.stats")}</h2>
       ${counts}
       ${goal}
-      <hr class="perfil-stats-divider">
+      ${routeDivider()}
       ${renderStatBar(t("perfil.achievementsStat"), `${done} / ${achievements.length}`, (done / achievements.length) * 100, "mint")}
     </article>`;
 }
@@ -405,8 +407,8 @@ function renderItemsCard(kind) {
   const canAdd = data?.items && edit === null && items.length < max;
   let status = "";
   if (data?.error) status = renderApiError(data.error);
-  else if (!data) status = `<p class="perfil-empty">${t("common.loading")}</p>`;
-  else if (!items.length && edit !== "new") status = `<p class="perfil-empty">${t(`${keys}.empty`)}</p>`;
+  else if (!data) status = `<p class="route-state perfil-empty">${routeDraw({ loop: true })}${t("common.loading")}</p>`;
+  else if (!items.length && edit !== "new") status = `<p class="route-state perfil-empty">${routeDraw()}${t(`${keys}.empty`)}</p>`;
   else if (items.length >= max) status = `<p class="perfil-hint">${t(`${keys}.max`, { max })}</p>`;
   const article = perfilBlock(`
     <article id="${card}" class="perfil-card" aria-labelledby="${card}-title">
@@ -415,7 +417,7 @@ function renderItemsCard(kind) {
         ${data?.items ? `<span class="perfil-count">${t("perfil.item.count", { n: items.length, max })}</span>` : ""}
         ${canAdd ? `<button type="button" class="perfil-add" data-action="add-item" data-kind="${kind}">${t(`${keys}.add`)}</button>` : ""}
       </header>
-      <ul class="perfil-items"></ul>
+      <ul class="perfil-items route-sep"></ul>
       ${status}
     </article>`);
   const list = article.querySelector(".perfil-items");
