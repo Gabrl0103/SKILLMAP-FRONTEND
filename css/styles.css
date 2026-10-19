@@ -378,23 +378,19 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
   box-shadow:0 12px 26px var(--action-shadow-color); }
 .perfil-identity { flex:1 1 18rem; min-width:0; }
 .perfil-identity .perfil-name { overflow-wrap:anywhere; }
-/* Titular y correo son reales; los enlaces aún son de ejemplo: la etiqueta va encima de ellos */
+/* Titular, correo y enlaces reales. Los enlaces son controles: 44px de alto */
 .perfil-headline { margin-top:.5rem; font-size:1rem; font-weight:600; line-height:1.45; color:var(--text-mid); overflow-wrap:anywhere; }
 .perfil-headline--empty { font-size:.88rem; font-weight:500; color:var(--muted); }
-.perfil-sample { margin-top:1rem; }
-.perfil-sample .perfil-links { margin-top:.6rem; }
 .perfil-links { display:flex; flex-wrap:wrap; gap:.55rem; margin-top:1rem; }
-.perfil-link { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .75rem; border-radius:.6rem; background:var(--surface-2);
-  font-size:.72rem; font-weight:600; color:var(--text-mid); }
+.perfil-link { display:inline-flex; align-items:center; gap:.4rem; min-height:44px; padding:.4rem .9rem; border-radius:.75rem; background:var(--surface-2);
+  font-size:.75rem; font-weight:600; color:var(--text-mid); overflow-wrap:anywhere; }
+.perfil-link svg { flex-shrink:0; }
+a.perfil-link { color:var(--link); transition:background-color var(--dur-fast) ease; }
+a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline; text-underline-offset:3px; }
 .perfil-header-actions { display:flex; flex-direction:column; gap:.75rem; }
 .perfil-header-actions .btn-pill { min-width:9.5rem; padding:.8rem 1.4rem; font-size:.82rem; }
 .btn-pill.perfil-btn-outline, .btn-pill.perfil-btn-outline:hover { background:var(--surface-solid); color:var(--text-mid); border:1.5px solid var(--card-border); box-shadow:none; }
-/* Exportar CV aún no existe: el hover solo aclara el tono (sin elevarse, para no prometer una acción) y al presionar
-   el botón hace un "no" lateral corto */
-.perfil-header-actions .btn-pill[aria-disabled="true"] { transition:filter var(--dur-fast) ease, border-color var(--dur-fast) ease; }
-.perfil-header-actions .btn-pill[aria-disabled="true"]:hover { transform:none; filter:brightness(1.08); box-shadow:0 12px 24px var(--action-shadow-color); }
-.perfil-header-actions .btn-pill.perfil-btn-outline[aria-disabled="true"]:hover { filter:none; background:var(--surface-solid); border-color:var(--pink-line-hover); box-shadow:none; }
-.perfil-header-actions .btn-pill[aria-disabled="true"]:active { animation:btn-nope 220ms ease-out; }
+.btn-pill.perfil-btn-outline:hover { border-color:var(--pink-line-hover); }
 @media (max-width:767px) { .perfil-header-actions { flex-direction:row; flex-wrap:wrap; } }
 
 /* Formularios de Perfil (edición, contraseña y borrado): mismos campos que Acceso (ver .acceso-input) */
@@ -402,8 +398,9 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .perfil-optional { font-weight:500; color:var(--text-2); }
 .perfil-form-actions { display:flex; flex-wrap:wrap; gap:.75rem; }
 .perfil-form-actions .btn-pill { padding:.8rem 1.4rem; font-size:.85rem; }
-.perfil-form .btn-pill[aria-busy="true"] { cursor:progress; }
-.perfil-form .btn-pill[aria-busy="true"]:hover, .perfil-form .btn-pill[aria-busy="true"]:active { transform:none; }
+.perfil-form .btn-pill[aria-busy="true"], .perfil-confirm .btn-pill[aria-busy="true"] { cursor:progress; }
+.perfil-form .btn-pill[aria-busy="true"]:hover, .perfil-form .btn-pill[aria-busy="true"]:active,
+.perfil-confirm .btn-pill[aria-busy="true"]:hover, .perfil-confirm .btn-pill[aria-busy="true"]:active { transform:none; }
 .perfil-success { font-size:14px; line-height:1.5; font-weight:600; color:var(--mint-ink); }
 .perfil-success:empty { display:none; }
 
@@ -451,20 +448,38 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .perfil-skill--mastered:hover { border-color:var(--mint-line-hover); box-shadow:0 6px 14px var(--mint-line); }
 .perfil-skill--learning:hover { border-color:var(--pink-line-hover); box-shadow:0 6px 14px var(--pink-line); }
 
-/* Proyectos */
-.perfil-add { position:relative; margin-left:auto; font-size:.75rem; font-weight:700; color:var(--pink-ink); }
-.perfil-add::before { content:""; position:absolute; inset:-14px -8px; } /* área táctil de 44px */
-.perfil-projects > li + li { margin-top:1.4rem; padding-top:1.4rem; border-top:1px solid var(--divider); }
-.perfil-project { display:flex; gap:1.25rem; align-items:flex-start; }
-.perfil-project-thumb { flex-shrink:0; width:4.25rem; height:4.25rem; border-radius:.9rem;
-  transition:transform .25s var(--ease-out), box-shadow .25s ease; }
-.perfil-project:hover .perfil-project-thumb { transform:translateY(-2px); box-shadow:0 10px 20px rgba(31,29,35,.18); }
-.perfil-project-title { font-size:.95rem; font-weight:700; color:var(--ink); }
-.perfil-project-desc { margin-top:.3rem; font-size:.78rem; line-height:1.55; color:var(--muted); }
+/* Enlaces y proyectos: lista con Editar y Borrar (44px), formulario en el lugar y confirmación de borrado */
+.perfil-count { font-size:.72rem; font-weight:600; color:var(--text-2); font-variant-numeric:tabular-nums; }
+.perfil-add { margin-left:auto; min-height:44px; padding:0 .5rem; border-radius:.75rem; font-size:.78rem; font-weight:700; color:var(--pink-ink);
+  transition:background-color var(--dur-fast) ease; }
+.perfil-add:hover { background:var(--pink-tint); }
+.perfil-card-title:focus-visible { outline:var(--focus-ring); outline-offset:3px; border-radius:.4rem; }
+.perfil-empty { font-size:.82rem; line-height:1.55; color:var(--muted); }
+.perfil-items + .perfil-hint { margin-top:1rem; }
+.perfil-items > li + li { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--divider); }
+.perfil-item { display:flex; gap:1rem; align-items:flex-start; }
+.perfil-item--form, .perfil-item--confirm { display:block; }
+.perfil-item-icon { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:2.75rem; height:2.75rem; border-radius:.9rem;
+  background:var(--surface-2); color:var(--text-mid); }
+.perfil-item-body { flex:1; min-width:0; padding-top:.2rem; }
+.perfil-item-title { font-size:.95rem; font-weight:700; color:var(--ink); overflow-wrap:anywhere; }
+.perfil-item-link { color:var(--link); text-underline-offset:3px; }
+.perfil-item-link:hover { text-decoration:underline; }
+.perfil-item-meta { margin-top:.2rem; font-size:.75rem; color:var(--text-2); overflow-wrap:anywhere; }
+.perfil-item-desc { margin-top:.3rem; font-size:.8rem; line-height:1.55; color:var(--muted); overflow-wrap:anywhere; white-space:pre-line; }
+.perfil-item-actions { display:flex; gap:.25rem; flex-shrink:0; }
+.perfil-icon-btn { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:.8rem; color:var(--text-2);
+  transition:background-color var(--dur-fast) ease, color var(--dur-fast) ease; }
+.perfil-icon-btn:hover { background:var(--surface-2); color:var(--text); }
+.perfil-icon-btn[data-action="delete-item"]:hover { background:var(--pink-tint); color:var(--pink-ink); }
+.perfil-item-form { margin-top:0; max-width:none; }
+.perfil-textarea { height:auto; min-height:6rem; padding:12px 16px; line-height:1.5; resize:vertical; }
+.perfil-confirm { display:flex; flex-direction:column; gap:12px; padding:1rem 1.1rem; border-radius:1rem; background:var(--chip-rosa-bg); }
+.perfil-confirm-text { font-size:.88rem; font-weight:600; line-height:1.5; color:var(--chip-rosa-fg); overflow-wrap:anywhere; }
 .perfil-project-tags { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.6rem; }
 .perfil-project-tags li { padding:2px 7px; border-radius:5px; border:1px solid var(--divider); font-size:.6rem; font-weight:600; letter-spacing:.06em;
-  text-transform:uppercase; color:var(--muted-2); transition:border-color .2s ease, color .2s ease; }
-.perfil-project:hover .perfil-project-tags li { border-color:var(--line-dashed); color:var(--text-mid); }
+  text-transform:uppercase; color:var(--text-2); overflow-wrap:anywhere; }
+.perfil-add:focus-visible, .perfil-icon-btn:focus-visible, a.perfil-link:focus-visible, .perfil-item-link:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
 
 /* Estadísticas de Carrera (tarjeta oscura) */
 .perfil-stats { padding:1.6rem 1.5rem; border-radius:var(--radius-card); background:var(--stats-bg); color:#fff; box-shadow:var(--stats-shadow); }
@@ -477,63 +492,90 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
 .perfil-stat-bar--mint span { background:var(--mastered-bg); }
 .perfil-stat-bar--pink span { background:var(--progress-bg); }
 .perfil-stats-divider { margin:1.4rem 0 1.2rem; border:0; border-top:1px solid rgba(255,255,255,.1); }
-.perfil-stat + .perfil-stats-eyebrow { margin-top:1.3rem; }
-.perfil-stats-eyebrow { font-size:.64rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--stats-muted); }
-.perfil-achievements { display:flex; gap:.6rem; margin-top:.8rem; }
-.perfil-achievement { display:flex; align-items:center; justify-content:center; width:2.3rem; height:2.3rem; border-radius:.65rem; background:rgba(255,255,255,.08);
-  transition:transform .2s var(--ease-out), background-color .2s ease; }
-.perfil-achievement:hover { transform:translateY(-2px); background:rgba(255,255,255,.14); }
-.perfil-achievement--mint { color:var(--mint); }
-.perfil-achievement--pink { color:#F07AA8; }
-.perfil-achievement--blue { color:#6FA8F7; }
-.perfil-stats-note { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.3rem; font-size:.7rem; color:var(--stats-muted); }
-.perfil-stats .sample-tag { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.3); color:#CAC6CE; }
-.perfil-stats .sample-tag::before { background:rgba(255,255,255,.4); }
 
-/* Preferencias */
-.perfil-prefs { display:flex; flex-direction:column; gap:.7rem; }
-.perfil-pref { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.75rem .9rem .75rem 1rem; border-radius:1rem;
-  background:var(--surface-2); font-size:.8rem; font-weight:600; color:var(--ink); }
-.perfil-switch { position:relative; flex-shrink:0; width:2.5rem; height:1.4rem; border-radius:9999px; background:var(--switch-off); cursor:pointer;
-  transition:background-color var(--dur-slow) ease, filter var(--dur-fast) ease; }
-/* Área táctil de 44px sin agrandar el interruptor (::after es la perilla) */
-.perfil-switch::before { content:""; position:absolute; inset:-11px -4px; }
-/* Perilla: se desliza con salida suave (translate) y al presionar se estira hacia el lado al que va (scale desde
-   su borde contrario) */
-.perfil-switch::after { content:""; position:absolute; top:3px; left:3px; width:calc(1.4rem - 6px); height:calc(1.4rem - 6px); border-radius:9999px;
-  background:#fff; box-shadow:0 1px 3px rgba(16,16,20,.2); transform-origin:left center;
-  transition:translate .3s var(--ease-out), scale .15s ease; }
-.perfil-switch[aria-checked="true"] { background:var(--mastered-bg); }
-.perfil-switch[aria-checked="true"]::after { translate:1.1rem 0; transform-origin:right center; }
-.perfil-switch:hover { filter:brightness(.94); }
-.perfil-switch:active::after { scale:1.25 1; }
-.perfil-switch:focus-visible, .perfil-add:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+/* Logros: desbloqueado en menta, pendiente con borde punteado ("todavía no"). No son clicables: sin hover */
+.perfil-achievements { display:grid; grid-template-columns:repeat(auto-fill,minmax(14rem,1fr)); gap:.75rem; }
+.perfil-achievement { display:flex; gap:.85rem; align-items:flex-start; padding:.9rem 1rem; border-radius:1rem; }
+.perfil-achievement-icon { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:2.5rem; height:2.5rem; border-radius:.8rem; }
+.perfil-achievement-title { font-size:.85rem; font-weight:700; color:var(--ink); }
+.perfil-achievement-how { margin-top:.2rem; font-size:.75rem; line-height:1.5; color:var(--muted); }
+.perfil-achievement-state { margin-top:.45rem; font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+.perfil-achievement--done { background:var(--mint-soft); border:1px solid var(--mint-line); }
+.perfil-achievement--done .perfil-achievement-icon { background:var(--mastered-bg); color:var(--mastered-fg); }
+.perfil-achievement--done .perfil-achievement-state { color:var(--mint-ink); }
+.perfil-achievement--locked { border:1.5px dashed var(--line-dashed); }
+.perfil-achievement--locked .perfil-achievement-icon { background:var(--surface-2); color:var(--text-2); }
+.perfil-achievement--locked .perfil-achievement-state { color:var(--text-2); }
 
-/* Perfil: entrada. Tarjetas en orden de lectura (cabecera, habilidades, estadísticas, proyectos, preferencias) y
-   las barras de estadísticas se llenan al aparecer su tarjeta. translate suelto para no chocar con transform.
-   renderPerfil continúa estas animaciones al repintar con los datos de la API. */
+/* CV (Exportar CV): en pantalla, una tarjeta con los tokens del tema; al imprimir, papel blanco (ver @media print) */
+.perfil-cv-wrap { max-width:52rem; margin-inline:auto; animation:card-in 420ms var(--ease-out) backwards; }
+.perfil-cv-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem 1rem; margin-bottom:1.5rem; }
+.perfil-cv-toolbar .btn-pill { padding:.8rem 1.4rem; font-size:.85rem; }
+.perfil-cv-toolbar .perfil-hint { flex-basis:100%; margin-top:0; }
+.perfil-cv { padding:2.5rem 2.75rem; border-radius:var(--radius-card); background:var(--surface); border:1px solid var(--card-border);
+  box-shadow:var(--card-shadow); color:var(--text); font-size:.92rem; line-height:1.55; }
+.perfil-cv-header { padding-bottom:1.25rem; border-bottom:2px solid var(--text); }
+.perfil-cv-name { font-size:2rem; font-weight:600; line-height:1.15; letter-spacing:-.02em; overflow-wrap:anywhere; }
+.perfil-cv-name:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
+.perfil-cv-headline { margin-top:.35rem; font-size:1.05rem; font-weight:600; color:var(--text-mid); overflow-wrap:anywhere; }
+.perfil-cv-contact { margin-top:.5rem; font-size:.85rem; color:var(--text-2); overflow-wrap:anywhere; }
+.perfil-cv-section { margin-top:1.5rem; }
+.perfil-cv-title { margin-bottom:.6rem; font-size:.7rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--title-solid); }
+.perfil-cv-muted { color:var(--text-2); }
+.perfil-cv-goal { font-weight:600; }
+.perfil-cv-tags { display:flex; flex-wrap:wrap; gap:.4rem; }
+.perfil-cv-tags li { padding:.15rem .6rem; border-radius:.5rem; border:1px solid var(--divider); font-size:.85rem; }
+.perfil-cv-projects > li + li { margin-top:1rem; }
+.perfil-cv-project-name { font-size:.98rem; font-weight:700; overflow-wrap:anywhere; }
+.perfil-cv-project p { margin-top:.2rem; overflow-wrap:anywhere; white-space:pre-line; }
+.perfil-cv-links li { overflow-wrap:anywhere; }
+.perfil-cv-links li + li { margin-top:.3rem; }
+.perfil-cv-url { color:var(--link); font-size:.85rem; overflow-wrap:anywhere; }
+.perfil-cv-url:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.perfil-cv-footer { margin-top:2rem; padding-top:1rem; border-top:1px solid var(--divider); font-size:.72rem; color:var(--text-2); }
+
+/* Impresión del CV (solo con el CV abierto: <html data-cv>): papel blanco con texto oscuro en cualquier tema, sin barra,
+   menú ni botones, y sin cortar un proyecto o un título de su contenido entre dos páginas */
+@media print {
+  @page { margin:16mm 15mm; }
+  :root[data-cv] { color-scheme:light; }
+  :root[data-cv] body { background:#fff; color:#1F1F24; }
+  :root[data-cv] body > :not(.app-main), :root[data-cv] .app-main > :not(#view-perfil), :root[data-cv] #view-perfil > :not(#perfil-cv),
+  :root[data-cv] .perfil-cv-toolbar { display:none !important; }
+  :root[data-cv] .app-main { max-width:none; margin:0; padding:0; }
+  :root[data-cv] .perfil-cv-wrap { max-width:none; animation:none; }
+  :root[data-cv] .perfil-cv { padding:0; border:0; border-radius:0; background:#fff; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none;
+    color:#1F1F24; font-size:10.5pt; line-height:1.45; }
+  :root[data-cv] .perfil-cv-name { font-size:22pt; }
+  :root[data-cv] .perfil-cv-headline { font-size:12pt; color:#3F3F46; }
+  :root[data-cv] .perfil-cv-contact, :root[data-cv] .perfil-cv-muted, :root[data-cv] .perfil-cv-footer { color:#55515E; }
+  :root[data-cv] .perfil-cv-header { border-color:#1F1F24; }
+  :root[data-cv] .perfil-cv-title, :root[data-cv] .perfil-cv-url { color:#1F1F24; text-decoration:none; }
+  :root[data-cv] .perfil-cv-tags li, :root[data-cv] .perfil-cv-footer { border-color:#C9C5CE; }
+  :root[data-cv] .perfil-cv-title { break-after:avoid; }
+  :root[data-cv] .perfil-cv-header, :root[data-cv] .perfil-cv-project, :root[data-cv] .perfil-cv-links li { break-inside:avoid; }
+}
+
+/* Perfil: entrada. Tarjetas en orden de lectura (cabecera, habilidades, estadísticas, proyectos, enlaces, logros y
+   seguridad) y las barras de estadísticas se llenan al aparecer su tarjeta. translate suelto para no chocar con
+   transform. renderPerfil continúa estas animaciones al repintar con los datos de la API. */
 #perfil-content > .perfil-header, .perfil-col > *, #perfil-content > .perfil-security { animation:card-in 420ms var(--ease-out) backwards; }
-#perfil-content > .perfil-security { animation-delay:260ms; }
+#perfil-content > .perfil-security { animation-delay:310ms; }
 .perfil-col:nth-child(1) > :nth-child(1) { animation-delay:60ms; }
 .perfil-col:nth-child(2) > :nth-child(1) { animation-delay:110ms; }
 .perfil-col:nth-child(1) > :nth-child(2) { animation-delay:160ms; }
 .perfil-col:nth-child(2) > :nth-child(2) { animation-delay:210ms; }
+.perfil-col:nth-child(1) > :nth-child(3) { animation-delay:260ms; }
 .perfil-stat-bar span { animation:bar-fill 700ms var(--ease-out) 280ms backwards; }
 .perfil-stat + .perfil-stat .perfil-stat-bar span { animation-delay:360ms; }
 
-/* Menos movimiento: sin entrada, llenado, elevación, estiramiento ni "no" lateral. Quedan color, borde y sombra. */
+/* Menos movimiento: sin entrada, llenado ni elevación. Quedan color, borde y sombra. */
 @media (prefers-reduced-motion: reduce) {
-  #perfil-content > .perfil-header, .perfil-col > *, #perfil-content > .perfil-security, .perfil-stat-bar span { animation:none; }
-  .perfil-header-actions .btn-pill[aria-disabled="true"]:active { animation:none; }
-  .perfil-skill:hover, .perfil-project:hover .perfil-project-thumb, .perfil-achievement:hover { transform:none; }
-  .perfil-switch::after { transition:none; }
-  .perfil-switch:active::after { scale:none; }
+  #perfil-content > .perfil-header, .perfil-col > *, #perfil-content > .perfil-security, .perfil-stat-bar span, .perfil-cv-wrap { animation:none; }
+  .perfil-skill:hover { transform:none; }
 }
-:root[data-motion="reduced"] #perfil-content > .perfil-header, :root[data-motion="reduced"] .perfil-col > *, :root[data-motion="reduced"] #perfil-content > .perfil-security, :root[data-motion="reduced"] .perfil-stat-bar span { animation:none; }
-:root[data-motion="reduced"] .perfil-header-actions .btn-pill[aria-disabled="true"]:active { animation:none; }
-:root[data-motion="reduced"] .perfil-skill:hover, :root[data-motion="reduced"] .perfil-project:hover .perfil-project-thumb, :root[data-motion="reduced"] .perfil-achievement:hover { transform:none; }
-:root[data-motion="reduced"] .perfil-switch::after { transition:none; }
-:root[data-motion="reduced"] .perfil-switch:active::after { scale:none; }
+:root[data-motion="reduced"] #perfil-content > .perfil-header, :root[data-motion="reduced"] .perfil-col > *, :root[data-motion="reduced"] #perfil-content > .perfil-security, :root[data-motion="reduced"] .perfil-stat-bar span, :root[data-motion="reduced"] .perfil-cv-wrap { animation:none; }
+:root[data-motion="reduced"] .perfil-skill:hover { transform:none; }
 
 /* ---------- Analizador ---------- */
 .analizador-card { padding:1.75rem; }
