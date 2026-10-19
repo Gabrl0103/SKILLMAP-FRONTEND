@@ -4,7 +4,8 @@ const API_BASE_URL = location.protocol === "file:" ||
   ? "http://localhost:8080" : "";
 
 // Vista "Mi Ruta". Usa escapeHtml y showView definidos en mapa.js (disponibles tras DOMContentLoaded), apiJson y
-// sessionUser (session.js), SKILL_STATE_CLASS (skill-status.js) y t, tn, statusLabel, formatNumber, errorText, tSkill y
+// sessionUser (session.js), SKILL_STATE_CLASS (skill-status.js), routeStopClass, routeDestination y routeDraw
+// (route-motif.js) y t, tn, statusLabel, formatNumber, errorText, tSkill y
 // tGoalTitle (i18n.js). Los datos se
 // piden al iniciar sesión (loadRuta, desde session.js).
 
@@ -120,8 +121,9 @@ function renderGauge(r) {
     </article>`;
 }
 
-// reference: habilidades del objetivo contra las que se calculan los badges y el largo de las barras.
-function renderBrechas(gaps, reference, jobStats) {
+// reference: habilidades del objetivo contra las que se calculan los badges y el largo de las barras. Las brechas van
+// unidas por el riel del Motivo de Ruta (un punto de control por brecha, con su estado) hasta el objetivo.
+function renderBrechas(gaps, reference, jobStats, goalTitle) {
   const demands = reference.map(s => s.demandPercentage);
   const maxDemand = Math.max(0, ...demands);
   // La API ya manda las brechas ordenadas por demanda.
@@ -129,8 +131,9 @@ function renderBrechas(gaps, reference, jobStats) {
     const badge = urgencyBadge(s.demandPercentage, demands);
     const barWidth = maxDemand ? Math.min(100, (s.demandPercentage / maxDemand) * 100) : 0;
     const extra = i >= VISIBLE_GAPS;
+    // --i: orden de entrada del punto; las brechas ocultas entran desde 0 al mostrarse
     return `
-      <li class="gap-row"${extra ? " data-extra hidden" : ""}>
+      <li class="gap-row ${routeStopClass(s.status)}" style="--i:${extra ? i - VISIBLE_GAPS : i};"${extra ? " data-extra hidden" : ""}>
         <div class="gap-head">
           <span class="gap-name">${escapeHtml(tSkill(s.name))}</span>
           <span class="gap-badge gap-badge--${badge.tone}">${badge.label}</span>
@@ -151,9 +154,10 @@ function renderBrechas(gaps, reference, jobStats) {
   const statsText = jobStatsText(jobStats);
   const note = demandIsSample(gaps) ? `<p class="ruta-sample-note">${sampleTag()} ${t("demand.sample")}</p>`
     : statsText ? `<p class="ruta-sample-note">${statsText}</p>` : "";
+  const destination = routeDestination(escapeHtml(tGoalTitle(goalTitle)), Math.min(gaps.length, VISIBLE_GAPS));
   const body = gaps.length
-    ? `<ul class="gap-list">${rows}</ul>${note}`
-    : `<p class="text-sm text-muted">${t("ruta.gaps.none")}</p>`;
+    ? `<ul class="gap-list route-rail">${rows}</ul>${destination}${note}`
+    : `<div class="route-state">${routeDraw()}<p class="text-sm text-muted">${t("ruta.gaps.none")}</p></div>`;
 
   return `
     <article id="brechas-card" class="ruta-card ruta-brechas" tabindex="-1">
@@ -285,7 +289,7 @@ function renderRutaSkeleton() {
       </div>
       <div class="ruta-col" aria-hidden="true">
         <div class="ruta-card">
-          <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span></div>
+          <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span>${routeDraw({ loop: true })}</div>
           <div class="gap-list">${gapRow.repeat(3)}</div>
         </div>
         <div class="ruta-card">
@@ -527,7 +531,7 @@ async function loadDashboard(goalId) {
     container.innerHTML = `
       <div class="ruta-grid">
         <div class="ruta-col">${renderGauge(r)}${renderNextAction(r.gaps[0], r.goalTitle)}</div>
-        <div class="ruta-col">${renderBrechas(r.gaps, reference, jobStats)}${renderTrend()}</div>
+        <div class="ruta-col">${renderBrechas(r.gaps, reference, jobStats, r.goalTitle)}${renderTrend()}</div>
       </div>`;
     bindTrendHover(container);
   } catch (err) {
