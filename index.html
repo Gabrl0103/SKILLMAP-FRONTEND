@@ -299,6 +299,16 @@
     </form>
     <!-- Lo llena js/analizador.js: estado vacío al cargar, luego skeleton, resultado o error de cada análisis -->
     <div id="analizador-result" aria-live="polite"></div>
+    <!-- Historial de análisis (js/analizador.js): la lista, su estado y las confirmaciones de borrado los pinta el JS -->
+    <section id="analizador-history" class="analizador-card analizador-history" aria-labelledby="analizador-history-title">
+      <header class="analizador-history-header">
+        <h2 id="analizador-history-title" class="analizador-card-title" tabindex="-1" data-i18n="analyzer.history.title">Historial</h2>
+        <p id="analizador-history-count" class="analizador-history-count"></p>
+        <div id="analizador-history-actions" class="analizador-history-actions"></div>
+      </header>
+      <p id="analizador-history-live" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+      <div id="analizador-history-body"></div>
+    </section>
   </section>
 
   <section id="view-perfil" class="hidden">

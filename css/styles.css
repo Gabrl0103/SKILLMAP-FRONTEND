@@ -733,6 +733,78 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 :root[data-motion="reduced"] #analizador-result > .analizador-empty, :root[data-motion="reduced"] #analizador-result > .analizador-error, :root[data-motion="reduced"] .analizador-grid > *, :root[data-motion="reduced"] .analizador-chip, :root[data-motion="reduced"] #analizador-submit[aria-busy="true"] svg, :root[data-motion="reduced"] #analizador-submit[aria-busy="true"] svg path + path, :root[data-motion="reduced"] .analizador-warning:not([hidden]) svg, :root[data-motion="reduced"] .analizador-wake { animation:none; }
 :root[data-motion="reduced"] .analizador-chip:hover { transform:none; }
 
+/* Aviso sobre el resultado: oferta repetida (caché) o análisis abierto desde el historial, recalculado con el progreso
+   actual. Azul informativo: no es una acción (rosa) ni un logro (menta). Recibe el foco al abrir un análisis guardado. */
+.analizador-notice { display:flex; align-items:flex-start; gap:16px; margin-bottom:24px; padding:16px 24px; border-radius:16px;
+  background:var(--chip-azul-bg); color:var(--chip-azul-fg); }
+.analizador-notice svg { flex-shrink:0; margin-top:2px; }
+.analizador-notice:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
+.analizador-notice-title { font-size:.88rem; font-weight:700; line-height:1.5; }
+.analizador-notice-text { margin-top:4px; font-size:.8rem; line-height:1.6; color:var(--text-mid); }
+/* Texto original de la oferta, plegado bajo el resultado guardado */
+.analizador-offer { margin-top:24px; padding:16px 24px; }
+.analizador-offer summary { display:flex; align-items:center; min-height:40px; cursor:pointer; font-size:.88rem; font-weight:700; color:var(--ink);
+  border-radius:8px; }
+.analizador-offer summary:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.analizador-offer-text { margin-top:16px; font-size:.8rem; line-height:1.6; color:var(--text-mid); white-space:pre-wrap; overflow-wrap:anywhere; }
+
+/* Historial: tarjeta bajo el resultado. Cada fila abre el análisis guardado (recalculado) y tiene su papelera;
+   el borrado se confirma en el lugar, como en Perfil. Medidas en múltiplos de 8px. */
+.analizador-history { margin-top:24px; padding:32px; }
+.analizador-history-header { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin-bottom:24px; }
+.analizador-history-header .analizador-card-title { border-radius:8px; }
+.analizador-history-header .analizador-card-title:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
+.analizador-history-count { font-size:.75rem; font-weight:500; color:var(--muted); font-variant-numeric:tabular-nums; }
+.analizador-history-actions { margin-left:auto; }
+.analizador-history-clear { display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:0 16px; border-radius:var(--radius-pill);
+  font-size:.78rem; font-weight:700; color:var(--pink-ink); transition:background-color var(--dur-fast) ease; }
+.analizador-history-clear:hover { background:var(--pink-tint); }
+.analizador-history-list { display:flex; flex-direction:column; gap:8px; }
+.analizador-history-item { display:flex; align-items:center; gap:8px; }
+.analizador-history-item--confirm { display:block; }
+.analizador-history-open { display:flex; flex:1; align-items:center; gap:16px; min-width:0; padding:16px; border-radius:16px; text-align:left;
+  border:1px solid var(--card-border); background:var(--surface-solid);
+  transition:border-color var(--dur) ease, background-color var(--dur) ease, transform var(--dur) var(--ease-out); }
+.analizador-history-open:hover { border-color:var(--pink-line-hover); transform:translateY(-1px); }
+.analizador-history-open[aria-current="true"] { border-color:var(--pink); background:var(--pink-tint); }
+.analizador-history-pct { display:flex; flex-shrink:0; align-items:center; justify-content:center; width:64px; height:40px; border-radius:var(--radius-pill);
+  background:var(--chip-rosa-bg); color:var(--chip-rosa-fg); font-size:.95rem; font-weight:600; font-variant-numeric:tabular-nums; }
+.analizador-history-main { display:flex; flex:1; flex-direction:column; gap:4px; min-width:0; }
+.analizador-history-name { overflow:hidden; font-size:.9rem; font-weight:700; color:var(--ink); text-overflow:ellipsis; white-space:nowrap; }
+.analizador-history-meta { font-size:.75rem; color:var(--text-2); }
+.analizador-icon-btn { display:flex; flex-shrink:0; align-items:center; justify-content:center; width:40px; height:40px; border-radius:12px;
+  color:var(--text-2); transition:background-color var(--dur-fast) ease, color var(--dur-fast) ease; }
+.analizador-icon-btn:hover { background:var(--pink-tint); color:var(--pink-ink); }
+.analizador-history-open:focus-visible, .analizador-icon-btn:focus-visible, .analizador-history-clear:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.analizador-history-more { margin-top:16px; padding:8px 24px; font-size:.85rem; }
+/* Confirmación de borrado (de uno o de todo) */
+.analizador-confirm { display:flex; flex-direction:column; gap:16px; padding:16px 24px; border-radius:16px; background:var(--chip-rosa-bg); }
+#analizador-history-body > .analizador-confirm { margin-bottom:16px; }
+.analizador-confirm-text { font-size:.88rem; font-weight:600; line-height:1.5; color:var(--chip-rosa-fg); overflow-wrap:anywhere; }
+.analizador-confirm-error { font-size:.8rem; font-weight:600; line-height:1.5; color:var(--pink-ink); }
+.analizador-confirm-error:empty { display:none; }
+.analizador-confirm-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.analizador-confirm-actions .btn-pill { padding:8px 24px; font-size:.85rem; }
+.analizador-confirm .btn-pill[aria-busy="true"] { cursor:progress; }
+.analizador-confirm .btn-pill[aria-busy="true"]:hover, .analizador-confirm .btn-pill[aria-busy="true"]:active { transform:none; }
+/* Cargando, vacío (con el Motivo de Ruta) y error */
+.analizador-history-empty-title { font-size:.95rem; font-weight:700; color:var(--ink); }
+.analizador-history-empty-text { max-width:38rem; font-size:.8rem; line-height:1.6; color:var(--muted); }
+p.analizador-history-state { font-size:.85rem; color:var(--muted); }
+.analizador-history-error { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px 24px; padding:24px;
+  border-radius:16px; border:1px dashed var(--pink); }
+.analizador-history-error .analizador-retry { padding:8px 24px; font-size:.85rem; }
+.analizador-history-refresh-error { margin-bottom:16px; font-size:.8rem; font-weight:600; color:var(--pink-ink); }
+/* Entradas: el aviso y la oferta entran como el resto del resultado */
+#analizador-result > .analizador-notice, #analizador-result > .analizador-offer { animation:card-in 420ms var(--ease-out) backwards; }
+#analizador-result > .analizador-offer { animation-delay:180ms; }
+@media (prefers-reduced-motion: reduce) {
+  #analizador-result > .analizador-notice, #analizador-result > .analizador-offer { animation:none; }
+  .analizador-history-open, .analizador-history-open:hover { transition:none; transform:none; }
+}
+:root[data-motion="reduced"] #analizador-result > .analizador-notice, :root[data-motion="reduced"] #analizador-result > .analizador-offer { animation:none; }
+:root[data-motion="reduced"] .analizador-history-open, :root[data-motion="reduced"] .analizador-history-open:hover { transition:none; transform:none; }
+
 /* ---------- Mi Ruta ---------- */
 .ruta-eyebrow { display:block; width:fit-content; padding:4px 10px; border-radius:9999px; background:var(--chip-eyebrow-bg); color:var(--chip-eyebrow-fg);
   font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; }

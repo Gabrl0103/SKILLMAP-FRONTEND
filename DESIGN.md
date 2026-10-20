@@ -287,6 +287,9 @@ Suaves y táctiles: todo lo que se toca responde al hover y al clic sin brusqued
 ### Gauge
 Anillo de 160px con trazo de 18 sobre pista Niebla, en Rosa Ruta. Al aparecer, el anillo se llena y el número cuenta desde 0 a la par (800ms). Es el mismo componente en Mi Ruta y en el Analizador.
 
+### Historial del Analizador
+Tarjeta blanca bajo el resultado, con medidas en múltiplos de 8px. Cada análisis es una fila (borde Línea de Tarjeta, radio 16px) con el % de entonces en una pastilla rosa, el título, la fecha y quién lo analizó (Gemini, IA en la nube o Caché), y una papelera a la derecha. Al abrir uno, el resultado se recalcula con el progreso actual y lo encabeza un aviso azul informativo ("Resultado recalculado con tu progreso actual"); la fila abierta queda en Tinte Rosa con borde rosa. Borrar uno o "Borrar historial" se confirma en el lugar (fondo rosa claro, "Sí, borrar" con contorno y "Cancelar"), porque no se puede deshacer. Vacío con el Motivo de Ruta; carga con la línea en bucle; error con borde rosa punteado y "Reintentar".
+
 ### Nodo del Mapa
 Círculos de 112px: menta sólido (dominado), rosa sólido (en desarrollo) o blanco con borde punteado (por aprender), cada uno con sombra de su color. En hover o foco suben 3px y crecen un 4%. Al pasar por la leyenda, los nodos de los otros estados bajan a .22 de opacidad.
 
