@@ -33,7 +33,10 @@
   /* Punteado "aún no" (≥3:1 contra su relleno) y controles deshabilitados (exentos de contraste) */
   --line-dashed:#7D7888; --disabled-fg:#D2CCD0;
   /* Acción principal (botones, nav activo, tarjeta "Siguiente acción") */
-  --action:linear-gradient(135deg,#BE3A72,#3F63D8); --action-shadow-color:rgba(190,58,114,.28);
+  --action-from:#BE3A72; --action-to:#3F63D8;
+  --action:linear-gradient(135deg,var(--action-from),var(--action-to)); --action-shadow-color:rgba(190,58,114,.28);
+  /* Logo de estrella (js/brand.js): el mismo degradado de acción */
+  --brand-from:var(--action-from); --brand-to:var(--action-to);
   --action-card-shadow:0 20px 44px rgba(63,99,216,.26); --action-chip-bg:rgba(20,10,40,.24); --on-action-ink:#B02E6A;
   /* Gráficos */
   --chart-from:#D95F8E; --chart-to:#5B7BEA; --chart-demand:#3F63D8; --chart-dot-fill:#FFFFFF; --chart-dot-stroke:#BE3A72;
@@ -106,7 +109,10 @@
   --card-shadow:0 1px 2px rgba(0,0,0,.40), 0 18px 44px rgba(0,0,0,.35);
   --text:#ECEEF8; --text-2:#A9AFC6; --text-2-page:var(--text-2); --text-mid:#B9BFD6; --track:rgba(255,255,255,.08); --divider:rgba(255,255,255,.08);
   --line-dashed:#7B8199; --disabled-fg:rgba(255,255,255,.22);
-  --action:linear-gradient(135deg,#6D28D9,#3F63D8); --action-shadow-color:rgba(109,40,217,.42);
+  --action-from:#6D28D9; --action-to:#3F63D8;
+  --action:linear-gradient(135deg,var(--action-from),var(--action-to)); --action-shadow-color:rgba(109,40,217,.42);
+  /* Logo: violeta→azul no llega a 3:1 sobre el fondo oscuro; la estrella usa el rosa→violeta de los gráficos */
+  --brand-from:var(--chart-from); --brand-to:var(--chart-to);
   --action-card-shadow:0 20px 44px rgba(109,40,217,.34); --action-chip-bg:rgba(20,10,40,.28); --on-action-ink:#5B21B6;
   --chart-from:#D95F8E; --chart-to:#A78BFA; --chart-demand:#9DBBFF; --chart-dot-fill:#0F1530; --chart-dot-stroke:#F59AC0;
   --chip-rosa-bg:rgba(217,95,142,.16); --chip-rosa-fg:#F59AC0; --chip-azul-bg:rgba(111,168,247,.16); --chip-azul-fg:#9DBBFF;
@@ -190,9 +196,16 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
   padding:16px 40px; background:var(--header-bg); border-bottom:1px solid var(--header-border);
   backdrop-filter:var(--header-blur); -webkit-backdrop-filter:var(--header-blur); }
 .topbar-brand { display:flex; align-items:center; gap:12px; min-width:0; }
-.logo-mark { flex-shrink:0; width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:var(--action);
-  color:var(--on-action); box-shadow:0 8px 20px var(--action-shadow-color); }
-.topbar-name { font-size:18px; font-weight:700; letter-spacing:.04em; color:var(--text); }
+/* Marca: estrella de brújula (js/brand.js) con el degradado del tema y el nombre "Cenit". En Introducción y Acceso
+   lleva el slogan debajo. .brand-star tiene el origen en el centro de la estrella para animarla más adelante */
+.logo-mark { flex-shrink:0; width:40px; height:40px; display:flex; align-items:center; justify-content:center; }
+.brand-mark { display:block; overflow:visible; filter:drop-shadow(0 4px 8px var(--action-shadow-color)); }
+.brand-stop-from { stop-color:var(--brand-from); }
+.brand-stop-to { stop-color:var(--brand-to); }
+.brand-star { transform-box:fill-box; transform-origin:50% 55%; }
+.brand-text { display:flex; flex-direction:column; min-width:0; }
+.topbar-name { font-size:18px; font-weight:700; letter-spacing:-.01em; line-height:1.2; color:var(--text); }
+.brand-slogan { font-size:12px; font-weight:500; line-height:1.4; color:var(--text-2-page); }
 .topbar-actions { justify-self:end; display:flex; align-items:center; gap:12px; }
 
 /* Nav: píldora con un indicador que se desliza hasta el ítem activo (transform + width, js en mapa.js).
@@ -533,6 +546,9 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 .perfil-cv { padding:2.5rem 2.75rem; border-radius:var(--radius-card); background:var(--surface); border:1px solid var(--card-border);
   box-shadow:var(--card-shadow); color:var(--text); font-size:.92rem; line-height:1.55; }
 .perfil-cv-header { padding-bottom:1.25rem; border-bottom:2px solid var(--text); }
+/* Marca del CV: estrella y nombre, sin sombra (en papel no se ve) */
+.perfil-cv-brand { display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:14px; font-weight:700; color:var(--text-2); }
+.perfil-cv-brand .brand-mark { filter:none; }
 .perfil-cv-name { font-size:2rem; font-weight:600; line-height:1.15; letter-spacing:-.02em; overflow-wrap:anywhere; }
 .perfil-cv-name:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
 .perfil-cv-headline { margin-top:.35rem; font-size:1.05rem; font-weight:600; color:var(--text-mid); overflow-wrap:anywhere; }
@@ -566,7 +582,7 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
     color:#1F1F24; font-size:10.5pt; line-height:1.45; }
   :root[data-cv] .perfil-cv-name { font-size:22pt; }
   :root[data-cv] .perfil-cv-headline { font-size:12pt; color:#3F3F46; }
-  :root[data-cv] .perfil-cv-contact, :root[data-cv] .perfil-cv-muted, :root[data-cv] .perfil-cv-footer { color:#55515E; }
+  :root[data-cv] .perfil-cv-contact, :root[data-cv] .perfil-cv-muted, :root[data-cv] .perfil-cv-footer, :root[data-cv] .perfil-cv-brand { color:#55515E; }
   :root[data-cv] .perfil-cv-header { border-color:#1F1F24; }
   :root[data-cv] .perfil-cv-title, :root[data-cv] .perfil-cv-url { color:#1F1F24; text-decoration:none; }
   :root[data-cv] .perfil-cv-tags li, :root[data-cv] .perfil-cv-footer { border-color:#C9C5CE; }
@@ -897,7 +913,7 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 :root[data-motion="reduced"] .btn-pill:hover, :root[data-motion="reduced"] .btn-pill:active { transform:none; }
 
 /* ---------- Motivo de Ruta ---------- */
-/* Sello de SKILLMAP: línea punteada con puntos de control, como la ruta de un GPS. Helpers en js/route-motif.js; todo es
+/* Sello de Cenit: línea punteada con puntos de control, como la ruta de un GPS. Helpers en js/route-motif.js; todo es
    decorativo (aria-hidden). Solo tokens del tema: punteado en --line-dashed (el tramo aún no recorrido), punto en --pink
    (trazo) y estados con los rellenos de los nodos del mapa. Medidas en múltiplos de 8 px. */
 :root {
