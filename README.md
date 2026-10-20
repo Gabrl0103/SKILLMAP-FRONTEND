@@ -1,6 +1,6 @@
 # SKILLMAP-FRONTEND
 
-Repositorio del frontend de SKILLMAP: un dashboard que muestra el nivel de preparación para un objetivo profesional y las brechas de habilidades prioritarias.
+Repositorio del frontend de **Cenit** (antes SkillMap), "Tu ruta hacia el cenit de tu carrera": un dashboard que muestra el nivel de preparación para un objetivo profesional y las brechas de habilidades prioritarias.
 
 Hecho con HTML, [Tailwind CSS (CDN)](https://tailwindcss.com/docs/installation/play-cdn), JavaScript vanilla y un Web Component (`<skill-card>`). No requiere build ni `npm install`.
 
@@ -21,9 +21,10 @@ Datos de `GET /api/goals/{id}/readiness`:
 **Datos de ejemplo** — la API aún no provee estos datos, así que se simulan en funciones aparte de `js/dashboard.js` y se muestran con la etiqueta "Datos de ejemplo":
 
 - `sampleUrgencyBadge()`: badges de urgencia de cada brecha (Alta demanda / Crítica / Media), asignados según la posición en el ranking.
-- `sampleTrendData()`: gráfico "Tendencia de Habilidades" (tu nivel vs. demanda del mercado, Ene–Jun). SVG inline, con tooltip al pasar el mouse o con teclado y una tabla accesible para lectores de pantalla.
 
-Cuando el backend exponga estos campos, basta con reemplazar esas dos funciones.
+Cuando el backend exponga ese campo, basta con reemplazar esa función.
+
+La **Tendencia de Preparación** ya es real: `GET /api/goals/{id}/readiness/history` (un punto por día con cambios), en SVG inline con tooltip por mouse o teclado y una tabla accesible; con menos de 2 puntos muestra un estado vacío.
 
 ### Otras vistas
 
@@ -38,10 +39,12 @@ Sin framework de routing: cada vista es una `<section id="view-*">` en `index.ht
 ```
 SKILLMAP-FRONTEND/
 ├── index.html          # Estructura HTML (barra superior + una <section> por vista)
+├── assets/cenit-star.svg  # Favicon: la estrella de Cenit
 ├── css/
 │   └── styles.css      # Tokens, barra superior, tarjetas de Mi Ruta, gráfico y Mapa Visual
 ├── docs/mockups/       # Mockups de referencia de cada vista
 └── js/
+    ├── brand.js        # Logo de Cenit (estrella de brújula): brandMark() y las marcas de index.html
     ├── skill-card.js   # Web Component <skill-card> (hoy sin uso en las vistas)
     ├── dashboard.js    # Vista Mi Ruta: fetch a la API, render y datos de ejemplo
     └── mapa.js         # Vista Mapa Visual y navegación entre vistas

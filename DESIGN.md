@@ -1,5 +1,5 @@
 ---
-name: SkillMap
+name: Cenit
 description: GPS de carrera que traza la ruta de habilidades hacia un rol objetivo.
 colors:
   pink: "#D95F8E"
@@ -157,15 +157,17 @@ components:
     height: "1.4rem"
 ---
 
-# Design System: SkillMap
+# Design System: Cenit
 
 ## Overview
 
 **Creative North Star: "El GPS de Carrera"**
 
-SkillMap se lee como un GPS: siempre dice dónde estás, cuánto falta y cuál es el siguiente giro. El rosa marca el camino por recorrer y la acción siguiente; el menta marca el tramo ya recorrido. Todo lo demás es papel rosado muy claro y tarjetas blancas, para que esos dos colores hablen solos. Ninguna pantalla termina sin una acción clara en rosa.
+Cenit se lee como un GPS: siempre dice dónde estás, cuánto falta y cuál es el siguiente giro. El rosa marca el camino por recorrer y la acción siguiente; el menta marca el tramo ya recorrido. Todo lo demás es papel rosado muy claro y tarjetas blancas, para que esos dos colores hablen solos. Ninguna pantalla termina sin una acción clara en rosa.
 
 El ánimo es **cálido, claro y alentador**. Nada intimida a quien busca su primer empleo ni le habla con condescendencia a un senior: los números son grandes y livianos (peso 300), los textos de apoyo son cortos y grises, y el progreso se celebra con menta, no con fanfarria. La densidad es aireada: tarjetas con 28px de padding, grillas con 24–28px de separación y un contenedor máximo de 1200px.
+
+**Marca:** Cenit (antes SkillMap), con el slogan "Tu ruta hacia el cenit de tu carrera" (en: "Your route to the zenith of your career"). El logo es una estrella de brújula de 4 puntas cuya punta superior, más larga, marca el norte: el cenit al que lleva la ruta.
 
 Los datos simulados se muestran siempre con la etiqueta "Datos de ejemplo" (borde punteado gris, punto gris). Esa etiqueta es parte del sistema visual: la honestidad de los datos se ve, no se esconde.
 
@@ -287,6 +289,13 @@ Anillo de 160px con trazo de 18 sobre pista Niebla, en Rosa Ruta. Al aparecer, e
 
 ### Nodo del Mapa
 Círculos de 112px: menta sólido (dominado), rosa sólido (en desarrollo) o blanco con borde punteado (por aprender), cada uno con sombra de su color. En hover o foco suben 3px y crecen un 4%. Al pasar por la leyenda, los nodos de los otros estados bajan a .22 de opacidad.
+
+### Logo (estrella de Cenit)
+Estrella de brújula de 4 puntas con los flancos curvados hacia dentro; la punta de arriba es la más larga (el norte). Una sola definición en `js/brand.js` (`brandMark(size)`, `BRAND_NAME`); el path lleva la clase `.brand-star`, con el origen de transformación en su centro para animarlo más adelante (hoy es estático).
+- **Relleno:** degradado a 135° de `--brand-from` a `--brand-to`. En claro es el degradado de acción (`--action-from` #BE3A72 → `--action-to` #3F63D8); en oscuro, el rosa→violeta de los gráficos (#D95F8E → #A78BFA), porque el violeta→azul de acción no llega a 3:1 sobre el fondo oscuro.
+- **Tamaños:** 32px en la barra superior, Introducción y Acceso (caja de 40px con sombra de acción); 24px y sin sombra en el CV imprimible.
+- **Con el nombre:** siempre junto a "Cenit" (700, 18px, sin mayúsculas completas), así que el logo es decorativo (`aria-hidden`). En Introducción y Acceso lleva el slogan debajo (12px, 500, texto secundario).
+- **Favicon:** `assets/cenit-star.svg`, la misma estrella con colores fijos (los del tema oscuro si el navegador está en oscuro).
 
 ### Etiqueta "Datos de ejemplo"
 Pastilla con borde punteado, fondo casi blanco, punto gris y texto Pizarra en 10px, mayúsculas y 700. Acompaña a todo dato que no viene de la API real; sobre superficies oscuras usa su variante carbón.

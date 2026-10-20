@@ -13,11 +13,11 @@ Personas en tech con un rol profesional objetivo, en dos grupos con el mismo pes
 - Estudiantes y juniors que buscan su primer empleo o prácticas.
 - Devs en activo que quieren subir de nivel o cambiar de rol (ej. a Senior Frontend Engineer).
 
-Trabajo que hacen en SkillMap: elegir un rol objetivo, ver qué habilidades les faltan para él y decidir cuál aprender primero. Ninguna vista debe asumir un nivel de experiencia concreto.
+Trabajo que hacen en Cenit: elegir un rol objetivo, ver qué habilidades les faltan para él y decidir cuál aprender primero. Ninguna vista debe asumir un nivel de experiencia concreto.
 
 ## Product Purpose
 
-SkillMap muestra qué tan preparada está una persona para un objetivo profesional, qué habilidades le faltan (brechas), ordenadas por demanda en vacantes, y cuál es su siguiente acción.
+Cenit muestra qué tan preparada está una persona para un objetivo profesional, qué habilidades le faltan (brechas), ordenadas por demanda en vacantes, y cuál es su siguiente acción.
 
 El éxito tiene dos etapas:
 
@@ -26,14 +26,14 @@ El éxito tiene dos etapas:
 
 ## Positioning
 
-Un "GPS de carrera" (confirmado): en vez de un catálogo de cursos, SkillMap traza una ruta hacia un rol concreto ordenando las brechas por demanda del mercado. El Analizador contrasta una vacante real pegada por el usuario con sus habilidades.
+Un "GPS de carrera" (confirmado): en vez de un catálogo de cursos, Cenit traza una ruta hacia un rol concreto ordenando las brechas por demanda del mercado. El Analizador contrasta una vacante real pegada por el usuario con sus habilidades.
 
 ## Operating Context
 
 - Vistas actuales: **Objetivo** (elegir rol), **Mi Ruta** (preparación, brechas, siguiente acción, tendencia), **Mapa Visual** (todas las habilidades como grafo por categoría), **Analizador** (pegar el texto de una oferta y ver la compatibilidad) y **Perfil**.
 - Backend: SKILLMAP-API (Spring Boot) en `http://localhost:8080`. Endpoints en uso: `GET /api/goals`, `GET /api/goals/{id}/readiness`, `GET /api/skills`. Previsto: `POST /api/analyzer/analyze`.
 - En desarrollo se sirve con un servidor estático local (Live Server de VS Code) junto al backend.
-- Uso en escritorio: SkillMap es una aplicación solo de escritorio.
+- Uso en escritorio: Cenit es una aplicación solo de escritorio (`dist\Cenit\Cenit.exe`).
 - Un solo usuario implícito, sin autenticación. El objetivo activo vive en `localStorage` porque la API no lo guarda.
 
 ## Capabilities and Constraints
@@ -50,7 +50,9 @@ Un "GPS de carrera" (confirmado): en vez de un catálogo de cursos, SkillMap tra
 
 ## Brand Commitments
 
-- Nombre: SkillMap.
+- Nombre: Cenit (antes SkillMap). Se escribe "Cenit", nunca en mayúsculas completas. Los identificadores internos (claves de `localStorage`, eventos `skillmap:*`, repositorios) conservan el nombre anterior.
+- Slogan: "Tu ruta hacia el cenit de tu carrera" / "Your route to the zenith of your career" (clave i18n `brand.slogan`).
+- Logo: estrella de brújula de 4 puntas con la punta superior más larga (el norte, el cenit), con el degradado de acción del tema (`js/brand.js`, favicon en `assets/cenit-star.svg`). Ver DESIGN.md.
 - Los mockups de `docs/mockups/` y la paleta que fijan (rosa principal, menta para "dominado") son vinculantes.
 - Voz observada en la UI: español, tuteo, metáfora de ruta/GPS ("¿Cuál es tu próximo gran salto?").
 
