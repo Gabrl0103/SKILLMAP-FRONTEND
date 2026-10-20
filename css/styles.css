@@ -830,10 +830,18 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 .trend-plot svg { display:block; width:100%; height:auto; overflow:visible; }
 .trend-grid { stroke:var(--divider); stroke-width:1; }
 .trend-axis { font-size:11px; fill:var(--muted); font-family:inherit; }
-.trend-line { fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-.trend-line--nivel { stroke:var(--pink); stroke-width:3; }
-.trend-line--demanda { stroke:var(--chart-demand); stroke-width:3; stroke-dasharray:1 7; }
-.trend-dot { fill:var(--chart-dot-fill); stroke:var(--chart-dot-stroke); stroke-width:3; }
+/* Línea de 2px en Rosa Ruta sobre un área en Tinte Rosa; el punto final (hoy o el último cambio) va relleno y con
+   anillo de la superficie, con su valor al lado */
+.trend-area { fill:var(--pink-tint); }
+.trend-line { fill:none; stroke:var(--pink); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:1; }
+.trend-dot { fill:var(--chart-dot-fill); stroke:var(--chart-dot-stroke); stroke-width:2; }
+.trend-dot--last { fill:var(--pink); stroke:var(--surface-solid); stroke-width:4; }
+.trend-last-label { font-size:14px; font-weight:600; fill:var(--ink); font-variant-numeric:tabular-nums; }
+/* Cambio total del periodo: menta si subió (logro), neutro si no */
+.trend-delta { display:inline-flex; align-items:center; height:24px; padding:0 8px; border-radius:var(--radius-pill); font-size:12px; font-weight:600;
+  font-variant-numeric:tabular-nums; white-space:nowrap; }
+.trend-delta--up { background:var(--mint-soft); color:var(--mint-ink); }
+.trend-delta--flat, .trend-delta--down { background:var(--faint); color:var(--ink-2); }
 .trend-cross { stroke:var(--line-dashed); stroke-width:1; stroke-dasharray:3 3; }
 .trend-hit { fill:transparent; cursor:crosshair; }
 .trend-hit:focus { outline:none; }
@@ -842,12 +850,13 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
   color:var(--tooltip-fg); font-size:11px; white-space:nowrap; pointer-events:none; box-shadow:0 8px 18px rgba(16,16,20,.18); }
 .trend-tooltip[hidden] { display:none; }
 .trend-tooltip span { display:flex; align-items:center; gap:6px; color:var(--tooltip-muted); }
-.trend-legend { display:flex; flex-wrap:wrap; gap:.5rem 1.75rem; margin-top:1rem; padding-left:.5rem; font-size:.75rem; font-weight:500; color:var(--ink-2); }
-.trend-legend li { display:flex; align-items:center; gap:.55rem; }
-.legend-key { position:relative; display:inline-block; width:22px; height:0; border-top:2.5px solid var(--pink); }
-.legend-key--nivel::after { content:""; position:absolute; left:50%; top:-5.25px; width:8px; height:8px; margin-left:-4px; border-radius:9999px; background:var(--pink); }
-.legend-key--demanda { border-top:3px dotted var(--chart-demand); }
-.trend-tooltip .legend-key { width:14px; }
+/* Entrada: la línea se dibuja de izquierda a derecha (pathLength=1) y después aparecen el área, los puntos y el valor */
+@keyframes trend-draw { from { stroke-dashoffset:1; } }
+.trend-line { animation:trend-draw 800ms var(--ease-out) 240ms backwards; }
+.trend-area, .trend-dot, .trend-last-label { animation:fade-in 320ms ease-out 800ms backwards; }
+@media (prefers-reduced-motion: reduce) { .trend-line, .trend-area, .trend-dot, .trend-last-label { animation:none; } }
+:root[data-motion="reduced"] .trend-line, :root[data-motion="reduced"] .trend-area, :root[data-motion="reduced"] .trend-dot,
+:root[data-motion="reduced"] .trend-last-label { animation:none; }
 
 /* Mi Ruta: entrada. Solo CSS: se repite al recargar datos o al volver a la vista. */
 /* Tarjetas en orden de lectura: preparación, brechas, siguiente acción, tendencia */
