@@ -291,10 +291,13 @@ Anillo de 160px con trazo de 18 sobre pista Niebla, en Rosa Ruta. Al aparecer, e
 Círculos de 112px: menta sólido (dominado), rosa sólido (en desarrollo) o blanco con borde punteado (por aprender), cada uno con sombra de su color. En hover o foco suben 3px y crecen un 4%. Al pasar por la leyenda, los nodos de los otros estados bajan a .22 de opacidad.
 
 ### Logo (estrella de Cenit)
-Estrella de brújula de 4 puntas con los flancos curvados hacia dentro; la punta de arriba es la más larga (el norte). Una sola definición en `js/brand.js` (`brandMark(size)`, `BRAND_NAME`); el path lleva la clase `.brand-star`, con el origen de transformación en su centro para animarlo más adelante (hoy es estático).
+Estrella de brújula de 4 puntas con los flancos curvados hacia dentro; la punta de arriba es la más larga (el norte). Una sola definición en `js/brand.js` (`brandMark(size)`, `BRAND_NAME`); el path lleva la clase `.brand-star`, con el origen de transformación en su centro para girarlo.
 - **Relleno:** degradado a 135° de `--brand-from` a `--brand-to`. En claro es el degradado de acción (`--action-from` #BE3A72 → `--action-to` #3F63D8); en oscuro, el rosa→violeta de los gráficos (#D95F8E → #A78BFA), porque el violeta→azul de acción no llega a 3:1 sobre el fondo oscuro.
 - **Tamaños:** 32px en la barra superior, Introducción y Acceso (caja de 40px con sombra de acción); 24px y sin sombra en el CV imprimible.
 - **Con el nombre:** siempre junto a "Cenit" (700, 18px, sin mayúsculas completas), así que el logo es decorativo (`aria-hidden`). En Introducción y Acceso lleva el slogan debajo (12px, 500, texto secundario).
+- **Aguja (barra superior):** la punta de arriba apunta al ítem activo del nav (o a Ajustes) y gira al cambiar de sección (400ms, `--ease-out`, rebote corto de aguja). El ángulo sale de las posiciones del logo y del ítem, medido contra un horizonte virtual a la distancia del centro del nav (el centro queda a 45°). Con hover o foco en otro ítem se inclina un tercio del camino hacia él, 10° como mucho (180ms). Sin ítem activo (detalle de habilidad) apunta al norte. `pointBrandNeedle()` en `js/brand.js`, llamada desde `positionNavIndicator` (mapa.js).
+- **Búsqueda (Introducción y Acceso):** oscila unos grados (barridos de 400ms con pausas, ciclo de 4s, `brand-search`). Al enviar el formulario de Acceso se detiene y vuelve al norte con el rebote; si el envío falla, sigue buscando (`setBrandSearchFound`).
+- **Animaciones reducidas:** quieta, sin giro ni oscilación. Solo se anima `transform`.
 - **Favicon:** `assets/cenit-star.svg`, la misma estrella con colores fijos (los del tema oscuro si el navegador está en oscuro).
 
 ### Etiqueta "Datos de ejemplo"

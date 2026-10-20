@@ -197,12 +197,24 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
   backdrop-filter:var(--header-blur); -webkit-backdrop-filter:var(--header-blur); }
 .topbar-brand { display:flex; align-items:center; gap:12px; min-width:0; }
 /* Marca: estrella de brújula (js/brand.js) con el degradado del tema y el nombre "Cenit". En Introducción y Acceso
-   lleva el slogan debajo. .brand-star tiene el origen en el centro de la estrella para animarla más adelante */
+   lleva el slogan debajo. .brand-star tiene el origen en el centro de la estrella: en la barra la gira la aguja de
+   brand.js hacia la sección activa; en Introducción y Acceso oscila buscando el norte (brand-search) */
 .logo-mark { flex-shrink:0; width:40px; height:40px; display:flex; align-items:center; justify-content:center; }
 .brand-mark { display:block; overflow:visible; filter:drop-shadow(0 4px 8px var(--action-shadow-color)); }
 .brand-stop-from { stop-color:var(--brand-from); }
 .brand-stop-to { stop-color:var(--brand-to); }
 .brand-star { transform-box:fill-box; transform-origin:50% 55%; }
+/* Búsqueda: barridos cortos (400 ms cada uno) con pausas entre medio; al avanzar (.is-found) se detiene */
+.intro .brand-star, .acceso .brand-star { animation:brand-search 4s var(--ease-out) infinite; }
+.acceso .logo-mark.is-found .brand-star { animation:none; }
+@keyframes brand-search {
+  0%, 78%, 100% { transform:rotate(0); }
+  10%, 25% { transform:rotate(-9deg); }
+  35%, 50% { transform:rotate(7deg); }
+  60%, 70% { transform:rotate(-3deg); }
+}
+@media (prefers-reduced-motion: reduce) { .brand-star { animation:none; transform:none !important; } }
+:root[data-motion="reduced"] .brand-star { animation:none; transform:none !important; }
 .brand-text { display:flex; flex-direction:column; min-width:0; }
 .topbar-name { font-size:18px; font-weight:700; letter-spacing:-.01em; line-height:1.2; color:var(--text); }
 .brand-slogan { font-size:12px; font-weight:500; line-height:1.4; color:var(--text-2-page); }

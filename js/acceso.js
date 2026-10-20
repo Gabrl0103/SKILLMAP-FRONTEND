@@ -1,6 +1,6 @@
 // Pantalla de Acceso: iniciar sesión o crear cuenta (#acceso, a pantalla completa y sin barra superior).
 // Usa apiFetch, apiError, friendlyError, storeSessionToken, startSession y setAppInert (session.js) y hideIntro
-// (intro.js) y t (i18n.js). La contraseña solo vive en su campo hasta enviar: se limpia al enviar, salga bien o mal, y
+// (intro.js), t (i18n.js) y setBrandSearchFound (brand.js). La contraseña solo vive en su campo hasta enviar: se limpia al enviar, salga bien o mal, y
 // nunca se guarda ni se registra.
 
 const ACCESO_MIN_PASSWORD = 8; // mismo mínimo que el backend (UserFactory)
@@ -71,6 +71,7 @@ function setAccesoBusy(busy) {
   renderAccesoTexts();
   ["name", "email", "password"].forEach(name => { acceso.field(name).readOnly = busy; });
   document.querySelectorAll("[data-acceso-mode]").forEach(button => { button.disabled = busy; });
+  setBrandSearchFound(document.getElementById("acceso"), busy); // la estrella deja de buscar mientras se envía (brand.js)
 }
 
 // Validación mínima antes de enviar (el backend vuelve a validar todo). Devuelve [campo, mensaje] o null.

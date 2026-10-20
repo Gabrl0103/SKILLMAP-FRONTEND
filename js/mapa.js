@@ -2,7 +2,7 @@
 // sugerida del objetivo activo y un panel de detalle de la habilidad seleccionada.
 // Usa renderApiError, demandIsSample, sampleTag, jobStatsText, fetchJobStats, fetchGoals, fetchReadiness y
 // getActiveGoalId (dashboard.js), currentActiveGoalId (objetivo.js), renderStatusPicker, bindStatusPicker,
-// focusStatusPicker y saveSkillStatus (skill-status.js), routeDraw (route-motif.js), friendlyError (session.js) y t, statusLabel, tSkill, tCategory,
+// focusStatusPicker y saveSkillStatus (skill-status.js), routeDraw (route-motif.js), pointBrandNeedle (brand.js), friendlyError (session.js) y t, statusLabel, tSkill, tCategory,
 // tGoalTitle y getLanguage (i18n.js).
 // También define la navegación entre vistas (showView) y el indicador del nav de la barra superior, con su estela.
 
@@ -792,6 +792,7 @@ let navTrailFrom = null; // último ítem activo y su centro, de donde sale la e
 function positionNavIndicator() {
   const nav = document.querySelector(".topnav");
   if (!nav) return;
+  pointBrandNeedle(); // la estrella del logo apunta al ítem activo (brand.js)
   const active = nav.querySelector(".nav-item.active");
   nav.classList.toggle("has-active", Boolean(active));
   if (!active) return;
