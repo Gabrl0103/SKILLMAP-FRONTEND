@@ -31,16 +31,7 @@ function averageDemandOf(skills) {
   return skills.reduce((sum, s) => sum + s.demandPercentage, 0) / skills.length;
 }
 
-// ---------- Datos de ejemplo (la API todavía no los provee) ----------
-
-// DATOS DE EJEMPLO: la API no guarda histórico del nivel ni de la demanda. Valores fijos.
-function sampleTrendData() {
-  return {
-    months: t("ruta.trend.months").split(","),
-    nivel: [40, 45, 52, 58, 62, 68],
-    demanda: [60, 62, 65, 70, 75, 82],
-  };
-}
+// ---------- Datos de ejemplo ----------
 
 // Etiqueta "Datos de ejemplo" (función: sale en el idioma vigente al pintar)
 function sampleTag() {
@@ -188,78 +179,142 @@ function renderNextAction(topGap, goalTitle) {
     </article>`;
 }
 
-// Geometría del gráfico de tendencia (unidades del viewBox).
-const TREND = { width: 520, height: 210, left: 44, right: 500, top: 14, bottom: 170, min: 38, max: 84, ticks: [40, 50, 60, 70, 80] };
+// ---------- Tendencia de preparación ----------
+// Historial real del % de preparación (GET /api/goals/{id}/readiness/history): un punto por día con cambios. Línea en
+// escalones: el % se mantiene hasta el siguiente cambio. Con menos de 2 puntos, estado vacío (nunca datos inventados).
 
-function renderTrend() {
-  const d = sampleTrendData();
-  const { left, right, top, bottom, min, max } = TREND;
-  const x = i => left + (i * (right - left)) / (d.months.length - 1);
-  const y = v => bottom - ((v - min) / (max - min)) * (bottom - top);
-  const path = values => values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
-  const step = (right - left) / (d.months.length - 1);
+const TREND_DAYS = 30;
+// Geometría del gráfico (unidades del viewBox). Eje Y fijo de 0 a 100: la pendiente no exagera cambios chicos.
+const TREND = { width: 520, height: 208, left: 40, right: 496, top: 16, bottom: 168, ticks: [0, 25, 50, 75, 100] };
+const DAY_MS = 86400000;
 
-  const grid = TREND.ticks.map(t => `
-    <line x1="${left}" x2="${right}" y1="${y(t)}" y2="${y(t)}" class="trend-grid"/>
-    <text x="${left - 14}" y="${y(t) + 4}" text-anchor="end" class="trend-axis">${t}</text>`).join("");
-  const months = d.months.map((m, i) => `<text x="${x(i)}" y="${bottom + 26}" text-anchor="middle" class="trend-axis">${m}</text>`).join("");
-  const dots = d.nivel.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="4.5" class="trend-dot"/>`).join("");
-  // Zonas de hover/foco más anchas que la marca: una columna por mes.
-  const hits = d.months.map((m, i) => `
-    <rect x="${x(i) - step / 2}" y="${top}" width="${step}" height="${bottom - top}" class="trend-hit" data-trend-i="${i}"
-      tabindex="0" aria-label="${t("ruta.trend.point", { month: m, level: d.nivel[i], demand: d.demanda[i] })}"/>`).join("");
-  const tableRows = d.months.map((m, i) => `<tr><th scope="row">${m}</th><td>${d.nivel[i]}</td><td>${d.demanda[i]}</td></tr>`).join("");
+// "2026-10-19" → días desde 1970, sin zona horaria: la fecha ya viene en el día del usuario
+function trendDayNumber(date) {
+  const [y, m, d] = date.split("-").map(Number);
+  return Date.UTC(y, m - 1, d) / DAY_MS;
+}
 
+function trendDateLabel(date, options = { day: "numeric", month: "short" }) {
+  return new Intl.DateTimeFormat(getLanguage(), { ...options, timeZone: "UTC" }).format(new Date(trendDayNumber(date) * DAY_MS));
+}
+
+// Puntos con su posición en el viewBox: X proporcional a los días, Y al %
+function trendLayout(points) {
+  const { left, right, top, bottom } = TREND;
+  const first = trendDayNumber(points[0].date);
+  const span = Math.max(1, trendDayNumber(points[points.length - 1].date) - first);
+  return points.map(p => ({
+    ...p,
+    x: left + ((trendDayNumber(p.date) - first) / span) * (right - left),
+    y: bottom - (p.percentage / 100) * (bottom - top),
+  }));
+}
+
+// "+12 pts en 30 días" o "Sin cambios en …", del primer al último punto
+function trendDelta(points) {
+  const first = points[0], last = points[points.length - 1];
+  const delta = last.percentage - first.percentage;
+  const span = tn("ruta.trend.days", trendDayNumber(last.date) - trendDayNumber(first.date));
+  if (delta === 0) return { text: t("ruta.trend.flat", { span }), tone: "flat" };
+  return { text: t("ruta.trend.delta", { sign: delta > 0 ? "+" : "−", n: Math.abs(delta), span }), tone: delta > 0 ? "up" : "down" };
+}
+
+function renderTrendCard(header, body) {
   return `
     <article class="ruta-card ruta-trend">
       <header class="ruta-card-header">
         <h2 class="ruta-card-title">${t("ruta.trend.title")}</h2>
-        ${sampleTag()}
+        ${header}
       </header>
+      ${body}
+    </article>`;
+}
+
+// history: lista de { date, percentage } ordenada por fecha, o null si no se pudo cargar
+function renderTrend(history) {
+  if (!history) return renderTrendCard("", `<p class="text-sm text-muted">${t("ruta.trend.error")}</p>`);
+  if (history.length < 2) {
+    return renderTrendCard("", `<div class="route-state">${routeDraw()}<p class="text-sm text-muted">${t("ruta.trend.empty")}</p></div>`);
+  }
+
+  const pts = trendLayout(history);
+  const { left, right, top, bottom } = TREND;
+  const last = pts[pts.length - 1];
+  const delta = trendDelta(history);
+  const y = v => bottom - (v / 100) * (bottom - top);
+  const longDate = date => trendDateLabel(date, { dateStyle: "long" });
+
+  const grid = TREND.ticks.map(v => `
+    <line x1="${left}" x2="${right}" y1="${y(v)}" y2="${y(v)}" class="trend-grid"/>
+    <text x="${left - 8}" y="${y(v) + 4}" text-anchor="end" class="trend-axis">${v}%</text>`).join("");
+  // Fechas del eje X: la primera y la última, y una intermedia si hay sitio
+  const mid = pts.length > 2 ? pts[Math.floor(pts.length / 2)] : null;
+  const showMid = mid && mid.x - pts[0].x > 96 && last.x - mid.x > 96;
+  const dateTicks = [[pts[0], "start"], ...(showMid ? [[mid, "middle"]] : []), [last, "end"]]
+    .map(([p, anchor]) => `<text x="${p.x.toFixed(1)}" y="${bottom + 24}" text-anchor="${anchor}" class="trend-axis">${trendDateLabel(p.date)}</text>`).join("");
+
+  // Escalones: horizontal hasta el día del cambio y luego vertical al nuevo valor
+  const line = pts.map((p, i) => (i ? `H${p.x.toFixed(1)} V${p.y.toFixed(1)}` : `M${p.x.toFixed(1)} ${p.y.toFixed(1)}`)).join(" ");
+  const area = `${line} V${bottom} H${pts[0].x.toFixed(1)} Z`;
+  const dots = pts.slice(0, -1).map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" class="trend-dot"/>`).join("");
+  // Valor del punto final: encima, o debajo si no cabe
+  const labelY = last.y - 16 < top ? last.y + 24 : last.y - 16;
+
+  // Zonas de hover y foco: de la mitad hacia el punto anterior a la mitad hacia el siguiente
+  const hits = pts.map((p, i) => {
+    const x0 = i ? (pts[i - 1].x + p.x) / 2 : left - 8;
+    const x1 = i < pts.length - 1 ? (p.x + pts[i + 1].x) / 2 : right + 8;
+    return `<rect x="${x0.toFixed(1)}" y="${top}" width="${(x1 - x0).toFixed(1)}" height="${bottom - top}" class="trend-hit" data-trend-i="${i}"
+      data-cx="${p.x.toFixed(1)}" tabindex="0" aria-label="${escapeHtml(t("ruta.trend.point", { date: longDate(p.date), pct: p.percentage }))}"/>`;
+  }).join("");
+
+  const summary = t("ruta.trend.aria", {
+    from: history[0].percentage, start: longDate(history[0].date),
+    to: last.percentage, end: longDate(last.date), delta: delta.text,
+  });
+  const tableRows = history.map(p => `<tr><th scope="row">${longDate(p.date)}</th><td>${p.percentage}%</td></tr>`).join("");
+
+  return renderTrendCard(`<span class="trend-delta trend-delta--${delta.tone}">${delta.text}</span>`, `
       <div class="trend-plot">
-        <svg viewBox="0 0 ${TREND.width} ${TREND.height}" role="img" aria-label="${t("ruta.trend.aria")}">
-          ${grid}${months}
+        <svg viewBox="0 0 ${TREND.width} ${TREND.height}" role="img" aria-label="${escapeHtml(summary)}">
+          ${grid}${dateTicks}
+          <path d="${area}" class="trend-area"/>
           <line class="trend-cross" x1="0" x2="0" y1="${top}" y2="${bottom}" visibility="hidden"/>
-          <path d="${path(d.demanda)}" class="trend-line trend-line--demanda"/>
-          <path d="${path(d.nivel)}" class="trend-line trend-line--nivel"/>
-          ${dots}${hits}
+          <path d="${line}" class="trend-line" pathLength="1"/>
+          ${dots}
+          <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="8" class="trend-dot trend-dot--last"/>
+          <text x="${(last.x - 12).toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="end" class="trend-last-label">${last.percentage}%</text>
+          ${hits}
         </svg>
         <div class="trend-tooltip" role="status" hidden></div>
       </div>
-      <ul class="trend-legend">
-        <li><span class="legend-key legend-key--nivel"></span>${t("ruta.trend.level")}</li>
-        <li><span class="legend-key legend-key--demanda"></span>${t("ruta.trend.demand")}</li>
-      </ul>
       <!-- sr-only va en un div: una <table> ignora width:1px y su ancho real desbordaba la página en pantallas angostas -->
       <div class="sr-only">
         <table>
           <caption>${t("ruta.trend.caption")}</caption>
-          <thead><tr><th scope="col">${t("ruta.trend.month")}</th><th scope="col">${t("ruta.trend.levelCol")}</th><th scope="col">${t("ruta.trend.demand")}</th></tr></thead>
+          <thead><tr><th scope="col">${t("ruta.trend.dateCol")}</th><th scope="col">${t("ruta.trend.pctCol")}</th></tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
-      </div>
-    </article>`;
+      </div>`);
 }
 
 // Crosshair + tooltip del gráfico de tendencia (mouse y teclado).
-function bindTrendHover(container) {
+function bindTrendHover(container, history) {
   const plot = container.querySelector(".trend-plot");
   if (!plot) return;
-  const d = sampleTrendData();
   const cross = plot.querySelector(".trend-cross");
   const tooltip = plot.querySelector(".trend-tooltip");
 
   const show = hit => {
-    const i = Number(hit.dataset.trendI);
-    const cx = Number(hit.getAttribute("x")) + Number(hit.getAttribute("width")) / 2;
+    const p = history[Number(hit.dataset.trendI)];
+    const cx = hit.dataset.cx;
     cross.setAttribute("x1", cx);
     cross.setAttribute("x2", cx);
     cross.setAttribute("visibility", "visible");
-    tooltip.innerHTML = `<strong>${d.months[i]}</strong><span><i class="legend-key legend-key--nivel"></i>${t("ruta.trend.tipLevel", { n: d.nivel[i] })}</span>
-      <span><i class="legend-key legend-key--demanda"></i>${t("ruta.trend.tipDemand", { n: d.demanda[i] })}</span>`;
+    tooltip.innerHTML = `<strong>${trendDateLabel(p.date)}</strong><span>${t("ruta.trend.tip", { pct: p.percentage })}</span>`;
     tooltip.hidden = false;
     // Posición horizontal en % del ancho; en los extremos se ancla al borde para que no se salga.
-    const pct = (cx / TREND.width) * 100;
+    const pct = (Number(cx) / TREND.width) * 100;
     tooltip.style.left = `${pct}%`;
     tooltip.style.transform = pct > 75 ? "translateX(-100%)" : pct < 25 ? "none" : "translateX(-50%)";
   };
@@ -361,6 +416,11 @@ function fetchJobStats() {
       .catch(err => { jobStatsRequest = null; throw err; }); // si falla, se reintenta en la próxima llamada
   }
   return jobStatsRequest;
+}
+
+// Sin caché: cada cambio de estado u objetivo puede agregar un punto, y Mi Ruta lo pide al recargarse.
+function fetchReadinessHistory(goalId) {
+  return apiJson(`/api/goals/${goalId}/readiness/history?days=${TREND_DAYS}`);
 }
 
 const readinessRequests = new Map(); // /api/goals/{id}/readiness por objetivo, compartida entre Mi Ruta y Mapa Visual
@@ -541,11 +601,12 @@ async function loadDashboard(goalId) {
   document.getElementById("market-demand").hidden = true;
   container.innerHTML = renderRutaSkeleton();
   try {
-    // La comparación y las estadísticas son complementarias: si fallan, la vista se muestra sin ellas.
-    const [r, demand, jobStats] = await Promise.all([
+    // La comparación, las estadísticas y el historial son complementarios: si fallan, la vista se muestra sin ellos.
+    const [r, demand, jobStats, history] = await Promise.all([
       fetchReadiness(goalId),
       fetchGoalDemand(goalId).catch(() => ({ goalSkills: [], catalog: [] })),
       fetchJobStats().catch(() => null),
+      fetchReadinessHistory(goalId).catch(() => null),
     ]);
     if (requestId !== latestRequest) return;
 
@@ -555,9 +616,9 @@ async function loadDashboard(goalId) {
     container.innerHTML = `
       <div class="ruta-grid">
         <div class="ruta-col">${renderGauge(r)}${renderNextAction(r.gaps[0], r.goalTitle)}</div>
-        <div class="ruta-col">${renderBrechas(r.gaps, reference, jobStats, r.goalTitle)}${renderTrend()}</div>
+        <div class="ruta-col">${renderBrechas(r.gaps, reference, jobStats, r.goalTitle)}${renderTrend(history)}</div>
       </div>`;
-    bindTrendHover(container);
+    bindTrendHover(container, history);
   } catch (err) {
     if (requestId !== latestRequest) return;
     container.innerHTML = renderApiError(err);
