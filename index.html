@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SkillMap</title>
+<title>Cenit</title>
+<link rel="icon" type="image/svg+xml" href="assets/cenit-star.svg"> <!-- misma estrella que js/brand.js -->
 <!-- Copia local de tema, animaciones e idioma antes del primer pintado (sin parpadeo). El backend manda: js/theme.js la
      corrige si difiere. Mismas claves que js/theme.js y js/i18n.js -->
 <script>
@@ -30,10 +31,11 @@
   <canvas class="intro-bg" aria-hidden="true"></canvas>
   <header class="intro-top">
     <div class="topbar-brand">
-      <div class="logo-mark" aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-      </div>
-      <span class="topbar-name">SKILLMAP</span>
+      <span class="logo-mark" data-brand-mark="32" aria-hidden="true"></span> <!-- estrella: js/brand.js -->
+      <span class="brand-text">
+        <span class="topbar-name">Cenit</span>
+        <span class="brand-slogan" data-i18n="brand.slogan">Tu ruta hacia el cenit de tu carrera</span>
+      </span>
     </div>
     <button type="button" class="intro-skip" data-intro-close aria-keyshortcuts="Escape"><span data-i18n="intro.skip">Omitir</span> <kbd class="intro-kbd" aria-hidden="true">Esc</kbd></button>
   </header>
@@ -48,7 +50,7 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button>
       <!-- Solo datos reales (js/intro.js): un chip sin dato o en 0 queda oculto -->
-      <ul class="intro-chips" aria-label="SkillMap en cifras" data-i18n-aria-label="intro.chips">
+      <ul class="intro-chips" aria-label="Cenit en cifras" data-i18n-aria-label="intro.chips">
         <li data-intro-chip="jobs" hidden><strong></strong> <span></span></li>
         <li data-intro-chip="skills" hidden><strong></strong> <span></span></li>
         <li data-intro-chip="goals" hidden><strong></strong> <span></span></li>
@@ -81,7 +83,7 @@
   </div>
 
   <!-- Slides: avanzan cada 4 s (barra CSS); hover o foco pausan; clic o Enter fija una -->
-  <div class="intro-slides" role="group" aria-label="Qué puedes hacer en SkillMap" data-i18n-aria-label="intro.slides">
+  <div class="intro-slides" role="group" aria-label="Qué puedes hacer en Cenit" data-i18n-aria-label="intro.slides">
     <button type="button" class="intro-slide" data-slide="1" aria-pressed="true">
       <span class="intro-slide-title" data-i18n="intro.slide1.title">1 · Mapa de habilidades</span>
       <span class="intro-slide-text" data-i18n="intro.slide1.text">Mira lo que sabes y lo que te falta, en un solo mapa.</span>
@@ -104,10 +106,11 @@
 <section id="acceso" class="acceso" aria-labelledby="acceso-title">
   <header class="intro-top">
     <div class="topbar-brand">
-      <div class="logo-mark" aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-      </div>
-      <span class="topbar-name">SKILLMAP</span>
+      <span class="logo-mark" data-brand-mark="32" aria-hidden="true"></span> <!-- estrella: js/brand.js -->
+      <span class="brand-text">
+        <span class="topbar-name">Cenit</span>
+        <span class="brand-slogan" data-i18n="brand.slogan">Tu ruta hacia el cenit de tu carrera</span>
+      </span>
     </div>
   </header>
 
@@ -158,10 +161,8 @@
 <!-- BARRA SUPERIOR (sticky en todas las vistas; ver .topbar en styles.css) -->
 <header class="topbar">
   <div class="topbar-brand">
-    <div class="logo-mark" aria-hidden="true">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
-    </div>
-    <span class="topbar-name">SKILLMAP</span>
+    <span class="logo-mark" data-brand-mark="32" aria-hidden="true"></span> <!-- estrella: js/brand.js -->
+    <span class="topbar-name">Cenit</span>
   </div>
 
   <!-- El indicador se desliza hasta el ítem activo (positionNavIndicator en mapa.js) -->
@@ -324,7 +325,7 @@
     <header class="ajustes-header">
       <span class="ruta-eyebrow" data-i18n="ajustes.eyebrow">Ajustes</span>
       <h1 class="objetivo-title" data-i18n="ajustes.title">Tu cabina de mando</h1>
-      <p class="objetivo-subtitle" data-i18n="ajustes.subtitle">Personaliza SKILLMAP y mantén tu ruta al día.</p>
+      <p class="objetivo-subtitle" data-i18n="ajustes.subtitle">Personaliza Cenit y mantén tu ruta al día.</p>
       <span class="route-divider" aria-hidden="true"></span> <!-- Motivo de Ruta (styles.css) -->
     </header>
 
@@ -396,12 +397,13 @@
     </div>
 
     <span class="route-divider" aria-hidden="true"></span>
-    <p class="ajustes-footer" data-i18n="ajustes.footer">SKILLMAP v0.1 · Tus datos viven solo en este equipo.</p>
+    <p class="ajustes-footer" data-i18n="ajustes.footer">Cenit v0.1 · Tus datos viven solo en este equipo.</p>
   </section>
 </main>
 
 <script src="js/i18n.js"></script> <!-- primero: los demás usan t() -->
 <script src="js/theme.js"></script>
+<script src="js/brand.js"></script> <!-- logo de estrella: pinta las marcas de esta página -->
 <script src="js/skill-card.js"></script>
 <script src="js/skill-status.js"></script> <!-- selector Pendiente / Aprendiendo / Dominada (Mapa y detalle) -->
 <script src="js/route-motif.js"></script> <!-- Motivo de Ruta: riel, divisor y línea que se dibuja (usa skill-status.js) -->

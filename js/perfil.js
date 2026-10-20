@@ -508,6 +508,7 @@ function renderCv() {
       </div>
       <article class="perfil-cv" lang="${getLanguage()}" aria-labelledby="perfil-cv-name">
         <header class="perfil-cv-header">
+          <p class="perfil-cv-brand">${brandMark(24)}<span>${BRAND_NAME}</span></p>
           <h1 id="perfil-cv-name" class="perfil-cv-name" tabindex="-1"></h1>
         </header>
         <footer class="perfil-cv-footer"></footer>
