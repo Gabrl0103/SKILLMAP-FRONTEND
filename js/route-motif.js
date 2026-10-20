@@ -1,4 +1,4 @@
-// Motivo de Ruta: el sello visual de SKILLMAP, una línea punteada con puntos de control como la ruta de un GPS. Estilos
+// Motivo de Ruta: el sello visual de Cenit, una línea punteada con puntos de control como la ruta de un GPS. Estilos
 // en la sección "Motivo de Ruta" de styles.css. Todo es decorativo (aria-hidden): no entra en el orden de lectura ni en
 // el de foco. Usa SKILL_STATE_CLASS (skill-status.js).
 //   .route-rail + .route-stop  brechas de Mi Ruta unidas en vertical, un punto de control por brecha
