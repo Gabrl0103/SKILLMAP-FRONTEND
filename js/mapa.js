@@ -3,7 +3,7 @@
 // Usa renderApiError, demandIsSample, sampleTag, jobStatsText, fetchJobStats, fetchGoals, fetchReadiness y
 // getActiveGoalId (dashboard.js), currentActiveGoalId (objetivo.js), renderStatusPicker, bindStatusPicker,
 // focusStatusPicker y saveSkillStatus (skill-status.js), routeDraw (route-motif.js), pointBrandNeedle (brand.js), friendlyError (session.js) y t, statusLabel, tSkill, tCategory,
-// tGoalTitle y getLanguage (i18n.js).
+// tGoalTitle y getLanguage (i18n.js). La vista 3D (interruptor 2D / 3D, escena y lista accesible) vive en mapa-3d.js.
 // También define la navegación entre vistas (showView) y el indicador del nav de la barra superior, con su estela.
 
 const NODE_SIZE = 96;       // diámetro de cada nodo (px)
@@ -286,6 +286,8 @@ function renderMapa(skills) {
 
           <div class="mapa-tooltip" id="mapa-tooltip" aria-hidden="true" hidden></div>
         </div>
+        ${renderMapa3dShell()}
+        ${renderMapaViewToggle()}
       </div>
 
       <aside class="mapa-panel" id="mapa-panel" aria-label="${t("mapa.panel")}">${renderMapaPanelEmpty()}</aside>
@@ -365,14 +367,23 @@ function refreshMapaPanel() {
   if (focused === "status") focusStatusPicker(panel);
 }
 
-function selectMapaNode(node) {
-  const id = Number(node.dataset.skillId);
-  document.querySelectorAll("#mapa-stage .mapa-node").forEach(n => n.setAttribute("aria-pressed", String(n === node)));
+function syncMapaPressed(id) {
+  document.querySelectorAll("#mapa-stage .mapa-node").forEach(n => n.setAttribute("aria-pressed", String(Number(n.dataset.skillId) === id)));
+}
+
+// Selección compartida por el mapa 2D, el 3D y la lista de la vista 3D; null la quita (Esc en el 3D)
+function selectMapaSkill(id) {
   if (id === mapaSelectedId) return;
   mapaSelectedId = id;
+  syncMapaPressed(id);
+  syncMapa3dSelection(); // mapa-3d.js
   refreshMapaPanel();
   const skill = mapaSkills.find(s => s.id === id);
-  if (skill) document.getElementById("mapa-live").textContent = t("mapa.selected", { name: tSkill(skill.name) });
+  document.getElementById("mapa-live").textContent = skill ? t("mapa.selected", { name: tSkill(skill.name) }) : t("mapa.deselected");
+}
+
+function selectMapaNode(node) {
+  selectMapaSkill(Number(node.dataset.skillId));
 }
 
 // El nodo cambia de color y de etiqueta sin redibujar el mapa (se conservan zoom, posición y foco)
@@ -382,6 +393,7 @@ function updateMapaNode(skill) {
   Object.values(STATUS_CLASS).forEach(status => node.classList.remove(`mapa-node--${status}`));
   node.classList.add(`mapa-node--${STATUS_CLASS[skill.status] || "pending"}`);
   node.setAttribute("aria-label", mapaNodeLabel(skill, node.dataset.category));
+  updateMapa3dSkill(skill); // mapa-3d.js
 }
 
 // Nodo y panel cambian al instante; si el backend falla, vuelven al estado anterior y el panel muestra el error.
@@ -438,10 +450,12 @@ function drawMapaRoute() {
   const half = NODE_SIZE / 2;
   const byId = new Map([...document.querySelectorAll("#mapa-stage .mapa-node")].map(n => [Number(n.dataset.skillId), n]));
   byId.forEach((node, id) => node.classList.toggle("is-route", mapaRoute.gapIds.includes(id)));
+  // Posición del estilo en línea, no offsetLeft/Top: con la vista 3D activa el lienzo 2D está oculto y medirían 0
   const points = mapaRoute.gapIds.map(id => byId.get(id)).filter(Boolean)
-    .map(n => `${n.offsetLeft + half},${n.offsetTop + half}`);
+    .map(n => `${parseFloat(n.style.left) + half},${parseFloat(n.style.top) + half}`);
   route.setAttribute("points", points.length > 1 ? points.join(" ") : "");
   document.getElementById("mapa-legend-route").hidden = points.length < 2;
+  updateMapa3dRoute(); // mapa-3d.js
 }
 
 // Al abrir la vista: si el objetivo activo cambió desde la última vez, se recalcula la ruta y el texto del panel.
@@ -747,6 +761,7 @@ let mapaRequest = null; // se reutiliza para no volver a pedir /api/skills en ca
 
 // Cambio de usuario: el mapa se vuelve a pedir y dibujar la próxima vez que se abra
 document.addEventListener("skillmap:user", () => {
+  closeMapa3d();
   mapaRequest = null;
   mapaSkills = [];
   mapaSelectedId = null;
@@ -762,6 +777,7 @@ document.addEventListener("skillmap:user", () => {
 function loadMapa() {
   if (mapaRequest) return mapaRequest;
   const container = document.getElementById("mapa-content");
+  closeMapa3d(); // la escena 3D vive dentro del contenido que se reemplaza
   container.innerHTML = `<p class="route-state text-sm text-muted-page">${routeDraw({ loop: true })}${t("mapa.loading")}</p>`;
 
   mapaRequest = (async () => {
@@ -774,6 +790,7 @@ function loadMapa() {
       mapaNeedsFit = true;
       bindMapaEvents();
       applyMapaTransform();
+      applyMapaViewMode(); // mapa-3d.js: vuelve a 3D si se eligió en esta sesión
     } catch (err) {
       mapaRequest = null; // si falla, se reintenta la próxima vez que se abra la vista
       container.innerHTML = renderApiError(err);
@@ -836,7 +853,9 @@ function showView(view) {
   });
   positionNavIndicator();
   // Si la carga terminó mientras la vista estaba oculta, se centra al volver a mostrarla; la ruta sigue al objetivo activo.
-  if (view === "mapa") loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); });
+  // Fuera del Mapa la escena 3D no se queda en memoria: se libera y se vuelve a armar al regresar.
+  if (view !== "mapa") closeMapa3d();
+  if (view === "mapa") loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); applyMapaViewMode(); });
   if (view === "dashboard") openRuta();        // definido en dashboard.js
   if (view === "analizador") openAnalizador(); // definido en analizador.js
   if (view === "objetivo") openObjetivo(); // definido en objetivo.js
@@ -863,7 +882,7 @@ document.addEventListener("skillmap:language", () => {
   mapaRequest = null;
   mapaRoute.goalId = null;
   if (!document.getElementById("view-mapa").classList.contains("hidden")) {
-    loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); });
+    loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); applyMapaViewMode(); });
   }
 });
 if ("ResizeObserver" in window) {

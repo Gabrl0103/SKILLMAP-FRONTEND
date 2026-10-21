@@ -1126,6 +1126,7 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 /* Una columna (panel debajo): el mapa gana alto; en móvil se recorre arrastrando y la leyenda se compacta */
 @media (max-width:1023px) { .mapa-viewport { height:clamp(600px, calc(100dvh - var(--header-h) - 80px), 720px); } }
 @media (max-width:639px) { .mapa-viewport { height:520px; } }
+.mapa-viewport[hidden] { display:none; }
 .mapa-stage { position:absolute; top:0; left:0; transform-origin:0 0; }
 .mapa-stage.is-ready { transition:transform .25s ease; }
 /* Arrastre: cursor de mano, sin selección de texto ni scroll táctil, y sin transición para que siga al puntero */
@@ -1203,6 +1204,58 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .mapa-tooltip { position:absolute; z-index:10; pointer-events:none; white-space:nowrap; padding:6px 10px; border-radius:8px;
   background:var(--tooltip-bg); color:var(--tooltip-fg); font-size:12px; box-shadow:0 6px 16px rgba(16,16,20,.18); }
 .mapa-tooltip[hidden] { display:none; }
+
+/* Vista 3D (mapa-3d.js). Interruptor 2D / 3D segmentado como el del tema, arriba a la derecha de la tarjeta; el aviso
+   de WebGL va debajo. La escena tiene el mismo alto que el lienzo 2D. Nombres, categorías y anillos son HTML sobre el
+   canvas: la capa forma su propio contexto de apilamiento para no pasar por encima de controles, leyenda e interruptor. */
+.mapa-view-toggle { position:absolute; top:24px; right:24px; z-index:3; display:flex; gap:4px; padding:4px; border-radius:var(--radius-pill);
+  background:var(--nav-bg); border:1px solid var(--nav-border); box-shadow:var(--nav-shadow); }
+.mapa-view-toggle button { min-width:56px; height:40px; padding:0 16px; border-radius:var(--radius-pill); font-size:14px; font-weight:700; color:var(--nav-fg);
+  transition:background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
+.mapa-view-toggle button:hover { color:var(--text); }
+.mapa-view-toggle button[aria-pressed="true"] { background:var(--toggle-on-bg); color:var(--toggle-on-fg); box-shadow:var(--toggle-on-shadow); }
+.mapa-view-toggle button:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce) { .mapa-view-toggle button { transition:none; } }
+:root[data-motion="reduced"] .mapa-view-toggle button { transition:none; }
+.mapa-view-notice { position:absolute; top:88px; right:24px; z-index:3; max-width:320px; padding:12px 16px; border-radius:16px;
+  background:var(--surface-solid); border:1px solid var(--card-border); box-shadow:var(--card-shadow); font-size:13px; line-height:1.5; color:var(--text); }
+.mapa-view-notice:empty { display:none; }
+.mapa-3d { position:relative; overflow:hidden; overflow:clip; height:clamp(480px, calc(100vh - var(--header-h) - 80px), 760px);
+  height:clamp(480px, calc(100dvh - var(--header-h) - 80px), 760px); }
+@media (max-width:1023px) { .mapa-3d { height:clamp(600px, calc(100dvh - var(--header-h) - 80px), 720px); } }
+@media (max-width:639px) { .mapa-3d { height:520px; } }
+.mapa-3d[hidden], .mapa-3d-list[hidden] { display:none; }
+.mapa-3d-scene { position:absolute; inset:0; }
+.mapa-3d-canvas { display:block; cursor:grab; touch-action:none; user-select:none; }
+.mapa-3d-canvas.is-dragging { cursor:grabbing; }
+.mapa-3d-canvas:focus { outline:none; }
+.mapa-3d-canvas:focus-visible { outline:var(--focus-ring); outline-offset:-3px; }
+.mapa-3d-loading { position:absolute; inset:0; align-items:center; justify-content:center; font-size:14px; color:var(--text-2-page); }
+.mapa-3d-overlay { position:absolute; inset:0; z-index:1; overflow:hidden; pointer-events:none; }
+.mapa-3d .mapa-controls, .mapa-3d .mapa-legend { z-index:2; }
+.mapa-3d-label, .mapa-3d-cluster, .mapa-3d-ring, .mapa-3d-focus { position:absolute; left:0; top:0; will-change:transform; }
+.mapa-3d-label { padding:2px 8px; border-radius:var(--radius-pill); background:var(--surface-solid); border:1px solid var(--card-border);
+  font-size:12px; font-weight:700; line-height:16px; color:var(--text); white-space:nowrap; }
+.mapa-3d-cluster { padding:4px 10px; border-radius:var(--radius-pill); background:var(--surface-solid); border:1px solid var(--card-border);
+  font-size:11px; font-weight:700; line-height:14px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-2); white-space:nowrap; }
+.mapa-3d-ring { z-index:100001; border-radius:9999px; border:3px solid var(--node-ring); }
+.mapa-3d-focus { z-index:100002; border-radius:9999px; outline:var(--focus-ring); }
+.mapa-key-height { display:inline-block; height:16px; border-left:2px dotted var(--line-dashed); }
+/* Lista accesible de la vista 3D: lo mismo que el canvas, plegada bajo la escena */
+.mapa-3d-list { padding:16px 24px; border-top:1px solid var(--divider); font-size:13px; color:var(--text-mid); }
+.mapa-3d-list summary { min-height:32px; display:flex; align-items:center; gap:8px; font-weight:700; color:var(--text); cursor:pointer; }
+.mapa-3d-list summary::before { content:""; width:8px; height:8px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; rotate:-45deg; }
+.mapa-3d-list[open] summary::before { rotate:45deg; }
+.mapa-3d-list summary::-webkit-details-marker { display:none; }
+.mapa-3d-list summary:focus-visible { outline:var(--focus-ring); outline-offset:2px; border-radius:8px; }
+.mapa-3d-list table { width:100%; margin-top:16px; border-collapse:collapse; }
+.mapa-3d-list th, .mapa-3d-list td { padding:8px; text-align:left; border-bottom:1px solid var(--divider); }
+.mapa-3d-list thead th { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-2); }
+.mapa-3d-list tbody th button { font-weight:700; color:var(--text); text-align:left; border-radius:4px; }
+.mapa-3d-list tbody th button:hover { color:var(--chip-rosa-fg); }
+.mapa-3d-list tbody th button[aria-pressed="true"] { color:var(--chip-rosa-fg); text-decoration:underline; text-underline-offset:4px; }
+.mapa-3d-list tbody th button:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.mapa-3d-list .mapa-chip { height:24px; padding:0 8px; font-size:11px; }
 
 /* Panel de detalle de la habilidad seleccionada */
 .mapa-panel { display:flex; flex-direction:column; padding:32px; background:var(--surface); min-width:0; }
