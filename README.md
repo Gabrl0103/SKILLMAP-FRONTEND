@@ -29,6 +29,7 @@ La **Tendencia de Preparación** ya es real: `GET /api/goals/{id}/readiness/hist
 ### Otras vistas
 
 - **Mapa Visual**: vista accesible desde la barra superior con **todas** las habilidades del sistema (`GET /api/skills`), dibujadas como un grafo de nodos circulares sobre fondo rosa pálido. Cada categoría es un cluster ubicado en círculo alrededor del centro y sus habilidades se reparten en círculo alrededor del cluster (layout automático, sin coordenadas fijas), unidas por líneas grises. Color por estado: menta = dominada, rosa = en desarrollo, blanco punteado = por aprender. Incluye zoom +/− (0.5x–2x), arrastre con el mouse para mover el mapa, botón para centrar, leyenda y tooltip con la demanda de cada habilidad. Se carga la primera vez que se abre y no depende del objetivo seleccionado en el GoalSelector.
+  - **Vista 3D** (`js/mapa-3d.js`): el interruptor "2D / 3D" de la tarjeta muestra las mismas habilidades en 3D, con el layout 2D en el piso y la demanda como altura. Se gira arrastrando, se acerca con la rueda o pellizcando y se selecciona con clic o teclado (mismo panel y mismo selector de estado que en 2D). La 2D sigue siendo la vista por defecto; sin WebGL 2 se queda en 2D con un aviso. Detalle en DESIGN.md ("Vista 3D del Mapa").
 
 ### Navegación
 
@@ -47,8 +48,32 @@ SKILLMAP-FRONTEND/
     ├── brand.js        # Logo de Cenit (estrella de brújula): brandMark() y las marcas de index.html
     ├── skill-card.js   # Web Component <skill-card> (hoy sin uso en las vistas)
     ├── dashboard.js    # Vista Mi Ruta: fetch a la API, render y datos de ejemplo
-    └── mapa.js         # Vista Mapa Visual y navegación entre vistas
+    ├── mapa.js         # Vista Mapa Visual y navegación entre vistas
+    └── mapa-3d.js      # Vista 3D del Mapa Visual (three.js)
+vendor/
+├── tailwind.js         # Tailwind Play CDN 3.4.17, copia local
+└── three/              # three.js r170 para la vista 3D: three.module.min.js, LICENSE (MIT) y README con la versión
 ```
+
+## Dependencias locales (`vendor/`)
+
+Las librerías van copiadas en `vendor/` para que la app funcione sin internet y dentro del ejecutable (`scriptsuild-app.ps1` del backend copia `vendor` entero junto con `index.html`, `css`, `js` y `assets`). No se usa npm ni CDN en tiempo de ejecución.
+
+- **three.js 0.170.0** (`vendor/three/three.module.min.js`, MIT): un solo archivo, módulo ES autónomo. Lo importa `js/mapa-3d.js` con `import()` solo cuando se elige la vista 3D, así la 2D no lo descarga.
+
+Cómo actualizar three.js:
+
+1. Elige una versión cuyo `build/three.module.min.js` no importe otros archivos (desde r171 el build se separa en `three.core.js` + `three.module.js` y harían falta los dos).
+2. Descarga el paquete desde el registro de npm y comprueba su integridad (`dist.integrity` de `https://registry.npmjs.org/three`):
+
+   ```bash
+   curl -O https://registry.npmjs.org/three/-/three-0.170.0.tgz
+   echo "sha512-$(openssl dgst -sha512 -binary three-0.170.0.tgz | base64 -w0)"   # debe coincidir con dist.integrity
+   tar -xzf three-0.170.0.tgz package/build/three.module.min.js package/LICENSE
+   ```
+
+3. Reemplaza `vendor/three/three.module.min.js` y `vendor/three/LICENSE`, y anota versión, integridad y SHA-256 en `vendor/three/README.md`.
+4. Prueba la vista 3D (alternar 2D/3D, girar, seleccionar, cambiar de tema) y revisa la consola: three.js cambia de API entre versiones.
 
 ## Requisitos
 
