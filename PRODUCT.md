@@ -54,7 +54,35 @@ Un "GPS de carrera" (confirmado): en vez de un catálogo de cursos, Cenit traza 
 - Slogan: "Tu ruta hacia el cenit de tu carrera" / "Your route to the zenith of your career" (clave i18n `brand.slogan`).
 - Logo: estrella de brújula de 4 puntas con la punta superior más larga (el norte, el cenit), con el degradado de acción del tema (`js/brand.js`, favicon en `assets/cenit-star.svg`). Ver DESIGN.md.
 - Los mockups de `docs/mockups/` y la paleta que fijan (rosa principal, menta para "dominado") son vinculantes.
-- Voz observada en la UI: español, tuteo, metáfora de ruta/GPS ("¿Cuál es tu próximo gran salto?").
+- Voz de la UI: español, tuteo, metáfora de ruta/GPS ("¿Cuál es tu próximo gran salto?"). Reglas en "Voz de GPS".
+
+## Voz de GPS
+
+Los textos hablan como un navegador GPS amable y breve: orientan, indican el siguiente paso y celebran la llegada. Es solo texto en pantalla, no hay voz ni audio.
+
+- **Vocabulario:** ruta, rumbo, destino (el objetivo), siguiente giro (la siguiente habilidad), tramo, punto de control (una habilidad dominada), recalculando (cuando cambia el objetivo o llegan ofertas nuevas), llegaste (100 % de preparación). "Llegada estimada" solo si hay un dato real que la respalde; hoy no lo hay.
+- **Claridad primero:** primero va el dato y después la metáfora ("Llegaste a tu destino: dominas todas las habilidades clave de…"). Ninguna metáfora va sola si oculta qué pasó.
+- **Una sola expresión GPS por bloque o pantalla.** No se repite en cada botón: botones, formularios, etiquetas de campo y títulos de tarjeta quedan neutros.
+- **Sin juegos de palabras en errores ni en seguridad:** contraseña, eliminar cuenta, borrar historial y mensajes de error dicen lo que pasa, en literal.
+- **Accesibilidad:** los textos `aria-live` y `aria-label` describen la acción real ("Objetivo cambiado a… Recalculando tu ruta").
+- **Idioma:** español natural de Colombia, sin regionalismos fuertes; el inglés es idiomático, no traducción literal ("You've arrived", "Next turn"). Sin emojis ni signos de exclamación.
+- **No cambiar** las claves i18n ni los mensajes del backend que se traducen comparando el texto (`BACKEND_ERRORS_EN` en `js/i18n.js`).
+- **Títulos con degradado** (`intro.title`, `objetivo.title`, título del objetivo): no se reescriben, porque el degradado recorta las letras con cola.
+
+| Dónde | Antes | Después |
+|---|---|---|
+| Mi Ruta · tarjeta de acción | Siguiente acción | Siguiente giro |
+| Mi Ruta · preparación | Estás a solo 3 habilidades clave de alcanzar el perfil ideal para Frontend Senior. | Te faltan 3 habilidades clave para llegar a Frontend Senior. |
+| Mi Ruta · objetivo alcanzado | Dominas todas las habilidades clave de Frontend Senior. | Llegaste a tu destino: dominas todas las habilidades clave de Frontend Senior. |
+| Mi Ruta · cargando (lector de pantalla) | Cargando tu ruta… | Calculando tu ruta… |
+| Mi Ruta · aviso al cambiar objetivo | Objetivo cambiado a Backend Java. Tu progreso se conserva. | Objetivo cambiado a Backend Java. Recalculando tu ruta; tu progreso se conserva. |
+| Mi Ruta · tendencia vacía | Aún no hay suficiente historial: marca tu avance y aquí verás tu tendencia. | Aún no hay recorrido que mostrar: marca tu avance y aquí verás tu tendencia. |
+| Objetivo · subtítulo | Define tu objetivo profesional para que el GPS pueda trazar la ruta más eficiente hacia tu meta. | Elige tu destino y Cenit traza la ruta: qué habilidades te faltan y en qué orden aprenderlas. |
+| Acceso · crear cuenta | Tu progreso se guarda en este equipo, separado del de otras cuentas. | Marca tu punto de partida. Tu progreso se guarda en este equipo, separado del de otras cuentas. |
+| Analizador · sin análisis | …para ver tu porcentaje de match y las habilidades que te faltan. | …: verás tu porcentaje de match y qué habilidades te faltan para llegar a ese puesto. |
+| Perfil · nada en aprendizaje | No estás aprendiendo ninguna habilidad ahora mismo. | No estás aprendiendo ninguna habilidad ahora mismo. Mi Ruta te indica el siguiente giro. |
+
+Ya seguían esta voz y no cambian: el subtítulo de la Introducción ("traza la ruta hacia tu próximo rol"), Acceso al entrar ("seguir tu ruta donde la dejaste"), el detalle del Mapa ("Es tu siguiente giro hacia…"), Ajustes ("Recalculando…", "Tu ruta se recalculó con las ofertas nuevas") y los logros "Medio camino" y "Recta final".
 
 ## Evidence on Hand
 
