@@ -30,7 +30,7 @@ Un "GPS de carrera" (confirmado): en vez de un catálogo de cursos, Cenit traza 
 
 ## Operating Context
 
-- Vistas actuales: **Objetivo** (elegir rol), **Mi Ruta** (preparación, brechas, siguiente acción, tendencia), **Mapa Visual** (todas las habilidades como grafo por categoría), **Analizador** (pegar el texto de una oferta y ver la compatibilidad) y **Perfil**.
+- Vistas actuales: **Objetivo** (elegir rol), **Mi Ruta** (preparación, brechas, siguiente acción, tendencia), **Mapa Visual** (todas las habilidades como grafo 2D por categoría), **Analizador** (pegar el texto de una oferta y ver la compatibilidad) y **Perfil** (con "Mis Habilidades": el catálogo completo como lista filtrable donde se cambia el estado de cada habilidad). La Introducción, que se ve sin cuenta, muestra un mapa de habilidades decorativo hecho de glifos (canvas 2D, datos de ejemplo) que responde al cursor y acompaña cada slide: el mapa, la demanda de cada habilidad y un análisis de una oferta.
 - Backend: SKILLMAP-API (Spring Boot) en `http://localhost:8080`. Endpoints en uso: `GET /api/goals`, `GET /api/goals/{id}/readiness`, `GET /api/skills`. Previsto: `POST /api/analyzer/analyze`.
 - En desarrollo se sirve con un servidor estático local (Live Server de VS Code) junto al backend.
 - Uso en escritorio: Cenit es una aplicación solo de escritorio (`dist\Cenit\Cenit.exe`).
@@ -80,7 +80,9 @@ Los textos hablan como un navegador GPS amable y breve: orientan, indican el sig
 | Objetivo · subtítulo | Define tu objetivo profesional para que el GPS pueda trazar la ruta más eficiente hacia tu meta. | Elige tu destino y Cenit traza la ruta: qué habilidades te faltan y en qué orden aprenderlas. |
 | Acceso · crear cuenta | Tu progreso se guarda en este equipo, separado del de otras cuentas. | Marca tu punto de partida. Tu progreso se guarda en este equipo, separado del de otras cuentas. |
 | Analizador · sin análisis | …para ver tu porcentaje de match y las habilidades que te faltan. | …: verás tu porcentaje de match y qué habilidades te faltan para llegar a ese puesto. |
-| Perfil · nada en aprendizaje | No estás aprendiendo ninguna habilidad ahora mismo. | No estás aprendiendo ninguna habilidad ahora mismo. Mi Ruta te indica el siguiente giro. |
+| Perfil · filtro Aprendiendo vacío | No estás aprendiendo ninguna habilidad ahora mismo. | No estás aprendiendo ninguna ahora mismo. Mi Ruta te indica el siguiente giro. |
+| Perfil · filtro Dominadas vacío | Aún no tienes habilidades dominadas. | Aún no dominas ninguna. Tu primera parada está en Mi Ruta. |
+| Perfil · filtro Pendientes vacío | — | No te queda ninguna pendiente: llegaste a destino. |
 
 Ya seguían esta voz y no cambian: el subtítulo de la Introducción ("traza la ruta hacia tu próximo rol"), Acceso al entrar ("seguir tu ruta donde la dejaste"), el detalle del Mapa ("Es tu siguiente giro hacia…"), Ajustes ("Recalculando…", "Tu ruta se recalculó con las ofertas nuevas") y los logros "Medio camino" y "Recta final".
 
