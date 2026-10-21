@@ -290,6 +290,16 @@ Anillo de 160px con trazo de 18 sobre pista Niebla, en Rosa Ruta. Al aparecer, e
 ### Historial del Analizador
 Tarjeta blanca bajo el resultado, con medidas en múltiplos de 8px. Cada análisis es una fila (borde Línea de Tarjeta, radio 16px) con el % de entonces en una pastilla rosa, el título, la fecha y quién lo analizó (Gemini, IA en la nube o Caché), y una papelera a la derecha. Al abrir uno, el resultado se recalcula con el progreso actual y lo encabeza un aviso azul informativo ("Resultado recalculado con tu progreso actual"); la fila abierta queda en Tinte Rosa con borde rosa. Borrar uno o "Borrar historial" se confirma en el lugar (fondo rosa claro, "Sí, borrar" con contorno y "Cancelar"), porque no se puede deshacer. Vacío con el Motivo de Ruta; carga con la línea en bucle; error con borde rosa punteado y "Reintentar".
 
+### Ofertas para ti (Mi Ruta)
+Tarjeta blanca en la columna ancha de Mi Ruta, entre Brechas Prioritarias y Tendencia, con medidas en múltiplos de 8px. Título neutro ("Ofertas para ti") y pista "Ordenadas por encaje"; la única expresión GPS está en el estado vacío ("…encajen con tu destino"). Muestra 5 ofertas y "Ver más (n)" (botón con contorno) despliega hasta 10; el foco pasa a la primera nueva. Cada oferta es una fila (borde Línea de Tarjeta, radio 16px) como las del historial del Analizador:
+- **% de encaje** en pastilla rosa de 64×40 a la izquierda (cifras tabulares). La pastilla es `aria-hidden`; el lector oye "Encaje: n%".
+- **Título** (700, .9rem) que enlaza a la oferta original en una pestaña nueva (`target="_blank" rel="noopener noreferrer"`), con ícono de enlace externo y el aviso "(se abre en otra pestaña)" solo para lectores. Hover en azul de enlace subrayado.
+- **Meta**: empresa · "Fuente: Remotive/Arbeitnow" (en 600, siempre visible: Remotive exige citar la fuente y enlazar la original) · fecha de publicación.
+- **Chips** de 24px y radio 8px: menta (la tienes), rosa→violeta sólido `--progress-bg` con texto blanco (aprendiendo) y punteado gris (pendiente). Dos listas con nombre accesible ("Habilidades que ya tienes" / "…que te faltan"); el estado de cada faltante se lee entre paréntesis.
+- **"Analizar con IA"**: botón secundario con contorno, a la derecha. Lleva el texto al Analizador ya pegado, con un aviso azul ("Oferta pegada: …"), pero no analiza: el usuario decide cuándo gastar cuota. Mientras pide el texto dice "Abriendo…"; si falla, el error sale en rosa bajo los chips.
+
+Entrada: las filas suben 8px con fundido (320ms, escalonadas 40ms) solo al cargar o al mostrar las de "Ver más"; sin animación con movimiento reducido. Carga con la línea del Motivo de Ruta en bucle; vacío con el Motivo de Ruta; error con borde rosa punteado, `role="alert"` y "Reintentar". Se vuelve a pedir al cambiar el estado de una habilidad, el objetivo o el idioma, y nunca muestra datos simulados.
+
 ### Nodo del Mapa
 Círculos de 112px: menta sólido (dominado), rosa sólido (en desarrollo) o blanco con borde punteado (por aprender), cada uno con sombra de su color. En hover o foco suben 3px y crecen un 4%. Al pasar por la leyenda, los nodos de los otros estados bajan a .22 de opacidad.
 

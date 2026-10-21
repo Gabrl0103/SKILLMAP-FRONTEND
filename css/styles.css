@@ -964,11 +964,52 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(1) { animation-delay:40ms; }
 .ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(1) > :nth-child(2) { animation-delay:80ms; }
 .ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(2) { animation-delay:120ms; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(3) { animation-delay:160ms; }
 /* Barras una tras otra; las que aparecen con "Ver detalle de brechas" se llenan al mostrarse */
 .gap-bar span { animation:bar-fill 600ms var(--ease-out) 140ms backwards; }
 .gap-row:nth-child(2) .gap-bar span { animation-delay:200ms; }
 .gap-row:nth-child(3) .gap-bar span { animation-delay:260ms; }
 .market-demand:not([hidden]) { animation:fade-in 240ms ease-out backwards; }
+
+/* Mi Ruta: "Ofertas para ti" (js/ofertas.js). Filas como las del historial del Analizador: % en pastilla rosa, título que
+   enlaza a la oferta original, fuente visible y chips de habilidades con las dos voces (menta = la tienes, rosa→violeta =
+   aprendiendo, punteado = pendiente). Medidas en múltiplos de 8px. */
+.offer-list { display:flex; flex-direction:column; gap:8px; }
+.offer-item { display:flex; align-items:flex-start; gap:16px; padding:16px; border-radius:16px; border:1px solid var(--card-border);
+  background:var(--surface-solid); transition:border-color var(--dur) ease, transform var(--dur) var(--ease-out); }
+.offer-item:hover { border-color:var(--pink-line-hover); transform:translateY(-1px); }
+.offer-pct { display:flex; flex-shrink:0; align-items:center; justify-content:center; width:64px; height:40px; border-radius:var(--radius-pill);
+  background:var(--chip-rosa-bg); color:var(--chip-rosa-fg); font-size:.95rem; font-weight:600; font-variant-numeric:tabular-nums; }
+.offer-main { display:flex; flex:1; flex-direction:column; gap:8px; min-width:0; }
+.offer-heading { font-size:.9rem; font-weight:700; line-height:1.5; color:var(--ink); }
+.offer-title { display:inline; border-radius:8px; color:var(--ink); overflow-wrap:anywhere; text-decoration:none; }
+a.offer-title:hover { color:var(--link); text-decoration:underline; text-underline-offset:3px; }
+a.offer-title:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.offer-external { display:inline-block; margin-left:8px; vertical-align:-2px; color:var(--text-2); }
+.offer-meta { font-size:.75rem; line-height:1.6; color:var(--text-2); }
+.offer-source { font-weight:600; color:var(--text-mid); }
+.offer-chips { display:flex; flex-wrap:wrap; gap:8px; }
+.offer-chip-list { display:contents; }
+.offer-chip { display:inline-flex; align-items:center; height:24px; padding:0 8px; border-radius:8px; font-size:11px; font-weight:700; white-space:nowrap; }
+.offer-chip--mastered { background:var(--mint-soft); border:1px solid var(--mint-line); color:var(--mint-ink); }
+.offer-chip--progress { background:var(--progress-bg); color:var(--progress-fg); }
+.offer-chip--pending { border:1.5px dashed var(--line-dashed); color:var(--text-2); }
+.btn-pill.offer-analyze { flex-shrink:0; min-height:40px; padding:8px 16px; font-size:.8rem; }
+.btn-pill.offer-analyze[aria-busy="true"] { cursor:progress; }
+.btn-pill.offer-analyze[aria-busy="true"]:hover, .btn-pill.offer-analyze[aria-busy="true"]:active { transform:none; }
+.offer-error { font-size:.8rem; font-weight:600; line-height:1.5; color:var(--pink-ink); }
+.ofertas-more { margin-top:16px; padding:8px 24px; font-size:.85rem; }
+p.ofertas-state { font-size:.85rem; color:var(--muted); }
+.ofertas-error { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px 24px; padding:24px;
+  border-radius:16px; border:1px dashed var(--pink); }
+.ofertas-error .ofertas-retry { padding:8px 24px; font-size:.85rem; }
+.ruta-ofertas .ruta-card-title { border-radius:8px; }
+.ruta-ofertas .ruta-card-title:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
+@keyframes offer-in { from { opacity:0; transform:translateY(8px); } }
+.offer-item[data-enter] { animation:offer-in 320ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 9) * 40ms); }
+@media (prefers-reduced-motion: reduce) { .offer-item, .offer-item[data-enter] { animation:none; transition:none; } .offer-item:hover { transform:none; } }
+:root[data-motion="reduced"] .offer-item, :root[data-motion="reduced"] .offer-item[data-enter] { animation:none; transition:none; }
+:root[data-motion="reduced"] .offer-item:hover { transform:none; }
 
 /* Mi Ruta: skeleton de carga con la misma grilla que la vista final, para que no salte el layout */
 @keyframes skel-pulse { from { opacity:1; } to { opacity:.5; } }
