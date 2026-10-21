@@ -28,7 +28,6 @@
 
 <!-- INTRODUCCIÓN: a pantalla completa sobre la app; se muestra a quien entra sin sesión válida (js/session.js) -->
 <div id="intro" class="intro" role="dialog" aria-modal="true" aria-labelledby="intro-title" aria-describedby="intro-subtitle">
-  <canvas class="intro-bg" aria-hidden="true"></canvas>
   <header class="intro-top">
     <div class="topbar-brand">
       <span class="logo-mark" data-brand-mark="32" aria-hidden="true"></span> <!-- estrella: js/brand.js -->
@@ -37,6 +36,8 @@
         <span class="brand-slogan" data-i18n="brand.slogan">Tu ruta hacia el cenit de tu carrera</span>
       </span>
     </div>
+    <!-- Aviso para lectores de pantalla al pausar o reanudar con Espacio (js/intro.js) -->
+    <p id="intro-live" class="sr-only" aria-live="polite"></p>
     <button type="button" class="intro-skip" data-intro-close aria-keyshortcuts="Escape"><span data-i18n="intro.skip">Omitir</span> <kbd class="intro-kbd" aria-hidden="true">Esc</kbd></button>
   </header>
 
@@ -57,23 +58,10 @@
       </ul>
     </div>
 
-    <!-- Ilustración decorativa (sin datos del usuario). data-slide cambia lo que resalta: 1 estados, 2 porcentajes,
-         3 barrido de análisis -->
+    <!-- Ilustración decorativa (datos genéricos, sin API): mapa de glifos en canvas 2D (js/intro-glifos.js). data-slide
+         dice qué grupo enfatiza. Si el canvas no puede dibujar queda el fondo estático (.intro-map.is-static) -->
     <div class="intro-art" data-slide="1" aria-hidden="true">
-      <div class="intro-graph">
-        <svg class="intro-links" viewBox="0 0 460 350" width="460" height="350">
-          <path d="M337 53L413 32M337 53L92 162M337 53L372 192M92 162L32 312M92 162L202 302M202 302L372 192"/>
-          <path class="intro-route" d="M120 190Q237 310 350 205"/>
-          <circle class="intro-route-dot" cx="236" cy="254" r="6"/>
-        </svg>
-        <span class="intro-node intro-node--mastered" style="--x:337px;--y:53px;--size:92px" data-pct="78%">React</span>
-        <span class="intro-node intro-node--mastered" style="--x:413px;--y:32px;--size:60px" data-pct="41%">SQL</span>
-        <span class="intro-node intro-node--progress" style="--x:92px;--y:162px;--size:84px" data-pct="88%">TypeScript</span>
-        <span class="intro-node intro-node--pending" style="--x:372px;--y:192px;--size:78px" data-pct="71%">Next.js</span>
-        <span class="intro-node intro-node--pending" style="--x:32px;--y:312px;--size:60px" data-pct="69%">Testing</span>
-        <span class="intro-node intro-node--mastered" style="--x:202px;--y:302px;--size:72px" data-pct="54%">Docker</span>
-        <span class="intro-scan"></span>
-      </div>
+      <div class="intro-map"><canvas class="intro-map-canvas"></canvas></div>
       <ul class="intro-legend">
         <li><i class="intro-legend-dot intro-legend-dot--mastered"></i><span data-i18n="status.MASTERED">Dominada</span></li>
         <li><i class="intro-legend-dot intro-legend-dot--progress"></i><span data-i18n="status.IN_PROGRESS">En desarrollo</span></li>
@@ -82,8 +70,9 @@
     </div>
   </div>
 
-  <!-- Slides: avanzan cada 4 s (barra CSS); hover o foco pausan; clic o Enter fija una -->
-  <div class="intro-slides" role="group" aria-label="Qué puedes hacer en Cenit" data-i18n-aria-label="intro.slides">
+  <!-- Slides: avanzan cada 4 s (barra CSS); hover o foco pausan; clic o Enter fija una. Atajos sin pista visible
+       (js/intro.js): ← → cambian de slide y Espacio pausa o reanuda -->
+  <div class="intro-slides" role="group" aria-label="Qué puedes hacer en Cenit" data-i18n-aria-label="intro.slides" aria-keyshortcuts="ArrowLeft ArrowRight Space">
     <button type="button" class="intro-slide" data-slide="1" aria-pressed="true">
       <span class="intro-slide-title" data-i18n="intro.slide1.title">1 · Mapa de habilidades</span>
       <span class="intro-slide-text" data-i18n="intro.slide1.text">Mira lo que sabes y lo que te falta, en un solo mapa.</span>
@@ -416,18 +405,19 @@
 <script src="js/theme.js"></script>
 <script src="js/brand.js"></script> <!-- logo de estrella: pinta las marcas de esta página -->
 <script src="js/skill-card.js"></script>
-<script src="js/skill-status.js"></script> <!-- selector Pendiente / Aprendiendo / Dominada (Mapa y detalle) -->
+<script src="js/skill-status.js"></script> <!-- selector Pendiente / Aprendiendo / Dominada (Mapa, detalle y Perfil) -->
 <script src="js/route-motif.js"></script> <!-- Motivo de Ruta: riel, divisor y línea que se dibuja (usa skill-status.js) -->
 <script src="js/dashboard.js"></script>
 <script src="js/ofertas.js"></script> <!-- "Ofertas para ti" de Mi Ruta (la pinta dashboard.js) -->
 <script src="js/mapa.js"></script>
-<script src="js/mapa-3d.js"></script> <!-- vista 3D del Mapa: importa vendor/three/three.module.min.js (three.js r170) al elegirla -->
 <script src="js/objetivo.js"></script>
 <script src="js/perfil.js"></script>
+<script src="js/perfil-habilidades.js"></script> <!-- "Mis Habilidades" de Perfil: filtros, demanda y estado de cada habilidad -->
 <script src="js/analizador.js"></script>
 <script src="js/ajustes.js"></script>
 <script src="js/skill-faq-data.js"></script> <!-- contenido estático del detalle de habilidad (es / en) -->
 <script src="js/skill-detalle.js"></script>
+<script src="js/intro-glifos.js"></script> <!-- mapa de glifos de la Introducción (canvas 2D) -->
 <script src="js/intro.js"></script>
 <script src="js/acceso.js"></script>
 <script src="js/session.js"></script> <!-- al final: arranca la app cuando las vistas ya están listas -->
