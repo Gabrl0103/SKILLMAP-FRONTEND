@@ -1,6 +1,10 @@
 // Pantalla de Introducción: a pantalla completa sobre la app (#intro). Usa prefersReducedMotion (theme.js);
 // fetchJobStats, fetchSkills y fetchGoals (dashboard.js); showView (mapa.js); sessionUser y setAppInert (session.js);
-// openAcceso (acceso.js); tn y formatNumber (i18n.js).
+// openAcceso (acceso.js); t, tn y formatNumber (i18n.js).
+// La ilustración es el mapa de glifos de js/intro-glifos.js (canvas 2D, startIntroMap / stopIntroMap): se arma después
+// del primer pintado y se libera al salir.
+// Teclado (sin pistas en pantalla): ← y → cambian de slide, Espacio pausa o reanuda el avance y las animaciones, y
+// Esc, Empezar y Omitir cierran como siempre.
 //
 // Regla de aparición (la decide session.js al arrancar): se muestra a quien entra sin sesión válida; con sesión
 // válida no. ?intro=1 la abre igual. "Empezar", "Omitir" y Esc llevan a Acceso, o a la app si ya hay sesión.
@@ -57,6 +61,23 @@ function selectIntroSlide(n) {
     slide.setAttribute("aria-pressed", String(slide.dataset.slide === String(n)));
   });
   document.querySelector(".intro-art").dataset.slide = String(n);
+  setIntroMapSlide(n); // intro-glifos.js
+}
+
+// ← y →: slide anterior o siguiente (da la vuelta). No fija la slide: el avance automático sigue desde la nueva.
+function stepIntroSlide(delta) {
+  const current = Number(document.querySelector(".intro-art").dataset.slide);
+  selectIntroSlide(((current - 1 + delta + INTRO_SLIDES) % INTRO_SLIDES) + 1);
+}
+
+// Espacio: pausa o reanuda el avance de las slides y las animaciones del mapa. Se anuncia para lectores de pantalla.
+let introPaused = false;
+
+function setIntroPaused(paused) {
+  introPaused = paused;
+  document.getElementById("intro").classList.toggle("is-paused", paused);
+  setIntroMapPaused(paused); // intro-glifos.js
+  document.getElementById("intro-live").textContent = t(paused ? "intro.paused" : "intro.resumed");
 }
 
 function bindIntroSlides() {
@@ -75,106 +96,22 @@ function bindIntroSlides() {
   });
 }
 
-// ---------- Fondo: puntos y nodos que derivan despacio (canvas, ~30 fps) ----------
-// Se detiene con la pestaña oculta y al cerrar la intro; con animaciones reducidas se dibuja una vez, quieto.
+// ---------- Mapa de glifos ----------
+// Se arma dos cuadros después de abrir (el primero pinta la intro) y se libera entera al salir
 
-const introBg = { canvas: null, ctx: null, points: [], raf: 0, last: 0, w: 0, h: 0, dot: "", line: "" };
-const INTRO_BG_POINTS = 36, INTRO_BG_LINK = 150, INTRO_BG_FRAME = 33;
+let introMapToken = 0; // descarta un arranque pendiente si la intro se cerró antes
 
-function readIntroBgColors() {
-  const style = getComputedStyle(document.documentElement);
-  introBg.dot = style.getPropertyValue("--intro-particle").trim();
-  introBg.line = style.getPropertyValue("--intro-particle-line").trim();
-}
-
-function resizeIntroBg() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-  introBg.w = window.innerWidth;
-  introBg.h = window.innerHeight;
-  introBg.canvas.width = Math.round(introBg.w * dpr);
-  introBg.canvas.height = Math.round(introBg.h * dpr);
-  introBg.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-
-function seedIntroBg() {
-  introBg.points = Array.from({ length: INTRO_BG_POINTS }, (_, i) => ({
-    x: Math.random() * introBg.w,
-    y: Math.random() * introBg.h,
-    r: i % 6 === 0 ? 3.5 : 1.6, // uno de cada seis es un "nodo"; el resto, puntos
-    vx: (Math.random() - 0.5) * 0.25,
-    vy: (Math.random() - 0.5) * 0.25,
+function startIntroIllustration() {
+  const token = ++introMapToken;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (token !== introMapToken || !introOpen) return;
+    startIntroMap(document.querySelector(".intro-map-canvas"), Number(document.querySelector(".intro-art").dataset.slide));
   }));
 }
 
-function drawIntroBg() {
-  const { ctx, points, w, h } = introBg;
-  ctx.clearRect(0, 0, w, h);
-  // Conexiones solo desde los nodos, más tenues cuanto más lejos
-  ctx.strokeStyle = introBg.line;
-  ctx.lineWidth = 1;
-  points.forEach(a => {
-    if (a.r < 3) return;
-    points.forEach(b => {
-      if (a === b) return;
-      const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (d > INTRO_BG_LINK) return;
-      ctx.globalAlpha = 1 - d / INTRO_BG_LINK;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-      ctx.stroke();
-    });
-  });
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = introBg.dot;
-  points.forEach(p => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fill();
-  });
-}
-
-function tickIntroBg(time) {
-  introBg.raf = requestAnimationFrame(tickIntroBg);
-  if (time - introBg.last < INTRO_BG_FRAME) return;
-  introBg.last = time;
-  introBg.points.forEach(p => {
-    p.x = (p.x + p.vx + introBg.w) % introBg.w;
-    p.y = (p.y + p.vy + introBg.h) % introBg.h;
-  });
-  drawIntroBg();
-}
-
-function stopIntroBg() {
-  cancelAnimationFrame(introBg.raf);
-  introBg.raf = 0;
-}
-
-function startIntroBg() {
-  if (!introOpen) return;
-  readIntroBgColors();
-  if (prefersReducedMotion() || document.hidden) {
-    stopIntroBg();
-    drawIntroBg();
-    return;
-  }
-  if (!introBg.raf) introBg.raf = requestAnimationFrame(tickIntroBg);
-}
-
-function initIntroBg() {
-  if (introBg.canvas) return;
-  introBg.canvas = document.querySelector(".intro-bg");
-  introBg.ctx = introBg.canvas.getContext("2d");
-  resizeIntroBg();
-  seedIntroBg();
-  document.addEventListener("visibilitychange", () => (document.hidden ? stopIntroBg() : startIntroBg()));
-  window.addEventListener("resize", () => {
-    if (!introOpen) return;
-    resizeIntroBg();
-    drawIntroBg();
-  });
-  // Tema o animaciones cambiados (p. ej. llega la respuesta del backend con la intro ya abierta)
-  document.addEventListener("skillmap:settings", startIntroBg);
+function stopIntroIllustration() {
+  introMapToken++;
+  stopIntroMap();
 }
 
 // ---------- Abrir y cerrar ----------
@@ -184,8 +121,9 @@ function openIntro() {
   introOpen = true;
   setIntroState("open");
   setAppInert(true);
-  initIntroBg();
-  startIntroBg();
+  setIntroPaused(false);
+  document.getElementById("intro-live").textContent = "";
+  startIntroIllustration();
   loadIntroChips();
   document.getElementById("intro-start").focus();
 }
@@ -194,7 +132,7 @@ function openIntro() {
 function hideIntro() {
   if (!introOpen) return;
   introOpen = false;
-  stopIntroBg();
+  stopIntroIllustration();
   setIntroState(null);
 }
 
@@ -214,11 +152,26 @@ function closeIntro() {
   document.querySelector(".nav-item[data-view='dashboard']")?.focus();
 }
 
+// Atajos de la intro, sin pista visible: ← → cambian de slide, Esc cierra y Espacio pausa en cualquier parte (también
+// con el foco en Empezar, que se activa con Enter o clic).
+function handleIntroKey(e) {
+  if (!introOpen || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.key === "Escape") { closeIntro(); return; }
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    e.preventDefault();
+    stepIntroSlide(e.key === "ArrowRight" ? 1 : -1);
+    return;
+  }
+  if (e.key === " ") {
+    e.preventDefault();
+    // Con animaciones reducidas no hay nada en movimiento que pausar
+    if (!e.repeat && !prefersReducedMotion()) setIntroPaused(!introPaused);
+  }
+}
+
 function initIntro() {
   document.querySelectorAll("[data-intro-close]").forEach(button => button.addEventListener("click", closeIntro));
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape" && introOpen) closeIntro();
-  });
+  document.addEventListener("keydown", handleIntroKey);
   bindIntroSlides();
 }
 
