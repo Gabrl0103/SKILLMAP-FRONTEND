@@ -255,6 +255,7 @@ function showAnalyzerResult(kind, data) {
   analyzerView = { kind, data };
   const render = {
     empty: renderAnalyzerEmpty,
+    prefill: ({ title }) => renderNotice(t("analyzer.prefill.title", { title: escapeHtml(title) }), t("analyzer.prefill.text")),
     result: renderNewResult,
     history: renderHistoryResult,
     error: renderAnalyzerError,
@@ -574,6 +575,31 @@ function initAnalizador() {
     else runAnalysis();
   });
   initHistory();
+}
+
+// Desde "Ofertas para ti" (Mi Ruta, ofertas.js): pega el texto de la oferta, abre la vista y enfoca el campo. No analiza:
+// cada análisis gasta cuota de IA y lo decide el usuario con "Analizar Compatibilidad". El resultado que hubiera era de
+// otro texto: se reemplaza por un aviso. Si hay un análisis en curso, su resultado se pinta igual al terminar.
+function prefillAnalyzer(text, title) {
+  const textarea = document.getElementById("analizador-text");
+  textarea.value = text.slice(0, ANALYZER_MAX_CHARS);
+  updateCounter();
+  showEmptyWarning(false);
+  if (!document.getElementById("analizador-submit").disabled) {
+    analyzerRequest++; // una apertura del historial en vuelo ya no pisa el aviso
+    analyzerShown = false;
+    analyzerStale = false;
+    historyState.current = null;
+    renderHistory();
+    showAnalyzerResult("prefill", { title });
+  }
+  showView("analizador");
+  textarea.scrollTop = 0;
+  textarea.setSelectionRange(0, 0);
+  textarea.focus();
+  const live = document.getElementById("analizador-live");
+  live.textContent = "";
+  requestAnimationFrame(() => { live.textContent = t("analyzer.prefill.live", { title }); });
 }
 
 // Al abrir la vista (showView en mapa.js): un resultado calculado con el progreso anterior se retira. No se vuelve a

@@ -287,6 +287,7 @@
         <!-- Contador de caracteres (js/analizador.js); el span oculto solo avisa al llegar al límite -->
         <p id="analizador-count" class="analizador-count">0 / 8.000</p>
         <span id="analizador-count-live" class="sr-only" aria-live="polite"></span>
+        <span id="analizador-live" class="sr-only" aria-live="polite"></span> <!-- oferta pegada desde Mi Ruta (prefillAnalyzer) -->
         <p id="analizador-warning" class="analizador-warning" role="alert" hidden>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></svg>
           <span data-i18n="analyzer.emptyWarning">Pega el texto de una oferta para analizarla.</span>
@@ -418,6 +419,7 @@
 <script src="js/skill-status.js"></script> <!-- selector Pendiente / Aprendiendo / Dominada (Mapa y detalle) -->
 <script src="js/route-motif.js"></script> <!-- Motivo de Ruta: riel, divisor y línea que se dibuja (usa skill-status.js) -->
 <script src="js/dashboard.js"></script>
+<script src="js/ofertas.js"></script> <!-- "Ofertas para ti" de Mi Ruta (la pinta dashboard.js) -->
 <script src="js/mapa.js"></script>
 <script src="js/objetivo.js"></script>
 <script src="js/perfil.js"></script>

@@ -5,7 +5,7 @@ const API_BASE_URL = location.protocol === "file:" ||
 
 // Vista "Mi Ruta". Usa escapeHtml y showView definidos en mapa.js (disponibles tras DOMContentLoaded), apiJson y
 // sessionUser (session.js), SKILL_STATE_CLASS (skill-status.js), routeStopClass, routeDestination y routeDraw
-// (route-motif.js) y t, tn, statusLabel, formatNumber, errorText, tSkill y
+// (route-motif.js), renderOffersCard y loadOffers (ofertas.js) y t, tn, statusLabel, formatNumber, errorText, tSkill y
 // tGoalTitle (i18n.js). Los datos se
 // piden al iniciar sesión (loadRuta, desde session.js).
 
@@ -613,12 +613,14 @@ async function loadDashboard(goalId) {
     // Sin las habilidades del objetivo, badges y barras se calculan solo entre las brechas.
     const reference = demand.goalSkills.length ? demand.goalSkills : r.gaps;
     renderMarketDemand(demand.goalSkills, demand.catalog);
+    const goal = escapeHtml(tGoalTitle(r.goalTitle));
     container.innerHTML = `
       <div class="ruta-grid">
         <div class="ruta-col">${renderGauge(r)}${renderNextAction(r.gaps[0], r.goalTitle)}</div>
-        <div class="ruta-col">${renderBrechas(r.gaps, reference, jobStats, r.goalTitle)}${renderTrend(history)}</div>
+        <div class="ruta-col">${renderBrechas(r.gaps, reference, jobStats, r.goalTitle)}${renderOffersCard(goal)}${renderTrend(history)}</div>
       </div>`;
     bindTrendHover(container, history);
+    loadOffers(goal, goalId); // ofertas.js: llega después, sin frenar el resto de la vista
   } catch (err) {
     if (requestId !== latestRequest) return;
     container.innerHTML = renderApiError(err);
