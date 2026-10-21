@@ -77,13 +77,10 @@
   --preview-light-track:#E9E4EE; --preview-light-bar:#D95F8E;
   --preview-dark-bg:linear-gradient(135deg,#0B1020,#1C1442); --preview-dark-accent:linear-gradient(90deg,#6D28D9,#3F63D8);
   --preview-dark-track:rgba(255,255,255,.12); --preview-dark-bar:#A78BFA;
-  /* Introducción: resplandor tras el grafo, partículas del fondo, tarjeta activa, barra de progreso, barrido de
-     "análisis", sombras de nodos y la etiqueta de tecla (Esc) */
-  --intro-halo:rgba(190,58,114,.14); --intro-particle:rgba(190,58,114,.22); --intro-particle-line:rgba(63,99,216,.12);
+  /* Introducción: resplandor tras el mapa de glifos, tarjeta activa, barra de progreso y la etiqueta de tecla (Esc) */
+  --intro-halo:rgba(190,58,114,.14);
   --intro-active-border:var(--pink); --intro-active-glow:0 14px 34px rgba(190,58,114,.18);
   --slide-progress:linear-gradient(90deg,var(--chart-from),var(--chart-to));
-  --intro-scan:linear-gradient(90deg,transparent,rgba(63,99,216,.20),transparent);
-  --intro-node-mastered-shadow:0 10px 26px rgba(63,191,147,.35); --intro-node-progress-shadow:0 10px 26px rgba(190,58,114,.35);
   --kbd-border:var(--tag-border); --kbd-fg:var(--text-2);
 
   /* Comunes */
@@ -133,10 +130,8 @@
   --stats-bg:#2A2F55; --stats-shadow:0 18px 44px rgba(0,0,0,.35); --stats-muted:#A9AFC6;
   --switch-off:#7D829A; --map-link:rgba(255,255,255,.12);
   --switch-knob-shadow:0 1px 3px rgba(0,0,0,.45);
-  --intro-halo:rgba(109,40,217,.32); --intro-particle:rgba(167,139,250,.30); --intro-particle-line:rgba(167,139,250,.14);
+  --intro-halo:rgba(109,40,217,.32);
   --intro-active-border:var(--chart-to); --intro-active-glow:0 0 0 1px rgba(167,139,250,.22), 0 16px 40px rgba(109,40,217,.35);
-  --intro-scan:linear-gradient(90deg,transparent,rgba(157,187,255,.22),transparent);
-  --intro-node-mastered-shadow:0 10px 30px rgba(63,191,147,.30); --intro-node-progress-shadow:0 10px 30px rgba(109,40,217,.45);
 }
 /* Respaldo: nada debe desbordar en horizontal, pero si algo lo hace no aparece scroll lateral */
 html, body { overflow-x:hidden; overflow-x:clip; }
@@ -460,27 +455,59 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 .perfil-col { display:flex; flex-direction:column; gap:1.5rem; min-width:0; }
 @media (min-width:1024px) { .perfil-grid { grid-template-columns:minmax(0,1.7fr) minmax(0,1fr); align-items:start; } }
 
-/* Mis Habilidades */
-.perfil-group + .perfil-group { margin-top:1.75rem; }
-.perfil-group-head { display:flex; flex-wrap:wrap; justify-content:space-between; gap:.25rem 1rem; margin-bottom:.85rem; }
-.perfil-group-title, .perfil-group-metric { font-size:.66rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; }
-.perfil-group-title { color:var(--muted-2); }
-.perfil-group-metric--mastered { color:var(--mint-ink); }
-.perfil-group-metric--learning { color:var(--pink-ink); }
-.perfil-group-empty { font-size:.8rem; color:var(--muted); }
-.perfil-skills { display:grid; grid-template-columns:repeat(auto-fill,minmax(9rem,1fr)); gap:.7rem; }
-.perfil-skill { display:flex; align-items:center; gap:.65rem; min-width:0; padding:.85rem 1rem; border-radius:.9rem; font-size:.8rem; font-weight:700; color:var(--ink); }
-.perfil-skill svg { flex-shrink:0; width:1.05rem; height:1.05rem; }
-.perfil-skill span { overflow-wrap:anywhere; }
-.perfil-skill--mastered { --mapa-node-bg:var(--mint-soft); background:var(--mint-soft); border:1px solid var(--mint-line); }
-.perfil-skill--mastered svg { color:var(--mint-ink); }
-.perfil-skill--learning { --mapa-node-bg:var(--pink-tint); background:var(--pink-tint); border:1px solid var(--pink-line); }
-.perfil-skill--learning svg { color:var(--pink-ink); }
-/* Hover sutil: el chip sube 1px y su borde se intensifica en su tono (no son clicables: sin cambio de cursor) */
-.perfil-skill { transition:transform .2s var(--ease-out), border-color .2s ease, box-shadow .2s ease; }
-.perfil-skill:hover { transform:translateY(-1px); }
-.perfil-skill--mastered:hover { border-color:var(--mint-line-hover); box-shadow:0 6px 14px var(--mint-line); }
-.perfil-skill--learning:hover { border-color:var(--pink-line-hover); box-shadow:0 6px 14px var(--pink-line); }
+/* Mis Habilidades (perfil-habilidades.js): a todo el ancho bajo la cabecera. Filtros segmentados compactos con
+   contador; grupos por categoría con un título discreto y filas ligeras de 40px en tres columnas (dos o una si el ancho
+   no alcanza), separadas solo por espacio. Cada fila: nombre (abre el contexto), demanda en texto tenue e indicador de
+   estado (círculo + etiqueta) que abre el selector en un popover pequeño anclado */
+#perfil-content > #perfil-skills { margin-bottom:24px; }
+#perfil-skills-title { scroll-margin-top:calc(var(--header-h) + 56px); }
+.perfil-filters { display:inline-flex; flex-wrap:wrap; gap:4px; padding:4px; border-radius:var(--radius-pill); background:var(--surface-2);
+  border:1px solid var(--card-border); }
+.perfil-filters button { display:inline-flex; align-items:center; gap:8px; height:32px; padding:0 12px;
+  border-radius:var(--radius-pill); font-size:13px; font-weight:600; color:var(--nav-fg); cursor:pointer;
+  transition:background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
+.perfil-filters button:hover { color:var(--text); }
+.perfil-filters button[aria-pressed="true"] { background:var(--toggle-on-bg); color:var(--toggle-on-fg); box-shadow:var(--toggle-on-shadow); }
+.perfil-filters button:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.perfil-filter-count { font-size:12px; font-weight:500; color:var(--text-2); font-variant-numeric:tabular-nums; }
+.perfil-filters button[aria-pressed="true"] .perfil-filter-count { color:inherit; }
+.perfil-hab-hint { margin-top:8px; }
+.perfil-hab-group { margin-top:24px; }
+.perfil-hab-title { display:flex; align-items:baseline; gap:8px; font-size:11px; font-weight:700; line-height:16px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--text-2); }
+.perfil-hab-count { font-weight:500; letter-spacing:0; text-transform:none; }
+.perfil-hab-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(264px,1fr)); column-gap:32px; margin-top:8px; }
+.perfil-hab-row { position:relative; display:grid; grid-template-columns:minmax(0,1fr) 40px 112px; align-items:center; column-gap:8px;
+  min-height:40px; }
+.perfil-hab-name { justify-self:start; font-size:14px; font-weight:600; line-height:20px; color:var(--text); text-align:left;
+  overflow-wrap:anywhere; border-radius:8px; }
+.perfil-hab-name:hover { color:var(--chip-rosa-fg); text-decoration:underline; text-underline-offset:4px; }
+.perfil-hab-name:focus-visible { outline:var(--focus-ring); outline-offset:4px; }
+.perfil-hab-pct { font-size:12px; color:var(--text-2); text-align:right; font-variant-numeric:tabular-nums; }
+.perfil-hab-state { position:relative; justify-self:start; }
+/* Indicador de estado: círculo con el color del estado (punteado, rosa→violeta o menta) y etiqueta pequeña, sin píldora */
+.perfil-hab-chip { display:inline-flex; align-items:center; gap:8px; height:32px; padding:0 8px; border-radius:8px; font-size:12px; font-weight:600;
+  color:var(--text-mid); white-space:nowrap; cursor:pointer; transition:background-color var(--dur-fast) ease; }
+.perfil-hab-chip::before, .perfil-hab-menu .status-option::before { content:""; flex:none; width:10px; height:10px; border-radius:9999px; }
+.perfil-hab-chip--pending::before, .perfil-hab-menu .status-option--pending::before { border:1.5px dashed var(--line-dashed); }
+.perfil-hab-chip--progress::before, .perfil-hab-menu .status-option--progress::before { background:var(--progress-bg); }
+.perfil-hab-chip--mastered::before, .perfil-hab-menu .status-option--mastered::before { background:var(--mastered-bg); }
+.perfil-hab-chip:hover, .perfil-hab-chip[aria-expanded="true"] { background:var(--surface-2); color:var(--text); }
+.perfil-hab-chip:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.perfil-hab-chip[aria-busy="true"] { cursor:progress; }
+/* Popover del selector: tres opciones en columna con su círculo; la elegida en negrita con fondo suave. Flota sobre las
+   filas (no desplaza nada); .is-up lo abre hacia arriba y .is-end lo alinea con el final del indicador */
+.perfil-hab-menu { position:absolute; top:calc(100% + 4px); left:0; z-index:5; width:168px; padding:4px; border-radius:16px;
+  background:var(--surface-solid); border:1px solid var(--card-border); box-shadow:var(--card-shadow); animation:fade-in 120ms ease-out; }
+.perfil-hab-menu.is-up { top:auto; bottom:calc(100% + 4px); }
+.perfil-hab-menu.is-end { left:auto; right:0; }
+.perfil-hab-menu .status-picker { flex-direction:column; gap:0; padding:0; border:0; background:none; }
+.perfil-hab-menu .status-option, .perfil-hab-menu .status-option[aria-checked="true"] { display:flex; align-items:center; gap:8px; min-height:36px;
+  padding:0 12px; border:0; border-radius:12px; background:none; box-shadow:none; color:var(--text-mid); font-size:13px; font-weight:500; text-align:left; }
+.perfil-hab-menu .status-option:hover { background:var(--surface-2); color:var(--text); }
+.perfil-hab-menu .status-option[aria-checked="true"] { background:var(--surface-2); color:var(--text); font-weight:700; }
+.perfil-hab-error { grid-column:1 / -1; padding-bottom:8px; font-size:13px; line-height:1.5; font-weight:600; color:var(--pink-ink); }
+.perfil-hab-empty { margin-top:24px; }
 
 /* Enlaces y proyectos: lista con Editar y Borrar (44px), formulario en el lugar y confirmación de borrado. Entre
    elementos, el divisor del Motivo de Ruta (.route-sep en el <ul>) */
@@ -605,7 +632,8 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 /* Perfil: entrada. Tarjetas en orden de lectura (cabecera, habilidades, estadísticas, proyectos, enlaces, logros y
    seguridad) y las barras de estadísticas se llenan al aparecer su tarjeta. translate suelto para no chocar con
    transform. renderPerfil continúa estas animaciones al repintar con los datos de la API. */
-#perfil-content > .perfil-header, .perfil-col > *, #perfil-content > .perfil-security { animation:card-in 420ms var(--ease-out) backwards; }
+#perfil-content > .perfil-header, #perfil-content > #perfil-skills, .perfil-col > *, #perfil-content > .perfil-security { animation:card-in 420ms var(--ease-out) backwards; }
+#perfil-content > #perfil-skills { animation-delay:60ms; }
 #perfil-content > .perfil-security { animation-delay:310ms; }
 .perfil-col:nth-child(1) > :nth-child(1) { animation-delay:60ms; }
 .perfil-col:nth-child(2) > :nth-child(1) { animation-delay:110ms; }
@@ -617,11 +645,13 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 
 /* Menos movimiento: sin entrada, llenado ni elevación. Quedan color, borde y sombra. */
 @media (prefers-reduced-motion: reduce) {
-  #perfil-content > .perfil-header, .perfil-col > *, #perfil-content > .perfil-security, .perfil-stat-bar span, .perfil-cv-wrap { animation:none; }
-  .perfil-skill:hover { transform:none; }
+  #perfil-content > .perfil-header, #perfil-content > #perfil-skills, .perfil-col > *, #perfil-content > .perfil-security, .perfil-stat-bar span, .perfil-cv-wrap { animation:none; }
+  .perfil-filters button, .perfil-hab-chip { transition:none; }
+  .perfil-hab-menu { animation:none; }
 }
-:root[data-motion="reduced"] #perfil-content > .perfil-header, :root[data-motion="reduced"] .perfil-col > *, :root[data-motion="reduced"] #perfil-content > .perfil-security, :root[data-motion="reduced"] .perfil-stat-bar span, :root[data-motion="reduced"] .perfil-cv-wrap { animation:none; }
-:root[data-motion="reduced"] .perfil-skill:hover { transform:none; }
+:root[data-motion="reduced"] #perfil-content > .perfil-header, :root[data-motion="reduced"] #perfil-content > #perfil-skills, :root[data-motion="reduced"] .perfil-col > *, :root[data-motion="reduced"] #perfil-content > .perfil-security, :root[data-motion="reduced"] .perfil-stat-bar span, :root[data-motion="reduced"] .perfil-cv-wrap { animation:none; }
+:root[data-motion="reduced"] .perfil-filters button, :root[data-motion="reduced"] .perfil-hab-chip { transition:none; }
+:root[data-motion="reduced"] .perfil-hab-menu { animation:none; }
 
 /* ---------- Analizador ---------- */
 .analizador-card { padding:1.75rem; }
@@ -1126,7 +1156,6 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 /* Una columna (panel debajo): el mapa gana alto; en móvil se recorre arrastrando y la leyenda se compacta */
 @media (max-width:1023px) { .mapa-viewport { height:clamp(600px, calc(100dvh - var(--header-h) - 80px), 720px); } }
 @media (max-width:639px) { .mapa-viewport { height:520px; } }
-.mapa-viewport[hidden] { display:none; }
 .mapa-stage { position:absolute; top:0; left:0; transform-origin:0 0; }
 .mapa-stage.is-ready { transition:transform .25s ease; }
 /* Arrastre: cursor de mano, sin selección de texto ni scroll táctil, y sin transición para que siga al puntero */
@@ -1205,57 +1234,23 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
   background:var(--tooltip-bg); color:var(--tooltip-fg); font-size:12px; box-shadow:0 6px 16px rgba(16,16,20,.18); }
 .mapa-tooltip[hidden] { display:none; }
 
-/* Vista 3D (mapa-3d.js). Interruptor 2D / 3D segmentado como el del tema, arriba a la derecha de la tarjeta; el aviso
-   de WebGL va debajo. La escena tiene el mismo alto que el lienzo 2D. Nombres, categorías y anillos son HTML sobre el
-   canvas: la capa forma su propio contexto de apilamiento para no pasar por encima de controles, leyenda e interruptor. */
-.mapa-view-toggle { position:absolute; top:24px; right:24px; z-index:3; display:flex; gap:4px; padding:4px; border-radius:var(--radius-pill);
-  background:var(--nav-bg); border:1px solid var(--nav-border); box-shadow:var(--nav-shadow); }
-.mapa-view-toggle button { min-width:56px; height:40px; padding:0 16px; border-radius:var(--radius-pill); font-size:14px; font-weight:700; color:var(--nav-fg);
-  transition:background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
-.mapa-view-toggle button:hover { color:var(--text); }
-.mapa-view-toggle button[aria-pressed="true"] { background:var(--toggle-on-bg); color:var(--toggle-on-fg); box-shadow:var(--toggle-on-shadow); }
-.mapa-view-toggle button:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
-@media (prefers-reduced-motion: reduce) { .mapa-view-toggle button { transition:none; } }
-:root[data-motion="reduced"] .mapa-view-toggle button { transition:none; }
-.mapa-view-notice { position:absolute; top:88px; right:24px; z-index:3; max-width:320px; padding:12px 16px; border-radius:16px;
-  background:var(--surface-solid); border:1px solid var(--card-border); box-shadow:var(--card-shadow); font-size:13px; line-height:1.5; color:var(--text); }
-.mapa-view-notice:empty { display:none; }
-.mapa-3d { position:relative; overflow:hidden; overflow:clip; height:clamp(480px, calc(100vh - var(--header-h) - 80px), 760px);
-  height:clamp(480px, calc(100dvh - var(--header-h) - 80px), 760px); }
-@media (max-width:1023px) { .mapa-3d { height:clamp(600px, calc(100dvh - var(--header-h) - 80px), 720px); } }
-@media (max-width:639px) { .mapa-3d { height:520px; } }
-.mapa-3d[hidden], .mapa-3d-list[hidden] { display:none; }
-.mapa-3d-scene { position:absolute; inset:0; }
-.mapa-3d-canvas { display:block; cursor:grab; touch-action:none; user-select:none; }
-.mapa-3d-canvas.is-dragging { cursor:grabbing; }
-.mapa-3d-canvas:focus { outline:none; }
-.mapa-3d-canvas:focus-visible { outline:var(--focus-ring); outline-offset:-3px; }
-.mapa-3d-loading { position:absolute; inset:0; align-items:center; justify-content:center; font-size:14px; color:var(--text-2-page); }
-.mapa-3d-overlay { position:absolute; inset:0; z-index:1; overflow:hidden; pointer-events:none; }
-.mapa-3d .mapa-controls, .mapa-3d .mapa-legend { z-index:2; }
-.mapa-3d-label, .mapa-3d-cluster, .mapa-3d-ring, .mapa-3d-focus { position:absolute; left:0; top:0; will-change:transform; }
-.mapa-3d-label { padding:2px 8px; border-radius:var(--radius-pill); background:var(--surface-solid); border:1px solid var(--card-border);
-  font-size:12px; font-weight:700; line-height:16px; color:var(--text); white-space:nowrap; }
-.mapa-3d-cluster { padding:4px 10px; border-radius:var(--radius-pill); background:var(--surface-solid); border:1px solid var(--card-border);
-  font-size:11px; font-weight:700; line-height:14px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-2); white-space:nowrap; }
-.mapa-3d-ring { z-index:100001; border-radius:9999px; border:3px solid var(--node-ring); }
-.mapa-3d-focus { z-index:100002; border-radius:9999px; outline:var(--focus-ring); }
-.mapa-key-height { display:inline-block; height:16px; border-left:2px dotted var(--line-dashed); }
-/* Lista accesible de la vista 3D: lo mismo que el canvas, plegada bajo la escena */
-.mapa-3d-list { padding:16px 24px; border-top:1px solid var(--divider); font-size:13px; color:var(--text-mid); }
-.mapa-3d-list summary { min-height:32px; display:flex; align-items:center; gap:8px; font-weight:700; color:var(--text); cursor:pointer; }
-.mapa-3d-list summary::before { content:""; width:8px; height:8px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; rotate:-45deg; }
-.mapa-3d-list[open] summary::before { rotate:45deg; }
-.mapa-3d-list summary::-webkit-details-marker { display:none; }
-.mapa-3d-list summary:focus-visible { outline:var(--focus-ring); outline-offset:2px; border-radius:8px; }
-.mapa-3d-list table { width:100%; margin-top:16px; border-collapse:collapse; }
-.mapa-3d-list th, .mapa-3d-list td { padding:8px; text-align:left; border-bottom:1px solid var(--divider); }
-.mapa-3d-list thead th { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-2); }
-.mapa-3d-list tbody th button { font-weight:700; color:var(--text); text-align:left; border-radius:4px; }
-.mapa-3d-list tbody th button:hover { color:var(--chip-rosa-fg); }
-.mapa-3d-list tbody th button[aria-pressed="true"] { color:var(--chip-rosa-fg); text-decoration:underline; text-underline-offset:4px; }
-.mapa-3d-list tbody th button:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
-.mapa-3d-list .mapa-chip { height:24px; padding:0 8px; font-size:11px; }
+/* "Ver mis habilidades como lista": enlace pequeño arriba a la derecha de la tarjeta, lleva a Perfil (mapa.js) */
+.mapa-list-link { position:absolute; top:24px; right:24px; z-index:3; display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 16px;
+  border-radius:var(--radius-pill); background:var(--nav-bg); border:1px solid var(--nav-border); box-shadow:var(--nav-shadow);
+  font-size:13px; font-weight:700; color:var(--text-mid); transition:color var(--dur-fast) ease, border-color var(--dur-fast) ease; }
+.mapa-list-link:hover { color:var(--chip-rosa-fg); border-color:var(--pink-line-hover); }
+.mapa-list-link:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce) { .mapa-list-link { transition:none; } }
+:root[data-motion="reduced"] .mapa-list-link { transition:none; }
+
+/* Consejo de primera vez: una línea sobre el mapa y el panel, se cierra una sola vez (mapa.js) */
+.mapa-tip { grid-column:1 / -1; display:flex; align-items:center; gap:12px; padding:8px 8px 8px 16px; border-radius:var(--radius-pill);
+  background:var(--surface-solid); border:1px solid var(--card-border); box-shadow:var(--card-shadow); font-size:14px; line-height:24px; color:var(--text); }
+.mapa-tip-dot { flex:none; width:8px; height:8px; border-radius:9999px; background:var(--map-route); }
+.mapa-tip-text { flex:1; min-width:0; }
+.mapa-tip-close { flex:none; display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:9999px; color:var(--text-mid); }
+.mapa-tip-close:hover { background:var(--surface-2); color:var(--text); }
+.mapa-tip-close:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
 
 /* Panel de detalle de la habilidad seleccionada */
 .mapa-panel { display:flex; flex-direction:column; padding:32px; background:var(--surface); min-width:0; }
@@ -1514,10 +1509,9 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .intro { display:none; position:fixed; inset:0; z-index:50; flex-direction:column; padding:28px 40px 48px; overflow:auto; isolation:isolate;
   background:var(--bg-glow), var(--bg-base); background-color:var(--bg-solid); }
 :root[data-intro="open"] .intro { display:flex; }
-/* Fondo: rejilla de puntos fija + canvas con partículas, detrás de todo el contenido */
+/* Fondo: rejilla de puntos fija detrás de todo el contenido */
 .intro::before { content:""; position:absolute; inset:0; z-index:-2; pointer-events:none;
   background:radial-gradient(circle, var(--map-dot) 1.2px, transparent 1.7px) 0 0 / 36px 36px; }
-.intro-bg { position:fixed; inset:0; z-index:-1; width:100%; height:100%; pointer-events:none; }
 
 .intro-top { display:flex; align-items:center; justify-content:space-between; gap:24px; }
 .intro-skip { display:inline-flex; align-items:center; gap:12px; height:44px; padding:0 8px 0 20px; border-radius:var(--radius-pill); cursor:pointer;
@@ -1542,33 +1536,19 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .intro-chips li[hidden] { display:none; }
 .intro-chips strong { font-size:18px; font-weight:700; color:var(--text); font-variant-numeric:tabular-nums; }
 
-/* Grafo decorativo: nodos HTML centrados en (--x, --y) sobre un SVG con conexiones y ruta sugerida */
-.intro-art { display:flex; flex-direction:column; align-items:center; gap:40px; }
-.intro-graph { position:relative; width:460px; height:350px; }
-.intro-graph::before { content:""; position:absolute; inset:-90px -60px; z-index:-1; border-radius:50%;
+/* Mapa de glifos (js/intro-glifos.js): canvas transparente de 560×400 (sobresale 20px a cada lado de la columna) sobre un resplandor suave del tema. Recibe el
+   cursor (parallax, glifos que se encienden, disco resaltado) pero no el foco: es decorativo (aria-hidden). Si no se
+   puede dibujar (.is-static) queda solo el resplandor sobre la rejilla de puntos */
+.intro-art { display:flex; flex-direction:column; align-items:center; gap:24px; }
+.intro-map { position:relative; width:560px; height:400px; margin:0 -20px; }
+.intro-map::before { content:""; position:absolute; inset:-60px -40px; z-index:-1; border-radius:50%; pointer-events:none;
   background:radial-gradient(closest-side, var(--intro-halo), transparent); }
-.intro-links { position:absolute; inset:0; overflow:visible; }
-.intro-links path { fill:none; stroke:var(--line-dashed); stroke-opacity:.45; stroke-width:1.5; }
-.intro-links .intro-route { stroke:var(--map-route); stroke-opacity:1; stroke-width:4; stroke-dasharray:.5 9; stroke-linecap:round; }
-.intro-route-dot { fill:var(--bg-solid); stroke:var(--map-route); stroke-width:2.5; }
-.intro-node { position:absolute; left:calc(var(--x) - var(--size) / 2); top:calc(var(--y) - var(--size) / 2); width:var(--size); height:var(--size);
-  display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:13px; font-weight:700; letter-spacing:-.01em;
-  background:var(--surface-solid); border:1.5px solid var(--card-border); color:var(--text);
-  transition:background var(--dur-slow) ease, color var(--dur-slow) ease, border-color var(--dur-slow) ease, box-shadow var(--dur-slow) ease; }
-.intro-node--pending { border:2px dashed var(--line-dashed); color:var(--text-mid); }
-/* Nodos coloreados por estado en todas las slides; cada slide añade su efecto encima */
-.intro-node--mastered { background:var(--mastered-bg); border-color:transparent; color:var(--mastered-fg); box-shadow:var(--intro-node-mastered-shadow); }
-.intro-node--progress { background:var(--progress-bg); border-color:transparent; color:var(--progress-fg); box-shadow:var(--intro-node-progress-shadow); }
-/* Slide 2: porcentaje de demanda sobre cada nodo (ilustrativo, parte de la ilustración aria-hidden) */
-.intro-node::after { content:attr(data-pct); position:absolute; top:-12px; right:-14px; padding:3px 7px; border-radius:var(--radius-pill);
-  background:var(--tooltip-bg); color:var(--tooltip-fg); font-size:11px; font-weight:700; opacity:0; scale:.8;
-  transition:opacity var(--dur) ease, scale var(--dur) var(--ease-out); }
-.intro-art[data-slide="2"] .intro-node::after { opacity:1; scale:1; }
-/* Slide 3: barrido de "análisis" de izquierda a derecha sobre el grafo */
-@keyframes intro-scan { from { translate:-140px 0; } to { translate:600px 0; } }
-.intro-scan { position:absolute; top:-30px; bottom:-30px; left:0; width:120px; pointer-events:none; background:var(--intro-scan); opacity:0;
-  transition:opacity var(--dur) ease; }
-.intro-art[data-slide="3"] .intro-scan { opacity:1; animation:intro-scan 2s var(--ease-out) infinite; }
+.intro-map-canvas { display:block; width:100%; height:100%; animation:fade-in 600ms ease-out;
+  /* borde suavizado: lo que roza el borde del lienzo se desvanece en vez de cortarse */
+  -webkit-mask-image:linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent), linear-gradient(to bottom, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  -webkit-mask-composite:source-in; mask-image:linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent), linear-gradient(to bottom, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  mask-composite:intersect; }
+.intro-map.is-static .intro-map-canvas { display:none; }
 
 .intro-legend { display:flex; gap:32px; font-size:15px; color:var(--text-2-page); }
 .intro-legend li { display:inline-flex; align-items:center; gap:8px; }
@@ -1595,15 +1575,17 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .intro-slide[aria-pressed="true"] .intro-slide-bar > span { animation:intro-progress 4s linear forwards; }
 .intro-slides:hover .intro-slide-bar > span, .intro-slides:focus-within .intro-slide-bar > span { animation-play-state:paused; }
 .intro-slides.is-manual .intro-slide[aria-pressed="true"] .intro-slide-bar > span { animation:none; transform:none; }
+/* Pausa (Espacio): se detienen la barra, las animaciones del mapa (intro-glifos.js) y la estrella del logo */
+.intro.is-paused .intro-slide-bar > span, .intro.is-paused .brand-star { animation-play-state:paused; }
 
 @media (prefers-reduced-motion: reduce) {
   .intro-slide[aria-pressed="true"] .intro-slide-bar > span { animation:none; transform:none; }
-  .intro-art[data-slide="3"] .intro-scan { animation:none; translate:220px 0; }
-  .intro-node, .intro-node::after, .intro-slide, .intro-scan { transition:none; }
+  .intro-slide { transition:none; }
+  .intro-map-canvas { animation:none; }
 }
 :root[data-motion="reduced"] .intro-slide[aria-pressed="true"] .intro-slide-bar > span { animation:none; transform:none; }
-:root[data-motion="reduced"] .intro-art[data-slide="3"] .intro-scan { animation:none; translate:220px 0; }
-:root[data-motion="reduced"] .intro-node, :root[data-motion="reduced"] .intro-node::after, :root[data-motion="reduced"] .intro-slide, :root[data-motion="reduced"] .intro-scan { transition:none; }
+:root[data-motion="reduced"] .intro-slide { transition:none; }
+:root[data-motion="reduced"] .intro-map-canvas { animation:none; }
 
 /* ---------- Acceso ---------- */
 /* Iniciar sesión / Crear cuenta (js/acceso.js), a pantalla completa sobre la app y sin barra superior. Sin mockup: lenguaje

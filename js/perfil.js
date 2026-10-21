@@ -1,5 +1,5 @@
-// Vista "Perfil". Usa fetchSkills, fetchGoals, fetchReadiness, getActiveGoalId, savedGoalId, renderApiError y
-// sampleDemandNote (dashboard.js), ICONS, pickIcon y escapeHtml (mapa.js), sessionUser, apiJson, apiFetch, apiError,
+// Vista "Perfil". Usa fetchSkills, fetchGoals, fetchReadiness, getActiveGoalId, savedGoalId y renderApiError
+// (dashboard.js), escapeHtml (mapa.js), renderPerfilSkillsCard (perfil-habilidades.js: "Mis Habilidades"), sessionUser, apiJson, apiFetch, apiError,
 // friendlyError, renderUserMenu y endSession (session.js), routeDivider y routeDraw (route-motif.js) y t, tSkill, tGoalTitle y getLanguage (i18n.js).
 // Todo es real: nombre, titular y correo (sesión), habilidades dominadas y en desarrollo (/api/skills), objetivo activo
 // con su preparación (/api/goals/{id}/readiness) y enlaces y proyectos (/api/profile/links y /api/profile/projects).
@@ -146,55 +146,9 @@ function renderPerfilHeader() {
   return header;
 }
 
-// ---------- Mis Habilidades ----------
-
-function averageDemand(skills) {
-  return Math.round(skills.reduce((sum, s) => sum + s.demandPercentage, 0) / skills.length);
-}
-
-function renderSkillGroup(title, skills, tone, emptyText) {
-  const chips = skills.map(s => `
-    <li class="perfil-skill perfil-skill--${tone}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-        aria-hidden="true">${ICONS[pickIcon(s.name, s.category)]}</svg>
-      <span>${escapeHtml(tSkill(s.name))}</span>
-    </li>`).join("");
-  // La API no mide el nivel de dominio: a la derecha va la demanda media real del grupo.
-  const metric = skills.length
-    ? `<span class="perfil-group-metric perfil-group-metric--${tone}" title="${t("perfil.groupMetricTitle")}">${t("perfil.groupMetric", { n: averageDemand(skills) })}</span>`
-    : "";
-  return `
-    <section class="perfil-group">
-      <header class="perfil-group-head">
-        <h3 class="perfil-group-title">${title} (${skills.length})</h3>
-        ${metric}
-      </header>
-      ${skills.length ? `<ul class="perfil-skills">${chips}</ul>` : `<p class="perfil-group-empty">${emptyText}</p>`}
-    </section>`;
-}
+// ---------- Mis Habilidades (la tarjeta la arma perfil-habilidades.js) ----------
 
 const skillsWithStatus = (skillsState, status) => skillsState?.skills?.filter(s => s.status === status) || [];
-
-function renderSkillsCard(skillsState) {
-  let body;
-  if (skillsState?.error) body = renderApiError(skillsState.error);
-  else if (!skillsState) body = `<p class="route-state text-sm text-muted">${routeDraw({ loop: true })}${t("perfil.loadingSkills")}</p>`;
-  else {
-    const mastered = skillsWithStatus(skillsState, "MASTERED");
-    const learning = skillsWithStatus(skillsState, "IN_PROGRESS");
-    const note = mastered.length || learning.length ? sampleDemandNote("perfil-sample-note", [...mastered, ...learning]) : "";
-    body = renderSkillGroup(t("perfil.mastered"), mastered, "mastered", t("perfil.masteredEmpty"))
-      + renderSkillGroup(t("perfil.learning"), learning, "learning", t("perfil.learningEmpty"))
-      // "Demanda media" se marca como ejemplo mientras alguna habilidad tenga demanda sembrada (demandIsSample), tras un
-      // divisor del Motivo de Ruta.
-      + (note ? routeDivider() + note : "");
-  }
-  return `
-    <article id="perfil-skills" class="perfil-card">
-      <h2 class="perfil-card-title">${t("perfil.skills")}</h2>
-      ${body}
-    </article>`;
-}
 
 // ---------- Estadísticas y logros ----------
 
@@ -626,13 +580,15 @@ const perfilEntrance = el => el.getAnimations({ subtree: true })
 function renderPerfil() {
   const grid = perfilBlock(`
     <div class="perfil-grid">
-      <div class="perfil-col">${renderSkillsCard(perfilState.skills)}</div>
+      <div class="perfil-col"></div>
       <div class="perfil-col">${renderStatsCard(perfilState.skills, perfilState.goal)}</div>
     </div>`);
   const [main, side] = grid.children;
   main.append(renderItemsCard("project"), perfilBlock(renderAchievementsCard()));
   side.append(renderItemsCard("link"));
-  document.getElementById("perfil-content").replaceChildren(renderPerfilHeader(), grid, perfilBlock(renderSecurityCard()));
+  // "Mis Habilidades" va a todo el ancho bajo la cabecera: sus filas caben en tres columnas
+  document.getElementById("perfil-content").replaceChildren(renderPerfilHeader(), perfilBlock(renderPerfilSkillsCard(perfilState.skills)),
+    grid, perfilBlock(renderSecurityCard()));
 }
 
 // Reemplaza un bloque ya pintado sin reiniciar la entrada: sigue desde donde iba o, si ya había terminado, aparece
@@ -691,7 +647,21 @@ async function loadPerfilData() {
   if (request !== perfilState.request) return; // cambió el usuario o su progreso mientras cargaba
   perfilState.skills = skills;
   perfilState.goal = goal;
-  swapPerfilBlock("perfil-skills", renderSkillsCard(skills));
+  // La tarjeta se reemplaza: si el foco estaba en su título (llegada desde el Mapa), vuelve a él
+  const titleFocused = document.activeElement?.id === "perfil-skills-title";
+  swapPerfilBlock("perfil-skills", renderPerfilSkillsCard(skills));
+  if (titleFocused) document.getElementById("perfil-skills-title")?.focus({ preventScroll: true });
+  refreshPerfilProgress();
+}
+
+// Estado cambiado desde la propia lista: las habilidades ya están al día; se recalculan las estadísticas y los logros
+// y se vuelve a pedir la preparación del objetivo activo (depende de las dominadas)
+async function refreshPerfilGoal() {
+  refreshPerfilProgress();
+  const request = ++perfilState.request;
+  const goal = await fetchActiveReadiness().then(readiness => ({ readiness }), error => ({ error }));
+  if (request !== perfilState.request) return;
+  perfilState.goal = goal;
   refreshPerfilProgress();
 }
 
@@ -950,7 +920,11 @@ document.addEventListener("skillmap:user", () => {
   if (perfilState.cv) setCvOpen(false);
   document.getElementById("perfil-content").replaceChildren();
 });
-document.addEventListener("skillmap:progress", () => {
+document.addEventListener("skillmap:progress", e => {
+  if (e.detail?.source === "perfil") {
+    refreshPerfilGoal();
+    return;
+  }
   resetPerfilSkills();
   if (!document.getElementById("view-perfil").classList.contains("hidden")) loadPerfilData(); // abierto mientras se guardaba
 });

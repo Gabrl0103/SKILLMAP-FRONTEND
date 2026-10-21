@@ -3,7 +3,8 @@
 // Usa renderApiError, demandIsSample, sampleTag, jobStatsText, fetchJobStats, fetchGoals, fetchReadiness y
 // getActiveGoalId (dashboard.js), currentActiveGoalId (objetivo.js), renderStatusPicker, bindStatusPicker,
 // focusStatusPicker y saveSkillStatus (skill-status.js), routeDraw (route-motif.js), pointBrandNeedle (brand.js), friendlyError (session.js) y t, statusLabel, tSkill, tCategory,
-// tGoalTitle y getLanguage (i18n.js). La vista 3D (interruptor 2D / 3D, escena y lista accesible) vive en mapa-3d.js.
+// tGoalTitle y getLanguage (i18n.js). Un consejo de primera vez explica el mapa y "Ver mis habilidades como lista"
+// lleva a la lista de Perfil (openPerfilSkills, perfil-habilidades.js).
 // También define la navegación entre vistas (showView) y el indicador del nav de la barra superior, con su estela.
 
 const NODE_SIZE = 96;       // diámetro de cada nodo (px)
@@ -17,65 +18,6 @@ const ZOOM_STEP = 0.1, ZOOM_MIN = 0.5, ZOOM_MAX = 2;
 const FIT_MARGIN = 24;      // margen entre el grafo ajustado y los bordes / controles
 const FIT_MIN = 0.6, FIT_MAX = 1.25;  // límites del zoom automático para que los nombres sigan legibles
 const WHEEL_SPEED = 0.0015; // sensibilidad de la rueda (factor exponencial por px de delta)
-
-// Íconos inline (viewBox 24x24, trazo con currentColor). Sin librerías externas. Los usa Perfil; los nodos del mapa
-// muestran solo el nombre, como el mockup.
-const ICONS = {
-  js: `<rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" stroke="none"/><text x="18.5" y="18.5" text-anchor="end" font-size="8.5" font-weight="800" fill="var(--mapa-node-bg)" stroke="none" font-family="inherit">JS</text>`,
-  atom: `<circle cx="12" cy="12" r="1.6" fill="currentColor"/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>`,
-  bolt: `<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" fill="currentColor"/>`,
-  gauge: `<circle cx="12" cy="12" r="9.5" fill="currentColor" stroke="none"/><path d="M12 12l4-4" stroke="var(--mapa-node-bg)" stroke-width="2.2"/><path d="M6.5 13.5a5.5 5.5 0 0 1 11 0" stroke="var(--mapa-node-bg)" stroke-width="1.6" stroke-dasharray="1.5 2"/>`,
-  puzzle: `<path d="M9 3.5a2 2 0 0 1 4 0V6h4a1 1 0 0 1 1 1v4h-1.5a2 2 0 1 0 0 4H18v4a1 1 0 0 1-1 1h-4v-1.5a2 2 0 1 0-4 0V20H5a1 1 0 0 1-1-1v-4h1.5a2 2 0 1 0 0-4H4V7a1 1 0 0 1 1-1h4V3.5z" fill="currentColor" stroke="none"/>`,
-  server: `<rect x="3.5" y="4" width="17" height="7" rx="1.8"/><rect x="3.5" y="13" width="17" height="7" rx="1.8"/><path d="M7 7.5h.01M7 16.5h.01" stroke-width="2.6"/>`,
-  database: `<ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8"/>`,
-  box: `<path d="M12 2.8 20.5 7.5v9L12 21.2 3.5 16.5v-9L12 2.8z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9.2"/>`,
-  cloud: `<path d="M7 18.5a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.5 1.6A3.8 3.8 0 0 1 17.5 18.5H7z"/>`,
-  branch: `<circle cx="6" cy="5.5" r="2.2"/><circle cx="6" cy="18.5" r="2.2"/><circle cx="18" cy="8" r="2.2"/><path d="M6 7.7v8.6M18 10.2c0 4-6 3.5-11 6.5"/>`,
-  flask: `<path d="M9.5 3h5M10 3v6l-5.2 9.2A1.9 1.9 0 0 0 6.4 21h11.2a1.9 1.9 0 0 0 1.6-2.8L14 9V3"/><path d="M7.5 15h9"/>`,
-  shield: `<path d="M12 2.8 19.5 6v5.5c0 4.6-3.2 8.3-7.5 9.7-4.3-1.4-7.5-5.1-7.5-9.7V6L12 2.8z"/><path d="m8.8 12 2.2 2.2 4.2-4.4"/>`,
-  palette: `<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.5-1.9-.4-1.3.5-2.6 1.9-2.6H17a4 4 0 0 0 4-4C21 7 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="7" r="1.2" fill="currentColor"/><circle cx="15" cy="7.5" r="1.2" fill="currentColor"/>`,
-  code: `<path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 4.5l-3 15"/>`,
-  users: `<circle cx="9" cy="8" r="3.2"/><path d="M3 19.5c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><path d="M16 5.2a3 3 0 0 1 0 5.6M17.5 14.8c2 .6 3.2 2.2 3.5 4.7"/>`,
-  layers: `<path d="M12 3 21 8l-9 5-9-5 9-5z"/><path d="m3 12.5 9 5 9-5M3 16.5l9 5 9-5"/>`,
-};
-
-// Palabra clave en el nombre de la habilidad → ícono. El orden importa (lo más específico primero).
-const SKILL_ICON_RULES = [
-  [/react/, "atom"],
-  [/next|vite|webpack|svelte|astro/, "bolt"],
-  [/performance|vitals|optimiz|rendimiento/, "gauge"],
-  [/micro|m[oó]dul|arquitect|architecture/, "puzzle"],
-  [/node|express|spring|nest|django|flask|api|rest|graphql|server|servidor/, "server"],
-  [/typescript|javascript|\bjs\b|\bts\b/, "js"],
-  [/sql|postgres|mysql|mongo|redis|database|base de datos/, "database"],
-  [/docker|kubernetes|k8s|contenedor|container/, "box"],
-  [/aws|azure|gcp|cloud|nube/, "cloud"],
-  [/git|ci\/cd|devops|pipeline/, "branch"],
-  [/test|jest|cypress|junit|playwright|\bqa\b/, "flask"],
-  [/secur|segur|auth|jwt/, "shield"],
-  [/css|tailwind|sass|html|figma|\bui\b|\bux\b|diseñ|design/, "palette"],
-  [/java|kotlin|python|golang|rust|c#|php|ruby/, "code"],
-];
-
-// Ícono genérico por categoría cuando el nombre no coincide con ninguna regla.
-const CATEGORY_ICON_RULES = [
-  [/front/, "code"],
-  [/back/, "server"],
-  [/dat|base/, "database"],
-  [/devops|cloud|infra|nube/, "cloud"],
-  [/test|calidad|qa/, "flask"],
-  [/segur|secur/, "shield"],
-  [/diseñ|design|ui|ux/, "palette"],
-  [/soft|bland|equipo|team|lider|lead/, "users"],
-];
-
-function pickIcon(name, category) {
-  const n = name.toLowerCase(), c = (category || "").toLowerCase();
-  const byName = SKILL_ICON_RULES.find(([re]) => re.test(n));
-  if (byName) return byName[1];
-  const byCategory = CATEGORY_ICON_RULES.find(([re]) => re.test(c));
-  return byCategory ? byCategory[1] : "layers";
-}
 
 function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
@@ -254,6 +196,7 @@ function renderMapa(skills) {
   // La ruta sugerida (polyline) la llena updateMapaRoute cuando llega el objetivo activo.
   return `
     <div class="mapa-layout">
+      ${renderMapaTip()}
       <div class="mapa-card">
         <div class="mapa-viewport" id="mapa-viewport">
           <div class="mapa-stage" id="mapa-stage" style="width:${width}px; height:${height}px;"
@@ -286,8 +229,10 @@ function renderMapa(skills) {
 
           <div class="mapa-tooltip" id="mapa-tooltip" aria-hidden="true" hidden></div>
         </div>
-        ${renderMapa3dShell()}
-        ${renderMapaViewToggle()}
+        <button type="button" class="mapa-list-link" data-goto-list>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></svg>
+          ${t("mapa.toList")}
+        </button>
       </div>
 
       <aside class="mapa-panel" id="mapa-panel" aria-label="${t("mapa.panel")}">${renderMapaPanelEmpty()}</aside>
@@ -371,19 +316,14 @@ function syncMapaPressed(id) {
   document.querySelectorAll("#mapa-stage .mapa-node").forEach(n => n.setAttribute("aria-pressed", String(Number(n.dataset.skillId) === id)));
 }
 
-// Selección compartida por el mapa 2D, el 3D y la lista de la vista 3D; null la quita (Esc en el 3D)
-function selectMapaSkill(id) {
+function selectMapaNode(node) {
+  const id = Number(node.dataset.skillId);
   if (id === mapaSelectedId) return;
   mapaSelectedId = id;
   syncMapaPressed(id);
-  syncMapa3dSelection(); // mapa-3d.js
   refreshMapaPanel();
   const skill = mapaSkills.find(s => s.id === id);
-  document.getElementById("mapa-live").textContent = skill ? t("mapa.selected", { name: tSkill(skill.name) }) : t("mapa.deselected");
-}
-
-function selectMapaNode(node) {
-  selectMapaSkill(Number(node.dataset.skillId));
+  if (skill) document.getElementById("mapa-live").textContent = t("mapa.selected", { name: tSkill(skill.name) });
 }
 
 // El nodo cambia de color y de etiqueta sin redibujar el mapa (se conservan zoom, posición y foco)
@@ -393,7 +333,6 @@ function updateMapaNode(skill) {
   Object.values(STATUS_CLASS).forEach(status => node.classList.remove(`mapa-node--${status}`));
   node.classList.add(`mapa-node--${STATUS_CLASS[skill.status] || "pending"}`);
   node.setAttribute("aria-label", mapaNodeLabel(skill, node.dataset.category));
-  updateMapa3dSkill(skill); // mapa-3d.js
 }
 
 // Nodo y panel cambian al instante; si el backend falla, vuelven al estado anterior y el panel muestra el error.
@@ -450,12 +389,11 @@ function drawMapaRoute() {
   const half = NODE_SIZE / 2;
   const byId = new Map([...document.querySelectorAll("#mapa-stage .mapa-node")].map(n => [Number(n.dataset.skillId), n]));
   byId.forEach((node, id) => node.classList.toggle("is-route", mapaRoute.gapIds.includes(id)));
-  // Posición del estilo en línea, no offsetLeft/Top: con la vista 3D activa el lienzo 2D está oculto y medirían 0
+  // Posición del estilo en línea, no offsetLeft/Top: si la ruta llega con la vista oculta medirían 0
   const points = mapaRoute.gapIds.map(id => byId.get(id)).filter(Boolean)
     .map(n => `${parseFloat(n.style.left) + half},${parseFloat(n.style.top) + half}`);
   route.setAttribute("points", points.length > 1 ? points.join(" ") : "");
   document.getElementById("mapa-legend-route").hidden = points.length < 2;
-  updateMapa3dRoute(); // mapa-3d.js
 }
 
 // Al abrir la vista: si el objetivo activo cambió desde la última vez, se recalcula la ruta y el texto del panel.
@@ -738,10 +676,12 @@ function bindMapaEvents() {
 
 window.addEventListener("resize", applyMapaTransform);
 
-// Botones del panel (se redibuja con cada selección): un solo listener en el contenedor
+// Botones del panel (se redibuja con cada selección), consejo y enlace a la lista: un solo listener en el contenedor
 document.getElementById("mapa-content").addEventListener("click", e => {
   const context = e.target.closest("#mapa-panel [data-context]");
   if (context) openSkillDetail(Number(context.dataset.context), context); // skill-detalle.js
+  if (e.target.closest("[data-tip-close]")) dismissMapaTip();
+  if (e.target.closest("[data-goto-list]")) openPerfilSkills(); // perfil-habilidades.js
 });
 bindStatusPicker(document.getElementById("mapa-content"), setMapaSkillStatus);
 
@@ -761,7 +701,6 @@ let mapaRequest = null; // se reutiliza para no volver a pedir /api/skills en ca
 
 // Cambio de usuario: el mapa se vuelve a pedir y dibujar la próxima vez que se abra
 document.addEventListener("skillmap:user", () => {
-  closeMapa3d();
   mapaRequest = null;
   mapaSkills = [];
   mapaSelectedId = null;
@@ -777,7 +716,6 @@ document.addEventListener("skillmap:user", () => {
 function loadMapa() {
   if (mapaRequest) return mapaRequest;
   const container = document.getElementById("mapa-content");
-  closeMapa3d(); // la escena 3D vive dentro del contenido que se reemplaza
   container.innerHTML = `<p class="route-state text-sm text-muted-page">${routeDraw({ loop: true })}${t("mapa.loading")}</p>`;
 
   mapaRequest = (async () => {
@@ -790,13 +728,40 @@ function loadMapa() {
       mapaNeedsFit = true;
       bindMapaEvents();
       applyMapaTransform();
-      applyMapaViewMode(); // mapa-3d.js: vuelve a 3D si se eligió en esta sesión
     } catch (err) {
       mapaRequest = null; // si falla, se reintenta la próxima vez que se abra la vista
       container.innerHTML = renderApiError(err);
     }
   })();
   return mapaRequest;
+}
+
+// ---------- Consejo de primera vez ----------
+
+const MAPA_TIP_KEY = "skillmap.mapa.tip"; // "visto" cuando se cerró el consejo
+
+function mapaTipSeen() {
+  try { return localStorage.getItem(MAPA_TIP_KEY) === "visto"; } catch { return false; }
+}
+
+// Una línea sobre el mapa y el panel; se cierra una sola vez (localStorage)
+function renderMapaTip() {
+  if (mapaTipSeen()) return "";
+  return `
+    <p class="mapa-tip" id="mapa-tip">
+      <span class="mapa-tip-dot" aria-hidden="true"></span>
+      <span class="mapa-tip-text">${t("mapa.tip")}</span>
+      <button type="button" class="mapa-tip-close" data-tip-close aria-label="${t("mapa.tip.close")}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </p>`;
+}
+
+// Se cierra para siempre; el foco pasa al nodo activo del mapa (lo que el consejo invita a tocar)
+function dismissMapaTip() {
+  try { localStorage.setItem(MAPA_TIP_KEY, "visto"); } catch { /* sin storage: vuelve a salir la próxima vez */ }
+  document.getElementById("mapa-tip")?.remove();
+  document.querySelector('#mapa-stage .mapa-node[tabindex="0"]')?.focus();
 }
 
 // ---------- Navegación ----------
@@ -853,9 +818,7 @@ function showView(view) {
   });
   positionNavIndicator();
   // Si la carga terminó mientras la vista estaba oculta, se centra al volver a mostrarla; la ruta sigue al objetivo activo.
-  // Fuera del Mapa la escena 3D no se queda en memoria: se libera y se vuelve a armar al regresar.
-  if (view !== "mapa") closeMapa3d();
-  if (view === "mapa") loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); applyMapaViewMode(); });
+  if (view === "mapa") loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); });
   if (view === "dashboard") openRuta();        // definido en dashboard.js
   if (view === "analizador") openAnalizador(); // definido en analizador.js
   if (view === "objetivo") openObjetivo(); // definido en objetivo.js
@@ -882,7 +845,7 @@ document.addEventListener("skillmap:language", () => {
   mapaRequest = null;
   mapaRoute.goalId = null;
   if (!document.getElementById("view-mapa").classList.contains("hidden")) {
-    loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); applyMapaViewMode(); });
+    loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); });
   }
 });
 if ("ResizeObserver" in window) {
