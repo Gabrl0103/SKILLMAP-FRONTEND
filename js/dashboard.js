@@ -153,7 +153,7 @@ function renderBrechas(gaps, reference, jobStats, goalTitle) {
   return `
     <article id="brechas-card" class="ruta-card ruta-brechas" tabindex="-1">
       <header class="ruta-card-header">
-        <h2 class="ruta-card-title">${t("ruta.gaps.title")}</h2>
+        <h2 id="brechas-title" class="ruta-card-title" tabindex="-1">${t("ruta.gaps.title")}</h2>
         <span class="ruta-card-hint">${t("ruta.gaps.hint")}</span>
       </header>
       ${body}
@@ -365,13 +365,47 @@ function renderApiError(err) {
     </div>`;
 }
 
+function revealExtraGaps(card) {
+  card.querySelectorAll(".gap-row[data-extra]").forEach(row => { row.hidden = false; });
+}
+
 // "Ver detalle de brechas": muestra las brechas ocultas y lleva la vista a la tarjeta.
 function showAllGaps() {
   const card = document.getElementById("brechas-card");
   if (!card) return;
-  card.querySelectorAll(".gap-row[data-extra]").forEach(row => { row.hidden = false; });
+  revealExtraGaps(card);
   card.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
   card.focus({ preventScroll: true });
+}
+
+// ---------- Foco en las brechas ----------
+// Recargar Mi Ruta borra las filas: la habilidad y su puesto se anotan antes y el foco se mueve al terminar el render.
+
+let gapFocus = null; // { skillId, index } pendiente
+
+function gapLinks() {
+  return [...document.querySelectorAll("#brechas-card [data-context]")];
+}
+
+function keepGapFocus(skillId) {
+  gapFocus = { skillId, index: gapLinks().findIndex(link => Number(link.dataset.context) === skillId) };
+}
+
+// Al enlace de la habilidad; si ya no está (quedó dominada), a la brecha que ocupó su lugar o, si era la última, al título
+// de la tarjeta. Espera a que termine la carga y no hace nada si el usuario ya siguió a otra vista u otro control (el
+// botón "Volver" recién oculto todavía puede figurar como elemento activo).
+function applyGapFocus() {
+  if (!gapFocus || document.querySelector("#app-content .ruta-skeleton")) return;
+  const { skillId, index } = gapFocus;
+  gapFocus = null;
+  const active = document.activeElement;
+  const moved = active && active !== document.body && !active.closest("#view-skill");
+  if (moved || document.getElementById("view-dashboard").classList.contains("hidden")) return;
+  const links = gapLinks();
+  const target = links.find(link => Number(link.dataset.context) === skillId) || links[index]
+    || document.getElementById("brechas-title") || document.querySelector(".nav-item[data-view='dashboard']");
+  if (target.closest("[data-extra]")) revealExtraGaps(document.getElementById("brechas-card"));
+  target.focus();
 }
 
 // Objetivo elegido: lo guarda el backend por usuario (goalId de /api/auth/me). Antes vivía en el navegador; esa copia
@@ -598,6 +632,8 @@ async function loadDashboard(goalId) {
   const container = document.getElementById("app-content");
   const requestId = ++latestRequest;
   rutaStale = false;
+  const focusedGap = document.activeElement?.closest("#brechas-card [data-context]");
+  if (focusedGap) keepGapFocus(Number(focusedGap.dataset.context));
   document.getElementById("market-demand").hidden = true;
   container.innerHTML = renderRutaSkeleton();
   try {
@@ -625,6 +661,7 @@ async function loadDashboard(goalId) {
     if (requestId !== latestRequest) return;
     container.innerHTML = renderApiError(err);
   }
+  applyGapFocus();
 }
 
 let rutaStale = false; // el progreso cambió (habilidad marcada en el Mapa): se recarga al volver a Mi Ruta
@@ -679,6 +716,7 @@ document.addEventListener("skillmap:user", () => {
   readinessRequests.clear();
   latestRequest++;
   rutaStale = false;
+  gapFocus = null;
   activeGoalId = null;
   closeGoalList({ focusButton: false });
   goalPicker.list().innerHTML = "";

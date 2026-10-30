@@ -647,10 +647,13 @@ async function loadPerfilData() {
   if (request !== perfilState.request) return; // cambió el usuario o su progreso mientras cargaba
   perfilState.skills = skills;
   perfilState.goal = goal;
-  // La tarjeta se reemplaza: si el foco estaba en su título (llegada desde el Mapa), vuelve a él
+  // La tarjeta se reemplaza: si el foco estaba en su título (llegada desde el Mapa) o en una fila (vuelta del detalle de
+  // habilidad), vuelve ahí
   const titleFocused = document.activeElement?.id === "perfil-skills-title";
+  const focus = perfilSkillsFocus();
   swapPerfilBlock("perfil-skills", renderPerfilSkillsCard(skills));
   if (titleFocused) document.getElementById("perfil-skills-title")?.focus({ preventScroll: true });
+  else if (focus) focusPerfilSkills(focus);
   refreshPerfilProgress();
 }
 

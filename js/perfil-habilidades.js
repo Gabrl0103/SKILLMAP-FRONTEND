@@ -117,14 +117,18 @@ function refreshPerfilSkillsList(focus = perfilSkillsFocus()) {
   body.innerHTML = renderPerfilSkillGroups(skills);
   perfilHab.painting = false;
   placePerfilStatusMenu();
-  if (!focus) return;
+  if (focus) focusPerfilSkills(focus);
+}
+
+// Tras repintar. Si el filtro ya no muestra la fila (p. ej. quedó dominada con "Pendientes"), al título de la tarjeta
+function focusPerfilSkills(focus) {
   if (focus.filter) {
     document.querySelector(`#perfil-hab-filters [data-skill-filter="${focus.filter}"]`)?.focus({ preventScroll: true });
     return;
   }
-  const row = body.querySelector(`[data-skill-row="${focus.id}"]`);
-  if (!row) return;
-  if (focus.kind === "menu") focusStatusPicker(row);
+  const row = document.querySelector(`[data-skill-row="${focus.id}"]`);
+  if (!row) document.getElementById("perfil-skills-title")?.focus();
+  else if (focus.kind === "menu" && perfilHab.open !== null) focusStatusPicker(row);
   else row.querySelector(focus.kind === "name" ? "[data-context]" : "[data-status-chip]")?.focus({ preventScroll: true });
 }
 
