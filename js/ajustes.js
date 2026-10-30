@@ -206,15 +206,11 @@ function renderJobStats(stats) {
   const sources = stats.sources.length
     ? stats.sources.map(s => `<li><strong>${escapeHtml(s.name)}</strong> · ${offersText(s.jobs)}${sourceMeta(s)}</li>`).join("")
     : `<li>${t("ajustes.noSources")}</li>`;
-  const updated = stats.lastSyncAt
-    ? t("ajustes.lastUpdate", { date: `<time datetime="${escapeHtml(stats.lastSyncAt)}">${formatSyncDate(stats.lastSyncAt)}</time>` })
-    : t("ajustes.neverUpdated");
   return `
     <p class="ajustes-total"><span class="ajustes-total-num">${formatNumber(stats.totalJobs)}</span>
       <span class="ajustes-total-label">${tn("ajustes.realOffers", stats.totalJobs)}</span></p>
     <div class="ajustes-sources">
       <ul>${sources}</ul>
-      <p class="ajustes-updated">${updated}</p>
     </div>`;
 }
 

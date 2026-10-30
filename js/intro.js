@@ -3,8 +3,8 @@
 // openAcceso (acceso.js); t, tn y formatNumber (i18n.js).
 // La ilustración es el mapa de glifos de js/intro-glifos.js (canvas 2D, startIntroMap / stopIntroMap): se arma después
 // del primer pintado y se libera al salir.
-// Teclado (sin pistas en pantalla): ← y → cambian de slide, Espacio pausa o reanuda el avance y las animaciones, y
-// Esc, Empezar y Omitir cierran como siempre.
+// Teclado (sin pistas en pantalla): ← y → cambian de slide, Espacio pausa o reanuda el avance y las animaciones (con el
+// foco en un control, lo activa) y Esc, Empezar y Omitir cierran como siempre.
 //
 // Regla de aparición (la decide session.js al arrancar): se muestra a quien entra sin sesión válida; con sesión
 // válida no. ?intro=1 la abre igual. "Empezar", "Omitir" y Esc llevan a Acceso, o a la app si ya hay sesión.
@@ -152,8 +152,9 @@ function closeIntro() {
   document.querySelector(".nav-item[data-view='dashboard']")?.focus();
 }
 
-// Atajos de la intro, sin pista visible: ← → cambian de slide, Esc cierra y Espacio pausa en cualquier parte (también
-// con el foco en Empezar, que se activa con Enter o clic).
+const INTRO_CONTROLS = "button, a[href], input, select, textarea"; // ahí Espacio los activa y no pausa
+
+// Atajos de la intro, sin pista visible: ← → cambian de slide, Esc cierra y Espacio pausa con el foco fuera de un control.
 function handleIntroKey(e) {
   if (!introOpen || e.altKey || e.ctrlKey || e.metaKey) return;
   if (e.key === "Escape") { closeIntro(); return; }
@@ -162,7 +163,7 @@ function handleIntroKey(e) {
     stepIntroSlide(e.key === "ArrowRight" ? 1 : -1);
     return;
   }
-  if (e.key === " ") {
+  if (e.key === " " && !e.target.closest(INTRO_CONTROLS)) {
     e.preventDefault();
     // Con animaciones reducidas no hay nada en movimiento que pausar
     if (!e.repeat && !prefersReducedMotion()) setIntroPaused(!introPaused);

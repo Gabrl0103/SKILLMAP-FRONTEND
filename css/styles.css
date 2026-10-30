@@ -91,7 +91,7 @@
 
   /* Alias de v1: las reglas de las vistas los siguen usando y cambian solos con el tema */
   --ink:var(--text); --ink-2:var(--text-mid); --muted:var(--text-2); --muted-2:var(--text-2); --faint:var(--track);
-  --pink-soft:var(--chip-rosa-bg); --line:var(--card-border); --shadow-card:var(--card-shadow);
+  --line:var(--card-border);
 }
 :root[data-theme="dark"] {
   color-scheme:dark;
@@ -146,6 +146,12 @@ body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
 /* Títulos de página (h1 de las vistas) con el gradiente del tema: 48px, peso 600, como el mockup */
 .objetivo-title, .perfil-name, .goal-title { background:var(--title-grad); -webkit-background-clip:text; background-clip:text; color:transparent;
   -webkit-text-fill-color:transparent; }
+/* background-clip:text solo pinta dentro de la caja, y con estos line-height y letter-spacing la tinta se sale de ella: se
+   cortaban las colas de "y", "g" y "p" y el final de la última letra. El padding agranda la caja y el margen negativo lo
+   compensa, así que el layout no se mueve. .16em cubre el caso más justo (.intro-title, line-height .98) */
+.objetivo-title, .perfil-name, .goal-title, .mapa-panel-name, .intro-title { padding-right:.06em; padding-bottom:.16em; margin-right:-.06em; margin-bottom:-.16em; }
+/* El nombre del usuario puede empezar con mayúscula acentuada, cuya tilde pasa el borde superior de la caja */
+.perfil-name { padding-top:.06em; margin-top:-.06em; }
 
 /* Animaciones reducidas: cada bloque @media (prefers-reduced-motion) va seguido de sus mismas reglas bajo
    :root[data-motion="reduced"] ("Reducir animaciones" de Ajustes, js/theme.js), así las dos vías se tratan igual. */
@@ -1033,8 +1039,8 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .ofertas-error { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px 24px; padding:24px;
   border-radius:16px; border:1px dashed var(--pink); }
 .ofertas-error .ofertas-retry { padding:8px 24px; font-size:.85rem; }
-.ruta-ofertas .ruta-card-title { border-radius:8px; }
-.ruta-ofertas .ruta-card-title:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
+.ruta-ofertas .ruta-card-title, .ruta-brechas .ruta-card-title { border-radius:8px; }
+.ruta-ofertas .ruta-card-title:focus-visible, .ruta-brechas .ruta-card-title:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
 @keyframes offer-in { from { opacity:0; transform:translateY(8px); } }
 .offer-item[data-enter] { animation:offer-in 320ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 9) * 40ms); }
 @media (prefers-reduced-motion: reduce) { .offer-item, .offer-item[data-enter] { animation:none; transition:none; } .offer-item:hover { transform:none; } }
@@ -1484,7 +1490,6 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .ajustes-sources strong { font-weight:700; color:var(--text); }
 .ajustes-sources li + li { margin-top:6px; }
 .ajustes-source-meta { display:block; font-size:14px; line-height:20px; color:var(--text-2); }
-.ajustes-updated { margin-top:2px; font-size:14px; color:var(--text-2); }
 .ajustes-jobs-action { flex-shrink:0; width:344px; }
 .ajustes-jobs-action .ajustes-note { margin-top:16px; }
 .ajustes-jobs-action .btn-pill:disabled { cursor:progress; }

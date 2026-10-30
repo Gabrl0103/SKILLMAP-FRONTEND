@@ -2,7 +2,7 @@
 // demanda reales. Se abre desde el panel del Mapa Visual y desde las brechas de Mi Ruta (openSkillDetail) y el botón
 // "Volver" regresa a la vista de origen.
 // Usa SKILL_FAQ (skill-faq-data.js), showView y escapeHtml (mapa.js), fetchSkills, fetchGoals, renderApiError,
-// demandIsSample y sampleTag (dashboard.js), currentActiveGoalId (objetivo.js), renderStatusPicker, bindStatusPicker,
+// demandIsSample, sampleTag, keepGapFocus y applyGapFocus (dashboard.js), currentActiveGoalId (objetivo.js), renderStatusPicker, bindStatusPicker,
 // focusStatusPicker, saveSkillStatus y SKILL_STATE_CLASS (skill-status.js), routeDraw (route-motif.js), friendlyError (session.js) y t, statusLabel,
 // tSkill, tCategory, tGoalTitle y getLanguage (i18n.js).
 
@@ -221,10 +221,13 @@ function openSkillDetail(skillId, opener) {
   loadSkillDetail({ focus: true });
 }
 
-// "Volver": a la vista de origen y, si sigue ahí, al botón que abrió el detalle
+// "Volver": a la vista de origen y, si sigue ahí, al botón que abrió el detalle. Mi Ruta puede recargarse al abrirse: el
+// foco se anota antes de que se borren las brechas y lo aplica dashboard.js al terminar. Perfil lo conserva al repintar.
 function closeSkillDetail() {
   const { from, opener, id } = skillDetail;
+  if (from === "dashboard") keepGapFocus(id);
   showView(from);
+  if (from === "dashboard") { applyGapFocus(); return; }
   const target = opener?.isConnected ? opener : document.querySelector(`#view-${from} [data-context="${id}"]`);
   target?.focus();
 }

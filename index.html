@@ -70,9 +70,9 @@
     </div>
   </div>
 
-  <!-- Slides: avanzan cada 4 s (barra CSS); hover o foco pausan; clic o Enter fija una. Atajos sin pista visible
-       (js/intro.js): ← → cambian de slide y Espacio pausa o reanuda -->
-  <div class="intro-slides" role="group" aria-label="Qué puedes hacer en Cenit" data-i18n-aria-label="intro.slides" aria-keyshortcuts="ArrowLeft ArrowRight Space">
+  <!-- Slides: avanzan cada 4 s (barra CSS); hover o foco pausan; clic, Enter o Espacio fijan una. Atajos sin pista visible
+       (js/intro.js): ← → cambian de slide y, con el foco fuera de un control, Espacio pausa o reanuda -->
+  <div class="intro-slides" role="group" aria-label="Qué puedes hacer en Cenit" data-i18n-aria-label="intro.slides" aria-keyshortcuts="ArrowLeft ArrowRight">
     <button type="button" class="intro-slide" data-slide="1" aria-pressed="true">
       <span class="intro-slide-title" data-i18n="intro.slide1.title">1 · Mapa de habilidades</span>
       <span class="intro-slide-text" data-i18n="intro.slide1.text">Mira lo que sabes y lo que te falta, en un solo mapa.</span>
@@ -404,7 +404,6 @@
 <script src="js/i18n.js"></script> <!-- primero: los demás usan t() -->
 <script src="js/theme.js"></script>
 <script src="js/brand.js"></script> <!-- logo de estrella: pinta las marcas de esta página -->
-<script src="js/skill-card.js"></script>
 <script src="js/skill-status.js"></script> <!-- selector Pendiente / Aprendiendo / Dominada (Mapa, detalle y Perfil) -->
 <script src="js/route-motif.js"></script> <!-- Motivo de Ruta: riel, divisor y línea que se dibuja (usa skill-status.js) -->
 <script src="js/dashboard.js"></script>
