@@ -2,7 +2,7 @@
 
 Repositorio del frontend de **Cenit** (antes SkillMap), "Tu ruta hacia el cenit de tu carrera": un dashboard que muestra el nivel de preparación para un objetivo profesional y las brechas de habilidades prioritarias.
 
-Hecho con HTML, [Tailwind CSS (CDN)](https://tailwindcss.com/docs/installation/play-cdn), JavaScript vanilla y un Web Component (`<skill-card>`). No requiere build ni `npm install`.
+Hecho con HTML, [Tailwind CSS (CDN)](https://tailwindcss.com/docs/installation/play-cdn), y JavaScript vanilla. No requiere build ni `npm install`.
 
 Diseño basado en los mockups de `docs/mockups/`. Paleta: rosa `#D95F8E` (principal) y menta `#5FD9AA` (dominado / alta demanda), fondo rosa pálido y fuente [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) (Google Fonts) en todas las vistas.
 
@@ -31,7 +31,7 @@ La **Tendencia de Preparación** ya es real: `GET /api/goals/{id}/readiness/hist
 - **Mapa Visual**: vista accesible desde la barra superior con **todas** las habilidades del sistema (`GET /api/skills`), dibujadas como un grafo de nodos circulares sobre fondo rosa pálido. Cada categoría es un cluster ubicado en círculo alrededor del centro y sus habilidades se reparten en círculo alrededor del cluster (layout automático, sin coordenadas fijas), unidas por líneas grises. Color por estado: menta = dominada, rosa = en desarrollo, blanco punteado = por aprender. Incluye zoom +/− (0.5x–2x), arrastre con el mouse para mover el mapa, botón para centrar, leyenda y tooltip con la demanda de cada habilidad. Se carga la primera vez que se abre y no depende del objetivo seleccionado en el GoalSelector.
   - Solo 2D. Un consejo de primera vez explica cómo usar el mapa y se cierra para siempre. El enlace "Ver mis habilidades como lista" lleva a **Mis Habilidades** de Perfil.
 - **Perfil · Mis Habilidades** (`js/perfil-habilidades.js`): a todo el ancho bajo la cabecera, el catálogo completo agrupado por categoría en filas ligeras de tres columnas, con filtros Todas · Dominadas · Aprendiendo · Pendientes y su contador (el filtro dura la sesión). Cada fila: el nombre abre el contexto y preguntas frecuentes, la demanda en texto y un indicador de estado que abre un popover Pendiente / Aprendiendo / Dominada. Se sincroniza al instante con Mapa, Mi Ruta y los logros. Detalle en DESIGN.md ("Mis Habilidades").
-- **Introducción · mapa de glifos** (`js/intro-glifos.js`): ilustración decorativa en canvas 2D (datos de ejemplo, sin API): discos de habilidades hechos de glifos diminutos, agrupados por categoría como el Mapa, con titileo, parallax y resalte del disco bajo el cursor. Slide 2: cada habilidad con su % de demanda; slide 3: una oferta escaneada y su compatibilidad. ← → cambian de slide, Espacio pausa las animaciones. Detalle en DESIGN.md ("Mapa de glifos de la Introducción").
+- **Introducción · mapa de glifos** (`js/intro-glifos.js`): ilustración decorativa en canvas 2D (datos de ejemplo, sin API): discos de habilidades hechos de glifos diminutos, agrupados por categoría como el Mapa, con titileo, parallax y resalte del disco bajo el cursor. Slide 2: cada habilidad con su % de demanda; slide 3: una oferta escaneada y su compatibilidad. ← → cambian de slide; Espacio pausa las animaciones, salvo con el foco en un control, donde lo activa. Detalle en DESIGN.md ("Mapa de glifos de la Introducción").
 
 ### Navegación
 
@@ -48,7 +48,6 @@ SKILLMAP-FRONTEND/
 ├── docs/mockups/       # Mockups de referencia de cada vista
 └── js/
     ├── brand.js        # Logo de Cenit (estrella de brújula): brandMark() y las marcas de index.html
-    ├── skill-card.js   # Web Component <skill-card> (hoy sin uso en las vistas)
     ├── dashboard.js    # Vista Mi Ruta: fetch a la API, render y datos de ejemplo
     ├── mapa.js         # Vista Mapa Visual (2D, consejo de primera vez) y navegación entre vistas
     ├── perfil-habilidades.js  # "Mis Habilidades" de Perfil: filtros, demanda y estado de cada habilidad
