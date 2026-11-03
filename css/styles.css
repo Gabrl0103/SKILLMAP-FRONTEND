@@ -1593,22 +1593,38 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 :root[data-motion="reduced"] .intro-map-canvas { animation:none; }
 
 /* ---------- Acceso ---------- */
-/* Iniciar sesión / Crear cuenta (js/acceso.js), a pantalla completa sobre la app y sin barra superior. Sin mockup: lenguaje
-   de Ajustes y Mi Ruta (tarjeta de 24px, h1 con gradiente, botón de acción, campos --field-*). data-acceso="open" en <html> */
+/* Iniciar sesión / Crear cuenta (js/acceso.js), a pantalla completa sobre la app y sin barra superior.
+   Dos columnas centradas (máx. 1120px): a la izquierda qué es Cenit (título grande, con una sola línea en degradado), a la
+   derecha la tarjeta del formulario. Debajo, un pie con una línea divisoria. data-acceso="open" en <html> */
 :root[data-acceso="open"] body { overflow:hidden; }
-.acceso { display:none; position:fixed; inset:0; z-index:50; flex-direction:column; padding:28px 40px 48px; overflow:auto;
+.acceso { display:none; position:fixed; inset:0; z-index:50; flex-direction:column; padding:28px 48px 0; overflow:auto;
   background:var(--bg-glow), var(--bg-base); background-color:var(--bg-solid); }
 :root[data-acceso="open"] .acceso { display:flex; }
-.acceso-main { flex:1; display:flex; align-items:center; justify-content:center; padding:32px 0; }
-.acceso-card { display:flex; flex-direction:column; width:100%; max-width:460px; padding:40px; }
-.acceso-card .ruta-eyebrow { padding:5px 12px; font-size:12px; }
-.acceso-title { margin-top:16px; }
-.acceso-card .objetivo-subtitle { font-size:1rem; }
+.acceso-top, .acceso-main, .acceso-footer { width:100%; max-width:1120px; margin-inline:auto; }
+.acceso-main { flex:1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,440px); align-items:center;
+  gap:clamp(48px, 7vw, 112px); padding:48px 0 64px; }
+
+.acceso-hero { max-width:540px; }
+.acceso-hero-title { font-size:clamp(3rem, 2rem + 2.6vw, 4.6rem); font-weight:600; line-height:1.02; letter-spacing:-.035em;
+  color:var(--text); text-wrap:balance; }
+.acceso-hero-title > span { display:block; }
+/* La única línea en degradado; mismo arreglo de caja que .intro-title para no cortar las colas de las letras */
+.acceso-hero-accent { width:fit-content; padding-right:.06em; padding-bottom:.16em; margin-right:-.06em; margin-bottom:-.16em;
+  background:var(--title-grad); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; }
+.acceso-hero-text { max-width:30em; margin-top:28px; font-size:18px; line-height:1.6; color:var(--text-2-page); text-wrap:pretty; }
+.acceso-hero-link { display:inline-flex; align-items:center; gap:8px; min-height:44px; margin-top:20px; padding:0 2px;
+  font-size:15px; font-weight:600; color:var(--link); cursor:pointer; text-underline-offset:4px; }
+.acceso-hero-link:hover { text-decoration:underline; }
+.acceso-hero-link:focus-visible { outline:var(--focus-ring); outline-offset:2px; border-radius:6px; }
+
+.acceso-card { display:flex; flex-direction:column; width:100%; padding:36px; }
+.acceso-title { font-size:26px; font-weight:700; line-height:1.2; letter-spacing:-.02em; color:var(--text); }
+.acceso-subtitle { margin-top:8px; font-size:15px; line-height:1.55; color:var(--text-2); }
 
 /* Alternancia Iniciar sesión / Crear cuenta: mismo patrón que el interruptor de tema */
-.acceso-modes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; margin-top:28px; padding:4px; border-radius:var(--radius-pill);
+.acceso-modes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; margin-top:24px; padding:4px; border-radius:var(--radius-pill);
   background:var(--surface-2); border:1px solid var(--card-border); }
-.acceso-modes button { height:44px; border-radius:var(--radius-pill); font-size:14px; font-weight:600; color:var(--nav-fg); cursor:pointer;
+.acceso-modes button { height:40px; border-radius:var(--radius-pill); font-size:14px; font-weight:600; color:var(--nav-fg); cursor:pointer;
   transition:background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
 .acceso-modes button:hover { color:var(--text); }
 .acceso-modes button[aria-pressed="true"] { background:var(--toggle-on-bg); color:var(--toggle-on-fg); box-shadow:var(--toggle-on-shadow); }
@@ -1620,6 +1636,37 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .acceso-notice:empty { display:none; }
 
 .acceso-form { display:flex; flex-direction:column; gap:20px; margin-top:24px; }
+/* Rótulos en mayúsculas pequeñas, como el resto de rótulos del sistema */
+.acceso .acceso-label { margin-bottom:8px; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-mid); }
+.acceso-input::placeholder { color:var(--text-2); opacity:1; }
+/* Error de un campo, junto al campo */
+.acceso-field-error { display:flex; gap:6px; margin-top:8px; font-size:13px; line-height:1.45; font-weight:600; color:var(--pink-ink); }
+.acceso-field-error:empty { display:none; }
+/* Requisito de la contraseña: círculo vacío hasta cumplirse, luego check en menta */
+.acceso-rule { display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px; font-weight:500; color:var(--text-2);
+  transition:color var(--dur) var(--ease-out); }
+.acceso-rule[hidden] { display:none; }
+.acceso-rule-icon { flex-shrink:0; }
+.acceso-rule-check { stroke-dasharray:12; stroke-dashoffset:12; transition:stroke-dashoffset var(--dur-slow) var(--ease-out); }
+.acceso-rule[data-met="true"] { color:var(--mint-ink); }
+.acceso-rule[data-met="true"] .acceso-rule-check { stroke-dashoffset:0; }
+.acceso-capslock { margin-top:8px; font-size:13px; font-weight:600; color:var(--chip-azul-fg); }
+.acceso-capslock[hidden] { display:none; }
+.acceso-note { margin-top:16px; font-size:13px; line-height:1.5; text-align:center; color:var(--text-2); text-wrap:balance; }
+
+.acceso-footer { padding:20px 0 24px; border-top:1px solid var(--divider); font-size:13px; text-align:center; color:var(--text-2-page); }
+
+/* Ventanas angostas: una columna, el texto arriba y más compacto */
+@media (max-width: 900px) {
+  .acceso { padding:20px 24px 0; }
+  .acceso-main { grid-template-columns:minmax(0,1fr); justify-items:center; gap:32px; padding:32px 0 48px; }
+  .acceso-hero { text-align:center; }
+  .acceso-hero-title { font-size:clamp(2.4rem, 1.6rem + 3vw, 3.2rem); }
+  .acceso-hero-accent { margin-inline:auto; }
+  .acceso-hero-text { margin-inline:auto; font-size:16px; }
+  .acceso-card { max-width:440px; padding:28px; }
+}
+
 .acceso-label, .perfil-label { display:block; margin-bottom:8px; font-size:15px; font-weight:600; color:var(--text); }
 /* Campos editables: borde con contraste de control (≥3:1), como la key de Ajustes */
 .acceso-input, .perfil-input { width:100%; height:48px; padding:0 16px; border-radius:14px; background:var(--field-bg);
@@ -1643,5 +1690,6 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .acceso-submit { width:100%; margin-top:4px; }
 .acceso-submit[aria-busy="true"] { cursor:progress; }
 .acceso-submit[aria-busy="true"]:hover, .acceso-submit[aria-busy="true"]:active { transform:none; box-shadow:0 12px 24px var(--action-shadow-color); }
-@media (prefers-reduced-motion: reduce) { .acceso-modes button, .acceso-reveal { transition:none; } }
-:root[data-motion="reduced"] .acceso-modes button, :root[data-motion="reduced"] .acceso-reveal { transition:none; }
+@media (prefers-reduced-motion: reduce) { .acceso-modes button, .acceso-reveal, .acceso-rule, .acceso-rule-check { transition:none; } }
+:root[data-motion="reduced"] .acceso-modes button, :root[data-motion="reduced"] .acceso-reveal,
+:root[data-motion="reduced"] .acceso-rule, :root[data-motion="reduced"] .acceso-rule-check { transition:none; }
