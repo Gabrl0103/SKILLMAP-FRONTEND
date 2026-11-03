@@ -29,13 +29,14 @@ La **Tendencia de Preparación** ya es real: `GET /api/goals/{id}/readiness/hist
 ### Otras vistas
 
 - **Mapa Visual**: vista accesible desde la barra superior con **todas** las habilidades del sistema (`GET /api/skills`), dibujadas como un grafo de nodos circulares sobre fondo rosa pálido. Cada categoría es un cluster ubicado en círculo alrededor del centro y sus habilidades se reparten en círculo alrededor del cluster (layout automático, sin coordenadas fijas), unidas por líneas grises. Color por estado: menta = dominada, rosa = en desarrollo, blanco punteado = por aprender. Incluye zoom +/− (0.5x–2x), arrastre con el mouse para mover el mapa, botón para centrar, leyenda y tooltip con la demanda de cada habilidad. Se carga la primera vez que se abre y no depende del objetivo seleccionado en el GoalSelector.
-  - Solo 2D. Un consejo de primera vez explica cómo usar el mapa y se cierra para siempre. El enlace "Ver mis habilidades como lista" lleva a **Mis Habilidades** de Perfil.
-- **Perfil · Mis Habilidades** (`js/perfil-habilidades.js`): a todo el ancho bajo la cabecera, el catálogo completo agrupado por categoría en filas ligeras de tres columnas, con filtros Todas · Dominadas · Aprendiendo · Pendientes y su contador (el filtro dura la sesión). Cada fila: el nombre abre el contexto y preguntas frecuentes, la demanda en texto y un indicador de estado que abre un popover Pendiente / Aprendiendo / Dominada. Se sincroniza al instante con Mapa, Mi Ruta y los logros. Detalle en DESIGN.md ("Mis Habilidades").
+  - Solo 2D. Un consejo de primera vez explica cómo usar el mapa y se cierra para siempre. El enlace "Ver mis habilidades como lista" lleva a la vista **Habilidades**.
+- **Habilidades** (`js/habilidades.js`): sección propia del nav, junto al Mapa. Encabezado con el resumen (X dominadas · Y aprendiendo · Z pendientes y una barra de proporciones), filtros Todas · Dominadas · Aprendiendo · Pendientes en una fila (el filtro dura la sesión) y una tarjeta por categoría con filas tipo tabla: el nombre abre el contexto y preguntas frecuentes, la demanda en barra y %, y un indicador de estado que abre un popover Pendiente / Aprendiendo / Dominada. Se sincroniza al instante con Mapa, Mi Ruta y Perfil; al volver del detalle de una habilidad el foco regresa a su fila. Detalle en DESIGN.md ("Habilidades").
+- **Perfil · Mis Habilidades**: un resumen corto bajo la cabecera (el mismo de Habilidades) con el botón "Ver todas mis habilidades", que abre la vista Habilidades.
 - **Introducción · mapa de glifos** (`js/intro-glifos.js`): ilustración decorativa en canvas 2D (datos de ejemplo, sin API): discos de habilidades hechos de glifos diminutos, agrupados por categoría como el Mapa, con titileo, parallax y resalte del disco bajo el cursor. Slide 2: cada habilidad con su % de demanda; slide 3: una oferta escaneada y su compatibilidad. ← → cambian de slide; Espacio pausa las animaciones, salvo con el foco en un control, donde lo activa. Detalle en DESIGN.md ("Mapa de glifos de la Introducción").
 
 ### Navegación
 
-Sin framework de routing: cada vista es una `<section id="view-*">` en `index.html` y la barra superior muestra/oculta la sección elegida (clase `hidden`) y desliza el indicador del nav hasta el ítem activo. Vistas actuales: `view-dashboard` (Mi Ruta) y `view-mapa` (Mapa Visual). Objetivo, Analizador y Perfil aparecen deshabilitados ("Próximamente").
+Sin framework de routing: cada vista es una `<section id="view-*">` en `index.html` y la barra superior muestra/oculta la sección elegida (clase `hidden`) y desliza el indicador del nav hasta el ítem activo. Secciones del nav: `view-objetivo` (Objetivo), `view-dashboard` (Mi Ruta), `view-mapa` (Mapa Visual), `view-habilidades` (Habilidades), `view-analizador` (Analizador) y `view-perfil` (Perfil); Ajustes (`view-ajustes`) se abre desde su botón y el detalle de habilidad (`view-skill`) desde Mapa, Mi Ruta o Habilidades. Por debajo de 1280px el nav muestra solo íconos.
 
 ## Estructura
 
@@ -50,7 +51,7 @@ SKILLMAP-FRONTEND/
     ├── brand.js        # Logo de Cenit (estrella de brújula): brandMark() y las marcas de index.html
     ├── dashboard.js    # Vista Mi Ruta: fetch a la API, render y datos de ejemplo
     ├── mapa.js         # Vista Mapa Visual (2D, consejo de primera vez) y navegación entre vistas
-    ├── perfil-habilidades.js  # "Mis Habilidades" de Perfil: filtros, demanda y estado de cada habilidad
+    ├── habilidades.js  # Vista Habilidades: resumen, filtros, demanda y estado de cada habilidad
     ├── intro.js        # Introducción: slides, teclado, pausa y arranque del mapa de glifos
     └── intro-glifos.js # Mapa de glifos de la Introducción (canvas 2D)
 vendor/
