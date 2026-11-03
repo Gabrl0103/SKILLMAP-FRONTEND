@@ -301,6 +301,22 @@ Tarjeta blanca en la columna ancha de Mi Ruta, entre Brechas Prioritarias y Tend
 
 Entrada: las filas suben 8px con fundido (320ms, escalonadas 40ms) solo al cargar o al mostrar las de "Ver más"; sin animación con movimiento reducido. Carga con la línea del Motivo de Ruta en bucle; vacío con el Motivo de Ruta; error con borde rosa punteado, `role="alert"` y "Reintentar". Se vuelve a pedir al cambiar el estado de una habilidad, el objetivo o el idioma, y nunca muestra datos simulados.
 
+### Tu semana (Mi Ruta)
+Tarjeta blanca en la columna ancha, entre Brechas Prioritarias y Ofertas para ti (`js/plan-semanal.js`), con medidas en múltiplos de 8px. Título neutro ("Tu semana") y, como pista, las fechas de la semana (lunes a domingo). Una sola expresión GPS, en la entrada: "Tus próximas paradas, por demanda del mercado: primero las que ya estás aprendiendo."
+- **Plan:** 3 brechas del objetivo, primero las que están en Aprendiendo y dentro por demanda. Se arma el primer día que se abre Mi Ruta en una semana nueva y no se reordena durante la semana: una habilidad que quedó dominada sigue en el plan (es el avance de la semana).
+- **Fila (tabla, divisor de 1px entre filas):** casilla de avance de 24px (borde punteado `--line-dashed` = todavía no; marcada, relleno `--mastered-bg` con la marca en `--mastered-fg`), nombre (15px/600, es la etiqueta de la casilla) con categoría y "% de las ofertas" en 12px `--text-2`, horas sugeridas ("≈ 3 h", 13px/600 con cifras tabulares; el lector oye "3 horas sugeridas esta semana") y el selector Pendiente / Aprendiendo / Dominada del Mapa (opciones de 40px). Si la tarjeta mide menos de 560px (`@container`), el selector baja a su propia línea a todo el ancho.
+- **Pie:** "1 de 3 con avance · ≈ 8 h en total" y una pista única (descripción accesible de cada casilla) con la regla de horas: más demanda, más tiempo, y una hora menos si ya la estás aprendiendo.
+- **Cambio de estado:** la fila cambia al instante y se guarda; `#ruta-live` lo anuncia y Mi Ruta se recarga sin skeleton ni entrada (`.ruta-grid.is-quiet`: preparación, brechas, siguiente giro y Tu ritmo se ponen al día y las ofertas de antes siguen a la vista hasta que llegan las nuevas). El foco vuelve a la opción elegida. Si el backend falla, vuelve al estado anterior con el error en la fila (`role="alert"`).
+- **Vacíos:** sin brechas, el Motivo de Ruta con "Llegaste a tu destino: no te quedan brechas en {objetivo}…"; con todo el plan dominado, la entrada pasa a "Dominaste todo el plan de esta semana. El lunes llega uno nuevo."
+
+### Tu ritmo (Mi Ruta)
+Tarjeta blanca en la columna angosta, bajo Siguiente giro (`js/rachas.js`).
+- **Meta semanal:** rótulo en mayúsculas (11px, 700, `--text-2`) y un control − / + (botones redondos de 40px con contorno; al llegar a 1 o a 10 quedan `aria-disabled` sin perder el foco) con el número grande y liviano (28px, 300) y "habilidades por semana". Cambiarla se anuncia en `#ruta-live` y solo afecta a la semana en curso.
+- **Esta semana:** "Esta semana: 1 de 2" (15px/600) sobre una barra de tramos de 10px, uno por avance de la meta (más si se supera): menta = dominada, rosa→violeta = aprendiendo, punteado = todavía no. Debajo, cuánto falta o "Meta cumplida: vas en ruta." en `--mint-ink`.
+- **Rachas:** racha actual y mejor racha en dos columnas, con el número en 2rem/300 y cifras tabulares. Sin racha: "Aún sin racha: cumple la meta esta semana para empezar una."; con racha y la semana sin cumplir todavía: "Cumple la meta esta semana para llevarla a N semanas."
+- **Este mes:** tras el divisor del Motivo de Ruta, "Dominaste N habilidades de tu ruta este mes." y la barra del objetivo entero: dominadas antes (`--mint-line-hover`), dominadas este mes (`--mastered-bg`) y lo que falta punteado, con su leyenda y "3 de 7 dominadas en {objetivo}". Sin dominadas este mes: "Aún no dominas ninguna este mes. Tu siguiente giro: {habilidad}."
+- **Movimiento:** las barras se revelan de izquierda a derecha (`bar-fill`) con la entrada de la tarjeta; nada con movimiento reducido ni en la recarga silenciosa.
+
 ### Nodo del Mapa
 Círculos de 112px: menta sólido (dominado), rosa sólido (en desarrollo) o blanco con borde punteado (por aprender), cada uno con sombra de su color. En hover o foco suben 3px y crecen un 4%. Al pasar por la leyenda, los nodos de los otros estados bajan a .22 de opacidad.
 

@@ -5,9 +5,9 @@ const API_BASE_URL = location.protocol === "file:" ||
 
 // Vista "Mi Ruta". Usa escapeHtml y showView definidos en mapa.js (disponibles tras DOMContentLoaded), apiJson y
 // sessionUser (session.js), SKILL_STATE_CLASS (skill-status.js), routeStopClass, routeDestination y routeDraw
-// (route-motif.js), renderOffersCard y loadOffers (ofertas.js) y t, tn, statusLabel, formatNumber, errorText, tSkill y
-// tGoalTitle (i18n.js). Los datos se
-// piden al iniciar sesión (loadRuta, desde session.js).
+// (route-motif.js), renderOffersCard y loadOffers (ofertas.js), renderSemanaCard y semanaFocus (plan-semanal.js: "Tu
+// semana"), renderRitmoCard y ritmoFocus (rachas.js: "Tu ritmo") y t, tn, statusLabel, formatNumber, errorText, tSkill y
+// tGoalTitle (i18n.js). Los datos se piden al iniciar sesión (loadRuta, desde session.js).
 
 const VISIBLE_GAPS = 3; // el mockup muestra 3 brechas; "Ver más (n)", al pie de la tarjeta, despliega el resto
 
@@ -344,10 +344,19 @@ function renderRutaSkeleton() {
           <span class="skel skel-pill"></span>
         </div>
         <div class="skel-action"></div>
+        <div class="ruta-card">
+          <span class="skel skel-line skel-line--title"></span>
+          <span class="skel skel-line skel-line--short"></span>
+          <span class="skel skel-bar"></span>
+        </div>
       </div>
       <div class="ruta-col" aria-hidden="true">
         <div class="ruta-card">
           <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span>${routeDraw({ loop: true })}</div>
+          <div class="gap-list">${gapRow.repeat(3)}</div>
+        </div>
+        <div class="ruta-card">
+          <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span></div>
           <div class="gap-list">${gapRow.repeat(3)}</div>
         </div>
         <div class="ruta-card">
@@ -640,14 +649,19 @@ async function changeGoalFromRuta(goalId) {
 
 let latestRequest = 0; // evita que una respuesta vieja pise la del objetivo recién elegido
 
-async function loadDashboard(goalId) {
+// quiet: recarga sin skeleton ni entrada, para un cambio hecho en la propia Mi Ruta ("Tu semana"): lo pintado sigue a
+// la vista hasta que llegan los datos y el foco vuelve a donde estaba (tarjetas Tu semana y Tu ritmo)
+async function loadDashboard(goalId, { quiet = false } = {}) {
   const container = document.getElementById("app-content");
   const requestId = ++latestRequest;
   rutaStale = false;
   const focusedGap = document.activeElement?.closest("#brechas-card [data-context]");
   if (focusedGap) keepGapFocus(Number(focusedGap.dataset.context));
-  document.getElementById("market-demand").hidden = true;
-  container.innerHTML = renderRutaSkeleton();
+  const silent = quiet && Boolean(container.querySelector(".ruta-grid:not(.ruta-skeleton)"));
+  if (!silent) {
+    document.getElementById("market-demand").hidden = true;
+    container.innerHTML = renderRutaSkeleton();
+  }
   try {
     // La comparación, las estadísticas y el historial son complementarios: si fallan, la vista se muestra sin ellos.
     const [r, demand, jobStats, history] = await Promise.all([
@@ -657,18 +671,20 @@ async function loadDashboard(goalId) {
       fetchReadinessHistory(goalId).catch(() => null),
     ]);
     if (requestId !== latestRequest) return;
+    const restoreFocus = silent ? semanaFocus() || ritmoFocus() : null;
 
     // Sin las habilidades del objetivo, badges y barras se calculan solo entre las brechas.
     const reference = demand.goalSkills.length ? demand.goalSkills : r.gaps;
     renderMarketDemand(demand.goalSkills, demand.catalog);
     const goal = escapeHtml(tGoalTitle(r.goalTitle));
     container.innerHTML = `
-      <div class="ruta-grid">
-        <div class="ruta-col">${renderGauge(r)}${renderNextAction(r.gaps[0], r.goalTitle)}</div>
-        <div class="ruta-col">${renderBrechas(r.gaps, reference, jobStats, r.goalTitle)}${renderOffersCard(goal)}${renderTrend(history)}</div>
+      <div class="ruta-grid${silent ? " is-quiet" : ""}">
+        <div class="ruta-col">${renderGauge(r)}${renderNextAction(r.gaps[0], r.goalTitle)}${renderRitmoCard(demand.catalog, demand.goalSkills, r)}</div>
+        <div class="ruta-col">${renderBrechas(r.gaps, reference, jobStats, r.goalTitle)}${renderSemanaCard(r.gaps, demand.catalog, goalId, r.goalTitle)}${renderOffersCard(goal)}${renderTrend(history)}</div>
       </div>`;
     bindTrendHover(container, history);
-    loadOffers(goal, goalId); // ofertas.js: llega después, sin frenar el resto de la vista
+    loadOffers(goal, goalId, { quiet: silent }); // ofertas.js: llega después, sin frenar el resto de la vista
+    restoreFocus?.();
   } catch (err) {
     if (requestId !== latestRequest) return;
     container.innerHTML = renderApiError(err);
@@ -745,12 +761,14 @@ document.addEventListener("skillmap:language", () => {
 });
 
 // Progreso cambiado (habilidad marcada o quitada): habilidades y preparación se vuelven a pedir. Si Mi Ruta está a la
-// vista (se abrió mientras se guardaba), se recarga ya.
+// vista (el cambio se hizo en "Tu semana", o se abrió mientras se guardaba en otra vista), se recarga ya, sin skeleton.
 document.addEventListener("skillmap:progress", () => {
   skillsRequest = null;
   readinessRequests.clear();
   rutaStale = true;
-  if (!document.getElementById("view-dashboard").classList.contains("hidden")) openRuta();
+  if (!document.getElementById("view-dashboard").classList.contains("hidden") && activeGoalId) {
+    loadDashboard(activeGoalId, { quiet: true });
+  }
 });
 
 // Se espera a que carguen todos los scripts porque se usan helpers de mapa.js.
