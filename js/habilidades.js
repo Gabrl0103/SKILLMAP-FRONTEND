@@ -22,8 +22,13 @@ const HAB_SUMMARY = ["MASTERED", "IN_PROGRESS", "PENDING"]; // orden del resumen
 // (así la fila no desaparece bajo el foco); open: id con el selector abierto; saving: id que se está guardando;
 // error/errorId: último error y la habilidad a la que pertenece (el texto se arma al pintar, en el idioma vigente);
 // painting: repintando (quitar el elemento enfocado no cuenta como "el foco salió")
-const hab = { skills: null, request: 0, filter: readHabFilter(), keep: new Set(), open: null, saving: null, error: null,
+// queryText: lo escrito en la búsqueda; query: lo mismo normalizado (sin tildes ni mayúsculas) para comparar con el
+// nombre original y el traducido
+const hab = { skills: null, request: 0, filter: readHabFilter(), query: "", queryText: "", keep: new Set(), open: null, saving: null, error: null,
   errorId: null, painting: false };
+
+const habNormalize = text => String(text).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+const habMatches = skill => !hab.query || habNormalize(`${skill.name} ${tSkill(skill.name)}`).includes(hab.query);
 
 function readHabFilter() {
   try {
@@ -62,9 +67,13 @@ function renderSkillSummary(skills, { bar = false } = {}) {
 
 // ---------- Marcado ----------
 
+// Cada filtro con su contador (heurística 01: cuántas hay antes de elegir)
 function renderHabFilters() {
+  const skills = hab.skills?.skills || [];
+  const count = filter => skills.filter(s => filter === "all" || habSkillStatus(s) === filter).length;
   return HAB_FILTERS.map(filter => `
-    <button type="button" data-skill-filter="${filter}" aria-pressed="${hab.filter === filter}">${t(`habilidades.filter.${filter}`)}</button>`).join("");
+    <button type="button" data-skill-filter="${filter}" aria-pressed="${hab.filter === filter}">${t(`habilidades.filter.${filter}`)}
+      <span class="hab-filter-count">${count(filter)}</span></button>`).join("");
 }
 
 const HAB_CARET = `<svg class="hab-chip-caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -98,8 +107,11 @@ function renderHabRow(skill) {
 // vista: cada fila ya dice su demanda y su estado). Sin ninguna, el estado vacío del filtro con el Motivo de Ruta.
 function renderHabGroups(skills) {
   const { filter, keep } = hab;
-  const visible = skills.filter(s => filter === "all" || habSkillStatus(s) === filter || keep.has(s.id));
-  if (!visible.length) return `<p class="ruta-card route-state hab-empty">${routeDraw()}${t(`habilidades.empty.${filter}`)}</p>`;
+  const visible = skills.filter(s => (filter === "all" || habSkillStatus(s) === filter || keep.has(s.id)) && habMatches(s));
+  if (!visible.length) {
+    const text = hab.query ? t("habilidades.empty.search") : t(`habilidades.empty.${filter}`);
+    return `<p class="ruta-card route-state hab-empty">${routeDraw()}${text}</p>`;
+  }
   return [...groupByCategory(visible)].map(([category, items], i) => `
     <section class="ruta-card hab-group" style="--i:${i}" aria-labelledby="hab-group-${i}">
       <header class="hab-group-header">
@@ -135,8 +147,14 @@ function paintHabilidades({ keepFocus = false } = {}) {
     content.innerHTML = `
       <div class="hab-toolbar">
         <div class="hab-filters" id="hab-filters" role="group" aria-label="${t("habilidades.filter.group")}">${renderHabFilters()}</div>
-        <p class="hab-hint" id="hab-hint">${t("habilidades.hint")}</p>
+        <label class="hab-search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span class="sr-only">${t("habilidades.search")}</span>
+          <input type="search" id="hab-search" autocomplete="off" spellcheck="false" placeholder="${t("habilidades.searchPlaceholder")}"
+            value="${escapeHtml(hab.queryText)}">
+        </label>
       </div>
+      <p class="hab-hint" id="hab-hint">${t("habilidades.hint")}</p>
       <div class="hab-body is-new" id="hab-body">${renderHabGroups(skills)}</div>
       ${note}`;
   }
@@ -288,6 +306,14 @@ function openHabilidadesList() {
 
 function initHabilidades() {
   const view = document.getElementById("view-habilidades");
+  // Búsqueda por nombre: filtra mientras se escribe; el campo no se repinta, así no pierde el foco ni el cursor
+  view.addEventListener("input", e => {
+    if (e.target.id !== "hab-search") return;
+    hab.queryText = e.target.value;
+    hab.query = habNormalize(e.target.value);
+    hab.open = null;
+    refreshHabList(null);
+  });
   view.addEventListener("click", e => {
     const filter = e.target.closest("[data-skill-filter]");
     if (filter) {
@@ -352,6 +378,7 @@ document.addEventListener("skillmap:user", () => {
   hab.request++;
   Object.assign(hab, { skills: null, open: null, saving: null, error: null, errorId: null });
   hab.keep.clear();
+  hab.query = hab.queryText = "";
   document.getElementById("hab-summary").innerHTML = "";
   document.getElementById("habilidades-content").replaceChildren();
 });

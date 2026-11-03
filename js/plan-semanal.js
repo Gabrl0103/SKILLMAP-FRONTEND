@@ -1,12 +1,12 @@
 // Tarjeta "Tu semana" de Mi Ruta: plan de estudio de 3 habilidades para la semana (lunes a domingo, en la hora local
 // del equipo). Sale de las brechas del objetivo: primero las que ya están en Aprendiendo y, dentro, por demanda del
-// mercado. Cada una lleva horas sugeridas (planHours), una casilla para marcar el avance de la semana y el selector
-// Pendiente / Aprendiendo / Dominada (skill-status.js), que guarda con PUT /api/skills/{id}/status.
+// mercado. Cada una lleva horas sugeridas (planHours), una casilla para marcar el avance de la semana y un desplegable
+// Pendiente / Aprendiendo / Dominada (renderSemanaStatus), que guarda con PUT /api/skills/{id}/status.
 // El backend no guarda planes: el plan vive en localStorage por usuario y objetivo ("skillmap.plan.{userId}.{goalId}":
 // { week, ids, done }) y se rehace el primer día que se abre Mi Ruta en una semana nueva. Sin storage, dura hasta
 // recargar (planMemory). Las semanas (weekStart, weekKey) también las usa rachas.js.
 // La pinta loadDashboard (dashboard.js). Usa escapeHtml (mapa.js), sessionUser y friendlyError (session.js),
-// renderStatusPicker, bindStatusPicker, focusStatusPicker, saveSkillStatus y SKILL_STATES (skill-status.js), routeDraw
+// saveSkillStatus, SKILL_STATES y SKILL_STATE_CLASS (skill-status.js), HAB_CARET (habilidades.js), routeDraw
 // (route-motif.js) y t, tn, statusLabel, tSkill, tCategory, tGoalTitle y getLanguage (i18n.js).
 
 const PLAN_SIZE = 3;
@@ -112,10 +112,24 @@ function renderSemanaRow(skill) {
         <p class="semana-meta">${meta}</p>
       </div>
       <p class="semana-hours"><span aria-hidden="true">${t("semana.hours", { n: hours })}</span><span class="sr-only">${tn("semana.hoursLabel", hours)}</span></p>
-      <div class="semana-status">${renderStatusPicker(skill, semana.busy === skill.id)}</div>
+      ${renderSemanaStatus(skill, name)}
       ${semana.errorId === skill.id ? `<p class="semana-error" role="alert">${escapeHtml(t("state.error",
         { error: friendlyError(semana.error) }))}</p>` : ""}
     </li>`;
+}
+
+// Estado como desplegable compacto, con el mismo aspecto que el indicador de Habilidades (círculo + etiqueta + flecha):
+// un <select> nativo, así que teclado y lector de pantalla funcionan sin más. Ocupa una sola línea en la fila.
+function renderSemanaStatus(skill, name) {
+  const current = SKILL_STATES.includes(skill.status) ? skill.status : "PENDING";
+  const options = SKILL_STATES.map(status =>
+    `<option value="${status}"${status === current ? " selected" : ""}>${statusLabel(status)}</option>`).join("");
+  return `
+      <label class="semana-status hab-chip hab-chip--${SKILL_STATE_CLASS[current]}"${semana.busy === skill.id ? ` aria-busy="true"` : ""}>
+        <span class="sr-only">${escapeHtml(t("state.group", { name }))}</span>
+        <select class="semana-select" data-plan-status="${skill.id}">${options}</select>
+        ${HAB_CARET}
+      </label>`;
 }
 
 function semanaCount() {
@@ -173,12 +187,11 @@ function semanaFocus() {
   const row = active?.closest?.("#semana-card [data-plan-row]");
   if (!row) return null;
   const id = row.dataset.planRow;
-  const inPicker = Boolean(active.closest(".status-picker"));
+  const inStatus = active.matches("[data-plan-status]");
   return () => {
     const target = document.querySelector(`#semana-card [data-plan-row="${id}"]`);
     if (!target) { document.getElementById("semana-title")?.focus(); return; }
-    if (inPicker) focusStatusPicker(target);
-    else target.querySelector("[data-plan-check]")?.focus({ preventScroll: true });
+    target.querySelector(inStatus ? "[data-plan-status]" : "[data-plan-check]")?.focus({ preventScroll: true });
   };
 }
 
@@ -222,10 +235,8 @@ function initSemana() {
   container.addEventListener("change", e => {
     const check = e.target.closest("[data-plan-check]");
     if (check) toggleSemanaDone(Number(check.dataset.planCheck), check.checked);
-  });
-  // Los únicos selectores de estado de Mi Ruta son los de esta tarjeta
-  bindStatusPicker(container, (id, status) => {
-    if (SKILL_STATES.includes(status)) setSemanaStatus(id, status);
+    const select = e.target.closest("[data-plan-status]");
+    if (select && SKILL_STATES.includes(select.value)) setSemanaStatus(Number(select.dataset.planStatus), select.value);
   });
 }
 
