@@ -555,11 +555,12 @@ function renderPasswordField(id, labelKey, autocomplete, describedBy, ruleText =
     </div>`;
 }
 
-// Seguridad: cambiar contraseña y eliminar cuenta (con aviso y confirmación escribiendo la contraseña)
+// Seguridad: cambiar contraseña y eliminar cuenta (con aviso y confirmación escribiendo la contraseña). Vive en
+// Ajustes (#ajustes-security), con las demás preferencias de la cuenta; Perfil queda para lo que se muestra de ti.
 function renderSecurityCard() {
   return `
-    <article id="perfil-security" class="perfil-card perfil-security">
-      <h2 class="perfil-card-title">${t("perfil.security")}</h2>
+    <section id="perfil-security" class="ruta-card ajustes-card perfil-security" aria-labelledby="perfil-security-title">
+      <h2 id="perfil-security-title" class="ajustes-card-title">${t("perfil.security")}</h2>
       <div class="perfil-security-grid">
         <form class="perfil-form" data-form="password" aria-labelledby="perfil-password-title" novalidate>
           <h3 id="perfil-password-title" class="perfil-security-title">${t("perfil.password.title")}</h3>
@@ -588,7 +589,12 @@ function renderSecurityCard() {
           </form>
         </section>
       </div>
-    </article>`;
+    </section>`;
+}
+
+// Pinta (o repinta, vacía) la tarjeta de Seguridad de Ajustes
+function renderAjustesSecurity() {
+  document.getElementById("ajustes-security").innerHTML = renderSecurityCard();
 }
 
 // ---------- Carga ----------
@@ -614,7 +620,7 @@ function renderPerfil() {
   side.append(renderItemsCard("link"));
   // "Mis Habilidades" va a todo el ancho bajo la cabecera: sus filas caben en tres columnas
   document.getElementById("perfil-content").replaceChildren(renderPerfilHeader(), perfilBlock(renderPerfilSkillsCard(perfilState.skills)),
-    grid, perfilBlock(renderSecurityCard()));
+    grid);
 }
 
 // Reemplaza un bloque ya pintado sin reiniciar la entrada: sigue desde donde iba o, si ya había terminado, aparece
@@ -949,6 +955,7 @@ document.addEventListener("skillmap:user", () => {
   Object.assign(perfilState, { links: null, projects: null, editing: false, edit: null, confirm: null });
   if (perfilState.cv) setCvOpen(false);
   document.getElementById("perfil-content").replaceChildren();
+  renderAjustesSecurity(); // otra cuenta: formularios vacíos y el borrado cerrado
 });
 document.addEventListener("skillmap:progress", e => {
   if (e.detail?.source === "perfil") {
@@ -988,7 +995,12 @@ function handlePerfilClick(e) {
 }
 
 function initPerfil() {
-  const view = document.getElementById("view-perfil");
+  renderAjustesSecurity();
+  // Perfil y la tarjeta de Seguridad de Ajustes comparten formularios, acciones y teclas
+  document.querySelectorAll("#view-perfil, #ajustes-security").forEach(bindPerfilEvents);
+}
+
+function bindPerfilEvents(view) {
   view.addEventListener("click", handlePerfilClick);
   view.addEventListener("input", e => {
     if (e.target.matches("#perfil-password-new, #perfil-password-confirm")) updatePasswordRules();
@@ -1018,6 +1030,7 @@ function initPerfil() {
 // abierto pasa al idioma nuevo
 document.addEventListener("skillmap:language", () => {
   if (document.getElementById("perfil-content").childElementCount) renderPerfil();
+  renderAjustesSecurity();
   refreshCv();
 });
 

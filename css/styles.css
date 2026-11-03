@@ -441,7 +441,6 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 
 /* Seguridad: cambiar contraseña y, al lado, eliminar cuenta. Eliminar va en blanco con contorno y texto rosa oscuro
    (nunca rosa sólido: la acción principal de la vista es Editar Perfil) */
-.perfil-security { margin-top:1.5rem; }
 .perfil-security-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:2rem; }
 @media (min-width:1024px) { .perfil-security-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } }
 .perfil-security-title { font-size:1rem; font-weight:700; color:var(--ink); }
@@ -1412,7 +1411,7 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .ajustes-header .objetivo-subtitle { font-size:1rem; }
 .ajustes-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
 .ajustes-card { display:flex; flex-direction:column; padding:32px; }
-.ajustes-jobs { grid-column:1 / -1; }
+.ajustes-jobs, .ajustes-security { grid-column:1 / -1; }
 .ajustes-card-title { margin-bottom:24px; font-size:20px; font-weight:600; letter-spacing:-.01em; color:var(--text); }
 .ajustes-text { font-size:15px; line-height:1.6; color:var(--text-2); }
 .ajustes-note { margin-top:24px; font-size:14px; line-height:1.55; color:var(--text-2); }

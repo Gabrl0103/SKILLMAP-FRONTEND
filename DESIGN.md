@@ -354,7 +354,8 @@ Estrella de brújula de 4 puntas con los flancos curvados hacia dentro; la punta
 - **Números con su significado:** una barra de demanda mide el % real de ofertas que dice su texto; un valor relativo ("Demanda baja") va con la comparación que lo explica.
 - **Botones solo con ícono** (tema, Ajustes, zoom del mapa) llevan `title` además de `aria-label`.
 - **Errores de carga:** qué pasó, "Reintentar" con contorno y el detalle técnico plegado en un `<details>`.
-- **Contraseñas nuevas** (Acceso y Perfil): requisitos visibles desde el inicio que se marcan en menta al cumplirse, incluida la coincidencia al repetirla.
+- **Seguridad en Ajustes:** cambiar contraseña y eliminar cuenta van en una tarjeta a todo el ancho al final de Ajustes, con las demás preferencias de la cuenta; Perfil queda para lo que se muestra de ti.
+- **Contraseñas nuevas** (Acceso y Seguridad en Ajustes): requisitos visibles desde el inicio que se marcan en menta al cumplirse, incluida la coincidencia al repetirla.
 
 ### Acceso (iniciar sesión / crear cuenta)
 Pantalla completa sin barra superior (`js/acceso.js`), en dos columnas centradas (máx. 1120px; una sola columna por debajo de 900px):
