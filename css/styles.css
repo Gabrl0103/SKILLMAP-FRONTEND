@@ -1067,12 +1067,17 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 :root[data-motion="reduced"] .trend-last-label { animation:none; }
 
 /* Mi Ruta: entrada. Solo CSS: se repite al recargar datos o al volver a la vista. */
-/* Tarjetas en orden de lectura: preparación, brechas, siguiente acción, tendencia */
+/* Tarjetas en orden de lectura: preparación, brechas, siguiente acción, tu semana, ofertas, tu ritmo, tendencia */
 .ruta-grid:not(.ruta-skeleton) > .ruta-col > * { animation:card-in 420ms var(--ease-out) backwards; }
 .ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(1) { animation-delay:40ms; }
 .ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(1) > :nth-child(2) { animation-delay:80ms; }
 .ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(2) { animation-delay:120ms; }
 .ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(3) { animation-delay:160ms; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(1) > :nth-child(3) { animation-delay:200ms; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(4) { animation-delay:240ms; }
+/* Recarga silenciosa (cambio de estado desde "Tu semana", loadDashboard con quiet): los datos nuevos aparecen sin
+   entrada, conteos ni barras que se vuelven a llenar */
+.ruta-grid.is-quiet *, .ruta-grid.is-quiet *::before, .ruta-grid.is-quiet *::after { animation:none !important; }
 /* Barras una tras otra; las que aparecen con "Ver detalle de brechas" se llenan al mostrarse */
 .gap-bar span { animation:bar-fill 600ms var(--ease-out) 140ms backwards; }
 .gap-row:nth-child(2) .gap-bar span { animation-delay:200ms; }
@@ -1118,6 +1123,89 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 @media (prefers-reduced-motion: reduce) { .offer-item, .offer-item[data-enter] { animation:none; transition:none; } .offer-item:hover { transform:none; } }
 :root[data-motion="reduced"] .offer-item, :root[data-motion="reduced"] .offer-item[data-enter] { animation:none; transition:none; }
 :root[data-motion="reduced"] .offer-item:hover { transform:none; }
+
+/* Mi Ruta: "Tu semana" (js/plan-semanal.js). Filas de tabla: casilla de avance (punteada = todavía no, menta con
+   marca = hecho esta semana), habilidad con su categoría y demanda, horas sugeridas y el selector de estado. Si la
+   tarjeta es angosta, el selector baja a su propia línea. Medidas en múltiplos de 8px. */
+.ruta-semana { container-type:inline-size; }
+.semana-intro { margin:-8px 0 8px; font-size:13px; line-height:1.5; color:var(--text-2); text-wrap:pretty; }
+.semana-list > li + li { border-top:1px solid var(--divider); }
+.semana-row { display:grid; grid-template-columns:24px minmax(0,1fr) auto minmax(0,288px); grid-template-areas:"check skill hours status";
+  align-items:center; gap:8px 16px; padding:16px 0; }
+.semana-check { grid-area:check; appearance:none; -webkit-appearance:none; display:grid; place-content:center; width:24px; height:24px; margin:0;
+  border-radius:8px; border:1.5px dashed var(--line-dashed); background:var(--surface-solid); cursor:pointer;
+  transition:background-color var(--dur-fast) ease, border-color var(--dur-fast) ease; }
+.semana-check::before { content:""; width:12px; height:7px; margin-top:-3px; border:solid var(--mastered-fg); border-width:0 0 2.5px 2.5px;
+  transform:rotate(-45deg); opacity:0; }
+.semana-check:checked { border:1.5px solid transparent; background:var(--mastered-bg); }
+.semana-check:checked::before { opacity:1; }
+.semana-check:hover:not(:checked) { border-color:var(--text-2); }
+.semana-check:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.semana-skill { grid-area:skill; min-width:0; }
+.semana-name { display:block; font-size:15px; font-weight:600; line-height:22px; color:var(--text); overflow-wrap:anywhere; cursor:pointer; }
+.semana-meta { margin-top:2px; font-size:12px; line-height:1.5; color:var(--text-2); }
+.semana-hours { grid-area:hours; font-size:13px; font-weight:600; color:var(--text-mid); white-space:nowrap; font-variant-numeric:tabular-nums; }
+.semana-status { grid-area:status; min-width:0; }
+.semana-status .status-option { min-height:40px; font-size:12px; }
+.semana-error { grid-column:1 / -1; font-size:13px; font-weight:600; line-height:1.5; color:var(--pink-ink); }
+.semana-foot { display:flex; flex-direction:column; gap:4px; margin-top:8px; padding-top:16px; border-top:1px solid var(--divider); }
+.semana-total { font-size:13px; font-weight:600; color:var(--text-mid); font-variant-numeric:tabular-nums; }
+.semana-hint { font-size:12px; line-height:1.5; color:var(--text-2); text-wrap:pretty; }
+@container (max-width:560px) {
+  .semana-row { grid-template-columns:24px minmax(0,1fr) auto; grid-template-areas:"check skill hours" "status status status"; }
+}
+@container (max-width:340px) { .semana-status .status-option { padding:0 4px; font-size:11.5px; } }
+
+/* Mi Ruta: "Tu ritmo" (js/rachas.js). Meta semanal con botones − / + (40px), la semana como tramos (uno por avance de
+   la meta: menta = dominada, rosa→violeta = aprendiendo, punteado = todavía no), las dos rachas con números grandes y
+   livianos y, tras el divisor del Motivo de Ruta, el mes sobre la barra del objetivo. */
+.ruta-ritmo > .ruta-card-title { margin-bottom:20px; }
+.ritmo-label { font-size:11px; font-weight:700; line-height:16px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-2); }
+.ritmo-goal { display:flex; flex-direction:column; gap:8px; }
+.ritmo-stepper { display:flex; align-items:center; gap:12px; }
+.ritmo-step { flex:none; display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:var(--radius-pill);
+  border:1.5px solid var(--card-border); background:var(--surface-solid); color:var(--text-mid); cursor:pointer;
+  transition:border-color var(--dur-fast) ease, color var(--dur-fast) ease; }
+.ritmo-step:hover:not([aria-disabled="true"]) { border-color:var(--pink-line-hover); color:var(--text); }
+.ritmo-step[aria-disabled="true"] { color:var(--disabled-fg); cursor:not-allowed; }
+.ritmo-step:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.ritmo-goal-value { min-width:0; font-size:13px; line-height:1.3; color:var(--text-mid); }
+.ritmo-goal-value strong { margin-right:4px; font-size:28px; font-weight:300; color:var(--text); font-variant-numeric:tabular-nums; vertical-align:-3px; }
+.ritmo-week { margin-top:24px; }
+.ritmo-week-text { font-size:15px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
+.ritmo-segments { display:flex; gap:4px; height:10px; margin-top:12px; }
+.ritmo-seg { flex:1; border-radius:var(--radius-pill); }
+.ritmo-seg--mastered { background:var(--mastered-bg); }
+.ritmo-seg--progress { background:var(--progress-bg); }
+.ritmo-seg--pending { border:1.5px dashed var(--line-dashed); }
+.ritmo-week-note { margin-top:8px; font-size:13px; line-height:1.5; color:var(--text-mid); }
+.ritmo-week-note.is-met { font-weight:600; color:var(--mint-ink); }
+.ritmo-hint { margin-top:4px; font-size:12px; line-height:1.5; color:var(--text-2); text-wrap:pretty; }
+.ritmo-streaks { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; margin-top:24px; }
+.ritmo-streak dt { font-size:12px; font-weight:600; color:var(--text-2); }
+.ritmo-streak dd { margin-top:4px; font-size:13px; color:var(--text-mid); }
+.ritmo-streak dd strong { margin-right:4px; font-size:2rem; font-weight:300; line-height:1; letter-spacing:-.02em; color:var(--text); font-variant-numeric:tabular-nums; }
+.ritmo-streak-note { margin-top:12px; font-size:13px; line-height:1.5; color:var(--text-mid); text-wrap:pretty; }
+.ruta-ritmo > .route-divider { margin:24px 0 16px; }
+.ritmo-month-text { margin-top:8px; font-size:14px; font-weight:600; line-height:1.5; color:var(--text); text-wrap:pretty; }
+.ritmo-month-bar { display:flex; align-items:center; gap:4px; height:10px; margin-top:12px; }
+.ritmo-month-seg { flex:0 1 auto; min-width:6px; height:10px; border-radius:var(--radius-pill); }
+.ritmo-month-seg--before { background:var(--mint-line-hover); }
+.ritmo-month-seg--month { background:var(--mastered-bg); }
+.ritmo-month-seg--left { flex-grow:1; height:2px; border-radius:0; background:var(--route-dash-x); }
+.ritmo-legend { display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:8px; font-size:12px; color:var(--text-2); }
+.ritmo-legend li { display:inline-flex; align-items:center; gap:6px; }
+.ritmo-legend li::before { content:""; width:10px; height:10px; border-radius:var(--radius-pill); }
+.ritmo-legend-before::before { background:var(--mint-line-hover); }
+.ritmo-legend-month::before { background:var(--mastered-bg); }
+/* Entrada: los tramos se revelan de izquierda a derecha con la tarjeta */
+.ritmo-segments, .ritmo-month-bar { animation:bar-fill 600ms var(--ease-out) 260ms backwards; }
+@media (prefers-reduced-motion: reduce) {
+  .ritmo-segments, .ritmo-month-bar { animation:none; }
+  .semana-check, .ritmo-step { transition:none; }
+}
+:root[data-motion="reduced"] .ritmo-segments, :root[data-motion="reduced"] .ritmo-month-bar { animation:none; }
+:root[data-motion="reduced"] .semana-check, :root[data-motion="reduced"] .ritmo-step { transition:none; }
 
 /* Mi Ruta: skeleton de carga con la misma grilla que la vista final, para que no salte el layout */
 @keyframes skel-pulse { from { opacity:1; } to { opacity:.5; } }
