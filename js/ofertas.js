@@ -126,9 +126,13 @@ function renderOffersBody({ enterFrom = Infinity } = {}) {
 
 // goal: título del objetivo ya traducido y escapado (para el estado vacío). goalId: el objetivo que muestra Mi Ruta; se
 // manda siempre porque en cuentas antiguas puede venir del navegador y no coincidir con el guardado en el backend.
-async function loadOffers(goal, goalId) {
+// quiet: recarga silenciosa de Mi Ruta (mismo objetivo): las ofertas de antes siguen a la vista, con "Ver más" como
+// estaba, hasta que llegan las nuevas, y entran sin animación.
+async function loadOffers(goal, goalId, { quiet = false } = {}) {
   const requestId = ++offersRequest;
-  Object.assign(offersState, { items: null, error: null, expanded: false, goal, goalId, busyId: null, analyzeError: null });
+  const keep = quiet && offersState.items && String(offersState.goalId) === String(goalId);
+  if (keep) Object.assign(offersState, { goal, busyId: null, analyzeError: null });
+  else Object.assign(offersState, { items: null, error: null, expanded: false, goal, goalId, busyId: null, analyzeError: null });
   renderOffersBody();
   try {
     const goalParam = goalId == null ? "" : `&goalId=${encodeURIComponent(goalId)}`;
@@ -139,7 +143,7 @@ async function loadOffers(goal, goalId) {
     if (requestId !== offersRequest) return;
     offersState.error = err;
   }
-  renderOffersBody({ enterFrom: 0 });
+  renderOffersBody({ enterFrom: keep ? Infinity : 0 });
 }
 
 // Pide el texto de la oferta y lo deja pegado en el Analizador (prefillAnalyzer abre la vista y enfoca el campo)
