@@ -1,6 +1,6 @@
 // Selector de estado de una habilidad (Pendiente / Aprendiendo / Dominada), compartido por el panel del Mapa Visual,
-// el detalle de habilidad y la lista de Perfil. Es un radiogroup: solo la opción elegida entra en el orden de tabulación
-// y las flechas (también Inicio / Fin) eligen la vecina. En la lista de Perfil se abre desde un chip como menú
+// el detalle de habilidad y la lista de Habilidades. Es un radiogroup: solo la opción elegida entra en el orden de
+// tabulación y las flechas (también Inicio / Fin) eligen la vecina. En la lista de Habilidades se abre desde un chip como menú
 // (menuitemradio): las flechas solo mueven el foco y se elige con Enter, Espacio o clic. Guarda con PUT
 // /api/skills/{id}/status.
 // Usa apiJson (session.js), escapeHtml (mapa.js) y t, statusLabel y tSkill (i18n.js).

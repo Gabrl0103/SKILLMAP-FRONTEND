@@ -1,6 +1,8 @@
 // Vista "Perfil". Usa fetchSkills, fetchGoals, fetchReadiness, getActiveGoalId, savedGoalId y renderApiError
-// (dashboard.js), escapeHtml (mapa.js), renderPerfilSkillsCard (perfil-habilidades.js: "Mis Habilidades"), sessionUser, apiJson, apiFetch, apiError,
-// friendlyError, renderUserMenu y endSession (session.js), routeDivider y routeDraw (route-motif.js) y t, tSkill, tGoalTitle y getLanguage (i18n.js).
+// (dashboard.js), escapeHtml (mapa.js), renderSkillSummary y openHabilidadesList (habilidades.js: el resumen "Mis
+// Habilidades" y su enlace a la vista Habilidades), sessionUser, apiJson, apiFetch, apiError, friendlyError,
+// renderUserMenu y endSession (session.js), routeDivider y routeDraw (route-motif.js) y t, tSkill, tGoalTitle y
+// getLanguage (i18n.js).
 // Todo es real: nombre, titular y correo (sesión), habilidades dominadas y en desarrollo (/api/skills), objetivo activo
 // con su preparación (/api/goals/{id}/readiness) y enlaces y proyectos (/api/profile/links y /api/profile/projects).
 // Los logros se calculan aquí con esos datos, sin guardar nada. Exportar CV abre una vista imprimible (window.print).
@@ -146,9 +148,29 @@ function renderPerfilHeader() {
   return header;
 }
 
-// ---------- Mis Habilidades (la tarjeta la arma perfil-habilidades.js) ----------
+// ---------- Mis Habilidades (resumen) ----------
 
 const skillsWithStatus = (skillsState, status) => skillsState?.skills?.filter(s => s.status === status) || [];
+
+// El resumen de la vista Habilidades (dominadas · aprendiendo · pendientes) y el enlace a la lista completa, donde se
+// cambia el estado de cada una
+function renderPerfilSkillsSummary(skillsState) {
+  let body;
+  if (skillsState?.error) body = renderApiError(skillsState.error);
+  else if (!skillsState) body = `<p class="route-state text-sm text-muted">${routeDraw({ loop: true })}${t("perfil.loadingSkills")}</p>`;
+  else body = renderSkillSummary(skillsState.skills);
+  return `
+    <article id="perfil-skills" class="perfil-card perfil-skills" aria-labelledby="perfil-skills-title">
+      <div class="perfil-skills-text">
+        <h2 id="perfil-skills-title" class="perfil-card-title">${t("perfil.skills")}</h2>
+        ${body}
+      </div>
+      <button type="button" class="btn-pill perfil-btn-outline perfil-skills-link" data-action="open-skills">
+        ${t("perfil.skills.link")}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </article>`;
+}
 
 // ---------- Estadísticas y logros ----------
 
@@ -618,8 +640,8 @@ function renderPerfil() {
   const [main, side] = grid.children;
   main.append(renderItemsCard("project"), perfilBlock(renderAchievementsCard()));
   side.append(renderItemsCard("link"));
-  // "Mis Habilidades" va a todo el ancho bajo la cabecera: sus filas caben en tres columnas
-  document.getElementById("perfil-content").replaceChildren(renderPerfilHeader(), perfilBlock(renderPerfilSkillsCard(perfilState.skills)),
+  // El resumen "Mis habilidades" va a todo el ancho bajo la cabecera, en una fila (Seguridad está en Ajustes)
+  document.getElementById("perfil-content").replaceChildren(renderPerfilHeader(), perfilBlock(renderPerfilSkillsSummary(perfilState.skills)),
     grid);
 }
 
@@ -679,24 +701,10 @@ async function loadPerfilData() {
   if (request !== perfilState.request) return; // cambió el usuario o su progreso mientras cargaba
   perfilState.skills = skills;
   perfilState.goal = goal;
-  // La tarjeta se reemplaza: si el foco estaba en su título (llegada desde el Mapa) o en una fila (vuelta del detalle de
-  // habilidad), vuelve ahí
-  const titleFocused = document.activeElement?.id === "perfil-skills-title";
-  const focus = perfilSkillsFocus();
-  swapPerfilBlock("perfil-skills", renderPerfilSkillsCard(skills));
-  if (titleFocused) document.getElementById("perfil-skills-title")?.focus({ preventScroll: true });
-  else if (focus) focusPerfilSkills(focus);
-  refreshPerfilProgress();
-}
-
-// Estado cambiado desde la propia lista: las habilidades ya están al día; se recalculan las estadísticas y los logros
-// y se vuelve a pedir la preparación del objetivo activo (depende de las dominadas)
-async function refreshPerfilGoal() {
-  refreshPerfilProgress();
-  const request = ++perfilState.request;
-  const goal = await fetchActiveReadiness().then(readiness => ({ readiness }), error => ({ error }));
-  if (request !== perfilState.request) return;
-  perfilState.goal = goal;
+  // El resumen se reemplaza: si el foco estaba en su enlace, vuelve ahí
+  const linkFocused = document.activeElement?.matches("#perfil-skills [data-action='open-skills']");
+  swapPerfilBlock("perfil-skills", renderPerfilSkillsSummary(skills));
+  if (linkFocused) document.querySelector("#perfil-skills [data-action='open-skills']")?.focus({ preventScroll: true });
   refreshPerfilProgress();
 }
 
@@ -957,11 +965,7 @@ document.addEventListener("skillmap:user", () => {
   document.getElementById("perfil-content").replaceChildren();
   renderAjustesSecurity(); // otra cuenta: formularios vacíos y el borrado cerrado
 });
-document.addEventListener("skillmap:progress", e => {
-  if (e.detail?.source === "perfil") {
-    refreshPerfilGoal();
-    return;
-  }
+document.addEventListener("skillmap:progress", () => {
   resetPerfilSkills();
   if (!document.getElementById("view-perfil").classList.contains("hidden")) loadPerfilData(); // abierto mientras se guardaba
 });
@@ -986,6 +990,7 @@ function handlePerfilClick(e) {
     "close-cv": () => setCvOpen(false),
     "print-cv": printCv,
     "change-goal": openGoalSelection,
+    "open-skills": openHabilidadesList, // habilidades.js
     "add-item": () => setItemMode({ edit: { kind, id: "new" } }, `${card} form input`),
     "edit-item": () => setItemMode({ edit: { kind, id } }, `${card} form input`),
     "delete-item": () => setItemMode({ confirm: { kind, id } }, `${card} .perfil-confirm [type='submit']`),

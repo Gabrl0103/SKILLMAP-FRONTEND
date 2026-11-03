@@ -4,7 +4,7 @@
 // getActiveGoalId (dashboard.js), currentActiveGoalId (objetivo.js), renderStatusPicker, bindStatusPicker,
 // focusStatusPicker y saveSkillStatus (skill-status.js), routeDraw (route-motif.js), pointBrandNeedle (brand.js), friendlyError (session.js) y t, statusLabel, tSkill, tCategory,
 // tGoalTitle y getLanguage (i18n.js). Un consejo de primera vez explica el mapa y "Ver mis habilidades como lista"
-// lleva a la lista de Perfil (openPerfilSkills, perfil-habilidades.js).
+// lleva a la vista Habilidades (openHabilidadesList, habilidades.js).
 // También define la navegación entre vistas (showView) y el indicador del nav de la barra superior, con su estela.
 
 const NODE_SIZE = 96;       // diámetro de cada nodo (px)
@@ -681,7 +681,7 @@ document.getElementById("mapa-content").addEventListener("click", e => {
   const context = e.target.closest("#mapa-panel [data-context]");
   if (context) openSkillDetail(Number(context.dataset.context), context); // skill-detalle.js
   if (e.target.closest("[data-tip-close]")) dismissMapaTip();
-  if (e.target.closest("[data-goto-list]")) openPerfilSkills(); // perfil-habilidades.js
+  if (e.target.closest("[data-goto-list]")) openHabilidadesList(); // habilidades.js
 });
 bindStatusPicker(document.getElementById("mapa-content"), setMapaSkillStatus);
 
@@ -822,6 +822,7 @@ function showView(view) {
   if (view === "dashboard") openRuta();        // definido en dashboard.js
   if (view === "analizador") openAnalizador(); // definido en analizador.js
   if (view === "objetivo") openObjetivo(); // definido en objetivo.js
+  if (view === "habilidades") openHabilidades(); // definido en habilidades.js
   if (view === "perfil") openPerfil();     // definido en perfil.js
   if (view === "ajustes") openAjustes();   // definido en ajustes.js
   // "skill" (detalle de habilidad) no tiene ítem en el nav: lo abre openSkillDetail (skill-detalle.js)

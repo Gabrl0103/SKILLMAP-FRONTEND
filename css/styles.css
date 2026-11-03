@@ -289,8 +289,9 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 /* Contenido: ancho máximo de 1200px centrado, padding de 40px */
 .app-main { max-width:1200px; margin-inline:auto; padding:40px; }
 
-/* Pantallas medianas: el nav pasa a solo íconos (los nombres quedan en aria-label) */
-@media (max-width:1079px) {
+/* Pantallas medianas: el nav pasa a solo íconos (los nombres quedan en aria-label). Con sus seis secciones el nav con
+   texto mide ~800px y, junto a la marca y las acciones, necesita ~1270px de ancho */
+@media (max-width:1279px) {
   .nav-item { width:44px; padding:0; }
   .nav-text { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 }
@@ -460,59 +461,12 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 .perfil-col { display:flex; flex-direction:column; gap:1.5rem; min-width:0; }
 @media (min-width:1024px) { .perfil-grid { grid-template-columns:minmax(0,1.7fr) minmax(0,1fr); align-items:start; } }
 
-/* Mis Habilidades (perfil-habilidades.js): a todo el ancho bajo la cabecera. Filtros segmentados compactos con
-   contador; grupos por categoría con un título discreto y filas ligeras de 40px en tres columnas (dos o una si el ancho
-   no alcanza), separadas solo por espacio. Cada fila: nombre (abre el contexto), demanda en texto tenue e indicador de
-   estado (círculo + etiqueta) que abre el selector en un popover pequeño anclado */
+/* Mis Habilidades (resumen): a todo el ancho bajo la cabecera, en una fila: título y el resumen de la vista Habilidades
+   (renderSkillSummary) a la izquierda y el enlace a la lista completa a la derecha */
 #perfil-content > #perfil-skills { margin-bottom:24px; }
-#perfil-skills-title { scroll-margin-top:calc(var(--header-h) + 56px); }
-.perfil-filters { display:inline-flex; flex-wrap:wrap; gap:4px; padding:4px; border-radius:var(--radius-pill); background:var(--surface-2);
-  border:1px solid var(--card-border); }
-.perfil-filters button { display:inline-flex; align-items:center; gap:8px; height:32px; padding:0 12px;
-  border-radius:var(--radius-pill); font-size:13px; font-weight:600; color:var(--nav-fg); cursor:pointer;
-  transition:background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
-.perfil-filters button:hover { color:var(--text); }
-.perfil-filters button[aria-pressed="true"] { background:var(--toggle-on-bg); color:var(--toggle-on-fg); box-shadow:var(--toggle-on-shadow); }
-.perfil-filters button:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
-.perfil-filter-count { font-size:12px; font-weight:500; color:var(--text-2); font-variant-numeric:tabular-nums; }
-.perfil-filters button[aria-pressed="true"] .perfil-filter-count { color:inherit; }
-.perfil-hab-hint { margin-top:8px; }
-.perfil-hab-group { margin-top:24px; }
-.perfil-hab-title { display:flex; align-items:baseline; gap:8px; font-size:11px; font-weight:700; line-height:16px; letter-spacing:.12em;
-  text-transform:uppercase; color:var(--text-2); }
-.perfil-hab-count { font-weight:500; letter-spacing:0; text-transform:none; }
-.perfil-hab-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(264px,1fr)); column-gap:32px; margin-top:8px; }
-.perfil-hab-row { position:relative; display:grid; grid-template-columns:minmax(0,1fr) 40px 112px; align-items:center; column-gap:8px;
-  min-height:40px; }
-.perfil-hab-name { justify-self:start; font-size:14px; font-weight:600; line-height:20px; color:var(--text); text-align:left;
-  overflow-wrap:anywhere; border-radius:8px; }
-.perfil-hab-name:hover { color:var(--chip-rosa-fg); text-decoration:underline; text-underline-offset:4px; }
-.perfil-hab-name:focus-visible { outline:var(--focus-ring); outline-offset:4px; }
-.perfil-hab-pct { font-size:12px; color:var(--text-2); text-align:right; font-variant-numeric:tabular-nums; }
-.perfil-hab-state { position:relative; justify-self:start; }
-/* Indicador de estado: círculo con el color del estado (punteado, rosa→violeta o menta) y etiqueta pequeña, sin píldora */
-.perfil-hab-chip { display:inline-flex; align-items:center; gap:8px; height:32px; padding:0 8px; border-radius:8px; font-size:12px; font-weight:600;
-  color:var(--text-mid); white-space:nowrap; cursor:pointer; transition:background-color var(--dur-fast) ease; }
-.perfil-hab-chip::before, .perfil-hab-menu .status-option::before { content:""; flex:none; width:10px; height:10px; border-radius:9999px; }
-.perfil-hab-chip--pending::before, .perfil-hab-menu .status-option--pending::before { border:1.5px dashed var(--line-dashed); }
-.perfil-hab-chip--progress::before, .perfil-hab-menu .status-option--progress::before { background:var(--progress-bg); }
-.perfil-hab-chip--mastered::before, .perfil-hab-menu .status-option--mastered::before { background:var(--mastered-bg); }
-.perfil-hab-chip:hover, .perfil-hab-chip[aria-expanded="true"] { background:var(--surface-2); color:var(--text); }
-.perfil-hab-chip:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
-.perfil-hab-chip[aria-busy="true"] { cursor:progress; }
-/* Popover del selector: tres opciones en columna con su círculo; la elegida en negrita con fondo suave. Flota sobre las
-   filas (no desplaza nada); .is-up lo abre hacia arriba y .is-end lo alinea con el final del indicador */
-.perfil-hab-menu { position:absolute; top:calc(100% + 4px); left:0; z-index:5; width:168px; padding:4px; border-radius:16px;
-  background:var(--surface-solid); border:1px solid var(--card-border); box-shadow:var(--card-shadow); animation:fade-in 120ms ease-out; }
-.perfil-hab-menu.is-up { top:auto; bottom:calc(100% + 4px); }
-.perfil-hab-menu.is-end { left:auto; right:0; }
-.perfil-hab-menu .status-picker { flex-direction:column; gap:0; padding:0; border:0; background:none; }
-.perfil-hab-menu .status-option, .perfil-hab-menu .status-option[aria-checked="true"] { display:flex; align-items:center; gap:8px; min-height:36px;
-  padding:0 12px; border:0; border-radius:12px; background:none; box-shadow:none; color:var(--text-mid); font-size:13px; font-weight:500; text-align:left; }
-.perfil-hab-menu .status-option:hover { background:var(--surface-2); color:var(--text); }
-.perfil-hab-menu .status-option[aria-checked="true"] { background:var(--surface-2); color:var(--text); font-weight:700; }
-.perfil-hab-error { grid-column:1 / -1; padding-bottom:8px; font-size:13px; line-height:1.5; font-weight:600; color:var(--pink-ink); }
-.perfil-hab-empty { margin-top:24px; }
+.perfil-skills { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px 24px; }
+.perfil-skills .perfil-card-title { margin-bottom:12px; }
+.btn-pill.perfil-skills-link { padding:.8rem 1.4rem; font-size:.85rem; }
 
 /* Enlaces y proyectos: lista con Editar y Borrar (44px), formulario en el lugar y confirmación de borrado. Entre
    elementos, el divisor del Motivo de Ruta (.route-sep en el <ul>) */
@@ -651,12 +605,119 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 /* Menos movimiento: sin entrada, llenado ni elevación. Quedan color, borde y sombra. */
 @media (prefers-reduced-motion: reduce) {
   #perfil-content > .perfil-header, #perfil-content > #perfil-skills, .perfil-col > *, #perfil-content > .perfil-security, .perfil-stat-bar span, .perfil-cv-wrap { animation:none; }
-  .perfil-filters button, .perfil-hab-chip { transition:none; }
-  .perfil-hab-menu { animation:none; }
 }
 :root[data-motion="reduced"] #perfil-content > .perfil-header, :root[data-motion="reduced"] #perfil-content > #perfil-skills, :root[data-motion="reduced"] .perfil-col > *, :root[data-motion="reduced"] #perfil-content > .perfil-security, :root[data-motion="reduced"] .perfil-stat-bar span, :root[data-motion="reduced"] .perfil-cv-wrap { animation:none; }
-:root[data-motion="reduced"] .perfil-filters button, :root[data-motion="reduced"] .perfil-hab-chip { transition:none; }
-:root[data-motion="reduced"] .perfil-hab-menu { animation:none; }
+
+/* ---------- Habilidades ---------- */
+/* Vista Habilidades (habilidades.js): el catálogo como lista para quien prefiere leer en vez de recorrer el Mapa.
+   Encabezado con el resumen, filtros segmentados en una fila y una tarjeta por categoría con filas de tabla
+   (nombre · demanda · estado). Medidas en múltiplos de 8px */
+.hab-header { margin-bottom:32px; }
+#habilidades-title { border-radius:8px; }
+#habilidades-title:focus { outline:none; }
+#habilidades-title:focus-visible { outline:var(--focus-ring); outline-offset:4px; }
+
+/* Resumen: "4 dominadas · 3 aprendiendo · 13 pendientes" con el círculo de cada estado (también en Perfil; números
+   grandes y livianos) y, en la vista, la barra de proporciones: menta y rosa→violeta sólidos, lo pendiente punteado */
+.hab-summary-wrap { min-height:64px; margin-top:24px; } /* reserva el alto mientras carga */
+.hab-summary { display:flex; flex-wrap:wrap; align-items:center; gap:8px 32px; font-size:15px; font-weight:500; color:var(--text-mid); }
+.hab-summary-item { display:inline-flex; align-items:center; gap:8px; white-space:nowrap; }
+.hab-summary-item strong { font-size:24px; font-weight:300; line-height:32px; letter-spacing:-.02em; color:var(--text); font-variant-numeric:tabular-nums; }
+.hab-dot, .hab-chip::before, .hab-menu .status-option::before { content:""; flex:none; width:10px; height:10px; border-radius:9999px; }
+.hab-dot--pending, .hab-chip--pending::before, .hab-menu .status-option--pending::before { border:1.5px dashed var(--line-dashed); }
+.hab-dot--progress, .hab-chip--progress::before, .hab-menu .status-option--progress::before { background:var(--progress-bg); }
+.hab-dot--mastered, .hab-chip--mastered::before, .hab-menu .status-option--mastered::before { background:var(--mastered-bg); }
+.hab-summary-bar { display:flex; align-items:center; gap:4px; max-width:480px; height:8px; margin-top:16px; }
+.hab-bar { flex:0 1 auto; min-width:8px; height:8px; border-radius:9999px; }
+.hab-bar--mastered { background:var(--mastered-bg); }
+.hab-bar--progress { background:var(--progress-bg); }
+.hab-bar--pending { flex:1 1 0; height:2px; border-radius:0; background:var(--route-dash-x); }
+
+/* Filtros: píldora del nav con botones de 40px; el elegido con --toggle-on-*. Siempre en una fila: si no caben, se
+   desplazan en horizontal. La pista va al lado (debajo si no cabe) */
+.hab-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:16px 32px; margin-bottom:24px; }
+.hab-filters { display:flex; gap:4px; max-width:100%; padding:4px; overflow-x:auto; scrollbar-width:none; border-radius:var(--radius-pill);
+  background:var(--nav-bg); border:1px solid var(--nav-border); box-shadow:var(--nav-shadow); backdrop-filter:var(--nav-blur);
+  -webkit-backdrop-filter:var(--nav-blur); }
+.hab-filters::-webkit-scrollbar { display:none; }
+.hab-filters button { flex-shrink:0; height:40px; padding:0 20px; border-radius:var(--radius-pill); font-size:14px; font-weight:600; white-space:nowrap;
+  color:var(--nav-fg); cursor:pointer;
+  transition:background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
+.hab-filters button:hover { color:var(--text); }
+.hab-filters button[aria-pressed="true"] { background:var(--toggle-on-bg); color:var(--toggle-on-fg); box-shadow:var(--toggle-on-shadow); }
+.hab-filters button:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.hab-hint { flex:1 1 20rem; max-width:44rem; font-size:13px; line-height:1.5; color:var(--text-2-page); }
+
+/* Tarjetas por categoría. La cabecera rotula las columnas con la misma grilla que las filas */
+.hab-body { display:flex; flex-direction:column; gap:24px; }
+.ruta-card.hab-group { padding:24px 32px 8px; } /* .ruta-card (más abajo) pone 1.75rem */
+/* La tarjeta con el selector abierto pasa sobre las siguientes (en oscuro cada tarjeta es su propio contexto de
+   apilamiento por el backdrop-filter) */
+.hab-group:has(.hab-menu) { position:relative; z-index:2; }
+.hab-group-header, .hab-row { display:grid; grid-template-columns:minmax(0,1fr) 232px 176px; grid-template-areas:"name demand state";
+  align-items:center; column-gap:24px; }
+.hab-group-header { padding-bottom:12px; border-bottom:1px solid var(--divider); }
+.hab-group-title { grid-area:name; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; font-size:1.05rem; font-weight:600;
+  letter-spacing:-.01em; color:var(--text); }
+.hab-group-count { font-size:13px; font-weight:500; letter-spacing:0; color:var(--text-2); }
+.hab-col-label { font-size:11px; font-weight:700; line-height:16px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-2); }
+.hab-col-label--demand { grid-area:demand; }
+.hab-col-label--state { grid-area:state; padding-left:13px; } /* alineado con el círculo del indicador */
+
+/* Fila (64px): nombre (botón con aspecto de enlace, abre el contexto), demanda (barra azul de --chart-demand y %) e
+   indicador de estado: círculo + etiqueta + flecha, con contorno suave; abre el selector */
+.hab-list > li + li { border-top:1px solid var(--divider); }
+.hab-row { min-height:64px; padding:8px 0; }
+.hab-name { grid-area:name; justify-self:start; padding:4px 0; font-size:15px; font-weight:600; line-height:22px; color:var(--text); text-align:left;
+  overflow-wrap:anywhere; border-radius:8px; }
+.hab-name:hover { color:var(--chip-rosa-fg); text-decoration:underline; text-underline-offset:4px; }
+.hab-name:focus-visible { outline:var(--focus-ring); outline-offset:4px; }
+.hab-demand { grid-area:demand; display:flex; align-items:center; gap:12px; }
+.hab-demand-bar { flex:1; height:6px; border-radius:9999px; background:var(--track); overflow:hidden; }
+.hab-demand-bar > span { display:block; height:100%; border-radius:inherit; background:var(--chart-demand); }
+.hab-demand-pct { flex:none; min-width:40px; font-size:13px; font-weight:600; color:var(--text-mid); text-align:right; font-variant-numeric:tabular-nums; }
+.hab-state { grid-area:state; position:relative; justify-self:start; }
+.hab-chip { display:inline-flex; align-items:center; gap:8px; min-width:152px; height:40px; padding:0 8px 0 12px; border:1px solid var(--card-border); border-radius:12px;
+  font-size:13px; font-weight:600; color:var(--text-mid); white-space:nowrap; cursor:pointer;
+  transition:background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease; }
+.hab-chip-caret { flex:none; margin-left:auto; color:var(--text-2); transition:rotate var(--dur-fast) var(--ease-out); }
+.hab-chip[aria-expanded="true"] .hab-chip-caret { rotate:180deg; }
+.hab-chip:hover, .hab-chip[aria-expanded="true"] { background:var(--surface-2); border-color:var(--pink-line-hover); color:var(--text); }
+.hab-chip:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.hab-chip[aria-busy="true"] { cursor:progress; }
+/* Popover del selector: tres opciones en columna con su círculo; la elegida en negrita con fondo suave. Flota sobre las
+   filas (no desplaza nada); .is-up lo abre hacia arriba y .is-end lo alinea con el final del indicador */
+.hab-menu { position:absolute; top:calc(100% + 4px); left:0; z-index:5; width:176px; padding:4px; border-radius:16px;
+  background:var(--surface-solid); border:1px solid var(--card-border); box-shadow:var(--card-shadow); animation:fade-in 120ms ease-out; }
+.hab-menu.is-up { top:auto; bottom:calc(100% + 4px); }
+.hab-menu.is-end { left:auto; right:0; }
+.hab-menu .status-picker { flex-direction:column; gap:0; padding:0; border:0; background:none; }
+.hab-menu .status-option, .hab-menu .status-option[aria-checked="true"] { display:flex; align-items:center; gap:8px; min-height:40px;
+  padding:0 12px; border:0; border-radius:12px; background:none; box-shadow:none; color:var(--text-mid); font-size:13px; font-weight:500; text-align:left; }
+.hab-menu .status-option:hover { background:var(--surface-2); color:var(--text); }
+.hab-menu .status-option[aria-checked="true"] { background:var(--surface-2); color:var(--text); font-weight:700; }
+.hab-row-error { grid-column:1 / -1; padding-bottom:8px; font-size:13px; line-height:1.5; font-weight:600; color:var(--pink-ink); }
+.hab-empty { font-size:.88rem; line-height:1.55; color:var(--text-2-page); }
+.ruta-card.hab-empty { padding:32px; color:var(--text-2); }
+
+/* Angostas: nombre y demanda en dos líneas, el indicador a la derecha; sin rótulos de columna */
+@media (max-width:767px) {
+  .ruta-card.hab-group { padding:16px 20px 8px; }
+  .hab-group-header { grid-template-columns:minmax(0,1fr); grid-template-areas:"name"; }
+  .hab-col-label { display:none; }
+  .hab-row { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"name state" "demand state"; row-gap:4px; column-gap:16px; }
+  .hab-demand { max-width:240px; }
+}
+
+/* Entrada: solo al pintar con datos nuevos (.is-new); los repintados por filtro o estado no la repiten */
+.hab-body.is-new > * { animation:card-in 420ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 8) * 50ms); }
+.hab-summary-wrap.is-new .hab-bar { animation:bar-fill 700ms var(--ease-out) 200ms backwards; }
+@media (prefers-reduced-motion: reduce) {
+  .hab-body.is-new > *, .hab-summary-wrap.is-new .hab-bar, .hab-menu { animation:none; }
+  .hab-filters button, .hab-chip, .hab-chip-caret { transition:none; }
+}
+:root[data-motion="reduced"] .hab-body.is-new > *, :root[data-motion="reduced"] .hab-summary-wrap.is-new .hab-bar, :root[data-motion="reduced"] .hab-menu { animation:none; }
+:root[data-motion="reduced"] .hab-filters button, :root[data-motion="reduced"] .hab-chip, :root[data-motion="reduced"] .hab-chip-caret { transition:none; }
 
 /* ---------- Analizador ---------- */
 .analizador-card { padding:1.75rem; }
@@ -950,12 +1011,11 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 /* Estado de la brecha (Pendiente / Aprendiendo): el chip del Mapa, más chico para la fila */
 .gap-meta { align-items:center; }
 .mapa-chip.gap-status { height:24px; padding:0 10px; font-size:11px; }
-/* Nota de "Datos de ejemplo" al pie de una tarjeta (Mi Ruta y Perfil) */
-.ruta-sample-note, .perfil-sample-note { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.6rem; padding-top:1.1rem; border-top:1px solid var(--divider);
+/* Nota de "Datos de ejemplo" al pie de una tarjeta (Mi Ruta) o de la lista (Habilidades) */
+.ruta-sample-note, .hab-sample-note { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.6rem; padding-top:1.1rem; border-top:1px solid var(--divider);
   font-size:.72rem; color:var(--muted); }
-/* Perfil: la nota va tras un divisor del Motivo de Ruta (renderSkillsCard) */
-.perfil-card > .route-divider { margin-top:24px; }
-.perfil-sample-note { margin-top:16px; padding-top:0; border-top:0; }
+/* Habilidades: bajo las tarjetas, sobre el fondo de la página */
+.hab-sample-note { margin-top:24px; padding-top:0; border-top:0; color:var(--text-2-page); }
 
 /* Error de carga (renderApiError): Reintentar y el detalle técnico plegado */
 .btn-pill.api-error-retry { margin-top:14px; min-height:40px; padding:8px 18px; font-size:.85rem; }
