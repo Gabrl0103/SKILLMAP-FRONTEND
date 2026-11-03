@@ -10,7 +10,7 @@
 // - Este mes: habilidades del objetivo que pasaron a Dominada desde el día 1 (hora local), con una barra del objetivo
 //   entero: dominadas antes, dominadas este mes y lo que falta.
 // La pinta loadDashboard (dashboard.js). Usa weekKey, weekKeyOf y previousWeekKey (plan-semanal.js), escapeHtml (mapa.js),
-// sessionUser (session.js) y t, tn, tSkill y tGoalTitle (i18n.js). "Este mes" es una tarjeta aparte (renderRitmoMonthCard).
+// sessionUser (session.js), routeDivider (route-motif.js) y t, tn, tSkill y tGoalTitle (i18n.js).
 
 const RITMO_KEY = "skillmap.ritmo";
 const RITMO_GOAL = { default: 2, min: 1, max: 10 };
@@ -134,7 +134,7 @@ function renderRitmoWeek(goal, count, advances) {
   const note = left > 0 ? tn("ritmo.week.left", left) : t("ritmo.week.met");
   return `
     <div class="ritmo-week">
-      <p class="ritmo-week-text">${tn("ritmo.week", count)}</p>
+      <p class="ritmo-week-text">${t("ritmo.week", { n: count, goal })}</p>
       <div class="ritmo-segments" aria-hidden="true">${segments}</div>
       <p class="ritmo-week-note${left > 0 ? "" : " is-met"}">${note}</p>
       <p class="ritmo-hint">${t("ritmo.goal.hint")}</p>
@@ -168,8 +168,9 @@ function renderRitmoMonth() {
     : topGap ? t("ritmo.month.none", { skill: escapeHtml(tSkill(topGap.name)) }) : t("ritmo.month.noneArrived");
   const segment = (kind, n) => (n ? `<span class="ritmo-month-seg ritmo-month-seg--${kind}" style="flex-basis:${pct(n)}%"></span>` : "");
   return `
-    <article id="ritmo-month-card" class="ruta-card ritmo-month" aria-labelledby="ritmo-month-title">
-      <h2 id="ritmo-month-title" class="ruta-card-title">${t("ritmo.month.title")}</h2>
+    ${routeDivider()}
+    <section class="ritmo-month" aria-labelledby="ritmo-month-title">
+      <h3 id="ritmo-month-title" class="ritmo-label">${t("ritmo.month.title")}</h3>
       <p class="ritmo-month-text">${text}</p>
       <div class="ritmo-month-bar" aria-hidden="true">
         ${segment("before", before)}${segment("month", thisMonth)}${segment("left", total - before - thisMonth)}
@@ -178,13 +179,7 @@ function renderRitmoMonth() {
         ${before ? `<li class="ritmo-legend-before">${t("ritmo.month.before")}</li>` : ""}${thisMonth ? `<li class="ritmo-legend-month">${t("ritmo.month.title")}</li>` : ""}
       </ul>` : ""}
       <p class="ritmo-hint">${t("ritmo.month.route", { n: before + thisMonth, total, goal })}</p>
-    </article>`;
-}
-
-// "Este mes" va en su propia tarjeta, junto a la Tendencia (los dos miran el avance en el tiempo); se pinta después de
-// renderRitmoCard, que deja listos los datos. Vacía si el objetivo no tiene habilidades o /api/skills falló.
-function renderRitmoMonthCard() {
-  return ritmo.skills ? renderRitmoMonth() : "";
+    </section>`;
 }
 
 function renderRitmoInner() {
@@ -196,7 +191,8 @@ function renderRitmoInner() {
     ${title}
     ${renderRitmoGoal(data.goal)}
     ${renderRitmoWeek(data.goal, count, weekAdvances(skills))}
-    ${renderRitmoStreaks(data, count >= data.goal)}`;
+    ${renderRitmoStreaks(data, count >= data.goal)}
+    ${renderRitmoMonth()}`;
   saveRitmo(data); // con la mejor racha al día
   return body;
 }

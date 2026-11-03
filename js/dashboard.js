@@ -335,12 +335,13 @@ function renderRutaSkeleton() {
   return `
     <div class="ruta-grid ruta-skeleton" role="status">
       <span class="sr-only">${t("ruta.loading")}</span>
-      <!-- Mismas franjas que la vista cargada -->
-      <div class="ruta-band ruta-band--now" aria-hidden="true">
+      <div class="ruta-col" aria-hidden="true">
         <div class="ruta-card ruta-gauge">
           <span class="skel skel-line skel-line--title"></span>
           <span class="skel skel-ring"></span>
           <span class="skel skel-line skel-line--short"></span>
+          <span class="skel skel-line skel-line--shorter"></span>
+          <span class="skel skel-pill"></span>
         </div>
         <div class="skel-action"></div>
         <div class="ruta-card">
@@ -349,7 +350,7 @@ function renderRutaSkeleton() {
           <span class="skel skel-bar"></span>
         </div>
       </div>
-      <div class="ruta-band ruta-band--plan" aria-hidden="true">
+      <div class="ruta-col" aria-hidden="true">
         <div class="ruta-card">
           <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span>${routeDraw({ loop: true })}</div>
           <div class="gap-list">${gapRow.repeat(3)}</div>
@@ -357,6 +358,10 @@ function renderRutaSkeleton() {
         <div class="ruta-card">
           <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span></div>
           <div class="gap-list">${gapRow.repeat(3)}</div>
+        </div>
+        <div class="ruta-card">
+          <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span></div>
+          <span class="skel skel-chart"></span>
         </div>
       </div>
     </div>`;
@@ -672,15 +677,10 @@ async function loadDashboard(goalId, { quiet = false } = {}) {
     const reference = demand.goalSkills.length ? demand.goalSkills : r.gaps;
     renderMarketDemand(demand.goalSkills, demand.catalog);
     const goal = escapeHtml(tGoalTitle(r.goalTitle));
-    // Cuatro franjas en orden de lectura: dónde estás y qué sigue (preparación, siguiente giro, tu ritmo) · qué hacer
-    // (brechas y el plan de la semana, lado a lado) · cómo avanzas en el tiempo (tendencia y este mes) · dónde aplicar
-    // (ofertas, a todo el ancho). Dentro de cada franja las tarjetas comparten alto.
     container.innerHTML = `
       <div class="ruta-grid${silent ? " is-quiet" : ""}">
-        <div class="ruta-band ruta-band--now">${renderGauge(r)}${renderNextAction(r.gaps[0], r.goalTitle)}${renderRitmoCard(demand.catalog, demand.goalSkills, r)}</div>
-        <div class="ruta-band ruta-band--plan">${renderBrechas(r.gaps, reference, jobStats, r.goalTitle)}${renderSemanaCard(r.gaps, demand.catalog, goalId, r.goalTitle)}</div>
-        <div class="ruta-band ruta-band--progress">${renderTrend(history)}${renderRitmoMonthCard()}</div>
-        <div class="ruta-band ruta-band--offers">${renderOffersCard(goal)}</div>
+        <div class="ruta-col">${renderGauge(r)}${renderNextAction(r.gaps[0], r.goalTitle)}${renderRitmoCard(demand.catalog, demand.goalSkills, r)}</div>
+        <div class="ruta-col">${renderBrechas(r.gaps, reference, jobStats, r.goalTitle)}${renderSemanaCard(r.gaps, demand.catalog, goalId, r.goalTitle)}${renderOffersCard(goal)}${renderTrend(history)}</div>
       </div>`;
     bindTrendHover(container, history);
     loadOffers(goal, goalId, { quiet: silent }); // ofertas.js: llega después, sin frenar el resto de la vista

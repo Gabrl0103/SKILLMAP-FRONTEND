@@ -635,7 +635,7 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 
 /* Filtros: píldora del nav con botones de 40px; el elegido con --toggle-on-*. Siempre en una fila: si no caben, se
    desplazan en horizontal. La pista va al lado (debajo si no cabe) */
-.hab-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:16px 24px; margin-bottom:24px; }
+.hab-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:16px 32px; margin-bottom:24px; }
 .hab-filters { display:flex; gap:4px; max-width:100%; padding:4px; overflow-x:auto; scrollbar-width:none; border-radius:var(--radius-pill);
   background:var(--nav-bg); border:1px solid var(--nav-border); box-shadow:var(--nav-shadow); backdrop-filter:var(--nav-blur);
   -webkit-backdrop-filter:var(--nav-blur); }
@@ -646,27 +646,10 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 .hab-filters button:hover { color:var(--text); }
 .hab-filters button[aria-pressed="true"] { background:var(--toggle-on-bg); color:var(--toggle-on-fg); box-shadow:var(--toggle-on-shadow); }
 .hab-filters button:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
-.hab-filter-count { margin-left:6px; font-size:12px; font-weight:500; color:var(--text-2); font-variant-numeric:tabular-nums; }
-.hab-filters button[aria-pressed="true"] .hab-filter-count { color:inherit; opacity:.75; }
-/* Búsqueda por nombre: a la derecha de los filtros, mismo alto que la píldora */
-.hab-search { position:relative; display:flex; align-items:center; flex:0 1 280px; min-width:200px; margin-left:auto; color:var(--text-2); }
-.hab-search svg { position:absolute; left:16px; pointer-events:none; }
-.hab-search input { width:100%; height:48px; padding:0 16px 0 44px; border-radius:var(--radius-pill); background:var(--field-bg);
-  border:1px solid var(--field-border-strong); font:inherit; font-size:14px; color:var(--text); }
-.hab-search input::placeholder { color:var(--text-2); opacity:1; }
-.hab-search input:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
-.hab-search:focus-within { color:var(--pink-ink); }
-.hab-hint { margin:-8px 0 24px; font-size:13px; line-height:1.5; color:var(--text-2-page); }
+.hab-hint { flex:1 1 20rem; max-width:44rem; font-size:13px; line-height:1.5; color:var(--text-2-page); }
 
 /* Tarjetas por categoría. La cabecera rotula las columnas con la misma grilla que las filas */
-/* Escritorio ancho: las categorías en dos columnas (se leen de arriba abajo, columna por columna, como el foco) para que
-   la lista no sea una sola tira larga; cada tarjeta entera en su columna */
 .hab-body { display:flex; flex-direction:column; gap:24px; }
-@media (min-width:1100px) {
-  .hab-body { display:block; columns:2; column-gap:24px; }
-  .hab-body > * { break-inside:avoid; margin-bottom:24px; }
-  .hab-body > .hab-empty { column-span:all; }
-}
 .ruta-card.hab-group { padding:24px 32px 8px; } /* .ruta-card (más abajo) pone 1.75rem */
 /* La tarjeta con el selector abierto pasa sobre las siguientes (en oscuro cada tarjeta es su propio contexto de
    apilamiento por el backdrop-filter) */
@@ -716,14 +699,6 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 .hab-row-error { grid-column:1 / -1; padding-bottom:8px; font-size:13px; line-height:1.5; font-weight:600; color:var(--pink-ink); }
 .hab-empty { font-size:.88rem; line-height:1.55; color:var(--text-2-page); }
 .ruta-card.hab-empty { padding:32px; color:var(--text-2); }
-
-/* Dos columnas (ver .hab-body): filas más compactas para que el nombre tenga sitio */
-@media (min-width:1100px) {
-  .hab-group-header, .hab-row { grid-template-columns:minmax(0,1fr) 112px 152px; column-gap:16px; }
-  .ruta-card.hab-group { padding:20px 24px 4px; }
-  .hab-row { min-height:56px; padding:6px 0; }
-  .hab-chip { min-width:0; width:152px; }
-}
 
 /* Angostas: nombre y demanda en dos líneas, el indicador a la derecha; sin rótulos de columna */
 @media (max-width:767px) {
@@ -982,22 +957,9 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
   .market-demand-value { justify-content:flex-start; }
 }
 
-/* Mi Ruta en franjas (heurística 08: lo que va junto, junto). Entre franjas 40px; dentro, 24px. Cada franja responde una
-   pregunta, en orden de lectura:
-   1 · dónde estás y qué sigue: preparación · siguiente giro · tu ritmo (tres columnas iguales)
-   2 · qué hacer: brechas prioritarias · tu semana (dos columnas: son las mismas habilidades, vistas lado a lado)
-   3 · cómo avanzas: tendencia (ancha) · este mes
-   4 · dónde aplicar: ofertas, a todo el ancho
-   Las tarjetas de una franja comparten alto. Por debajo de 1024px, todo en una columna en el mismo orden. */
-.ruta-grid { display:flex; flex-direction:column; gap:40px; }
-.ruta-band { display:grid; grid-template-columns:minmax(0,1fr); gap:24px; min-width:0; }
-.ruta-band > * { min-width:0; }
-@media (min-width:1024px) {
-  .ruta-band--now { grid-template-columns:repeat(3,minmax(0,1fr)); }
-  .ruta-band--plan { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
-  .ruta-band--progress { grid-template-columns:minmax(0,2fr) minmax(0,1fr); }
-  .ruta-band--progress > :only-child { grid-column:1 / -1; }
-}
+.ruta-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:1.75rem; }
+.ruta-col { display:flex; flex-direction:column; gap:1.75rem; min-width:0; }
+@media (min-width:1024px) { .ruta-grid { grid-template-columns:minmax(0,1fr) minmax(0,2.1fr); align-items:start; } }
 
 .ruta-card { padding:1.75rem; }
 .ruta-card:focus { outline:none; }
@@ -1025,12 +987,9 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .btn-pill--light:focus-visible { outline-color:#fff; }
 
 /* Gauge */
-.ruta-gauge { display:flex; flex-direction:column; align-items:center; text-align:center; padding:1.75rem 1.5rem; }
-.ruta-gauge-ring { margin:1.25rem 0 1rem; }
-.ruta-gauge-text { max-width:16rem; font-size:.85rem; line-height:1.55; color:var(--muted); text-wrap:pretty; }
-/* Siguiente giro: el botón queda abajo aunque la tarjeta crezca para igualar a sus vecinas */
-.ruta-band--now > .ruta-action { display:flex; flex-direction:column; align-items:flex-start; }
-.ruta-band--now > .ruta-action > .btn-pill { margin-top:auto; }
+.ruta-gauge { display:flex; flex-direction:column; align-items:center; text-align:center; padding:2.25rem 1.5rem 2.5rem; }
+.ruta-gauge-ring { margin:1.75rem 0 1.5rem; }
+.ruta-gauge-text { max-width:15.5rem; font-size:.8rem; line-height:1.55; color:var(--muted); margin-bottom:1.6rem; text-wrap:pretty; }
 .gap-meta, .trend-axis, .market-demand-note { font-variant-numeric:tabular-nums; }
 
 /* Brechas */
@@ -1108,14 +1067,14 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 :root[data-motion="reduced"] .trend-last-label { animation:none; }
 
 /* Mi Ruta: entrada. Solo CSS: se repite al recargar datos o al volver a la vista. */
-/* Tarjetas en orden de lectura: franja por franja, de izquierda a derecha */
-.ruta-grid:not(.ruta-skeleton) > .ruta-band > * { animation:card-in 420ms var(--ease-out) backwards; }
-.ruta-band--now > :nth-child(2) { animation-delay:40ms; }
-.ruta-band--now > :nth-child(3) { animation-delay:80ms; }
-.ruta-band--plan > :nth-child(1) { animation-delay:120ms; }
-.ruta-band--plan > :nth-child(2) { animation-delay:160ms; }
-.ruta-band--progress > * { animation-delay:200ms; }
-.ruta-band--offers > * { animation-delay:240ms; }
+/* Tarjetas en orden de lectura: preparación, brechas, siguiente acción, tu semana, ofertas, tu ritmo, tendencia */
+.ruta-grid:not(.ruta-skeleton) > .ruta-col > * { animation:card-in 420ms var(--ease-out) backwards; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(1) { animation-delay:40ms; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(1) > :nth-child(2) { animation-delay:80ms; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(2) { animation-delay:120ms; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(3) { animation-delay:160ms; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(1) > :nth-child(3) { animation-delay:200ms; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-col:nth-child(2) > :nth-child(4) { animation-delay:240ms; }
 /* Recarga silenciosa (cambio de estado desde "Tu semana", loadDashboard con quiet): los datos nuevos aparecen sin
    entrada, conteos ni barras que se vuelven a llenar */
 .ruta-grid.is-quiet *, .ruta-grid.is-quiet *::before, .ruta-grid.is-quiet *::after { animation:none !important; }
@@ -1171,8 +1130,8 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .ruta-semana { container-type:inline-size; }
 .semana-intro { margin:-8px 0 8px; font-size:13px; line-height:1.5; color:var(--text-2); text-wrap:pretty; }
 .semana-list > li + li { border-top:1px solid var(--divider); }
-.semana-row { display:grid; grid-template-columns:24px minmax(0,1fr) auto auto; grid-template-areas:"check skill hours status";
-  align-items:center; gap:8px 16px; padding:14px 0; }
+.semana-row { display:grid; grid-template-columns:24px minmax(0,1fr) auto minmax(0,288px); grid-template-areas:"check skill hours status";
+  align-items:center; gap:8px 16px; padding:16px 0; }
 .semana-check { grid-area:check; appearance:none; -webkit-appearance:none; display:grid; place-content:center; width:24px; height:24px; margin:0;
   border-radius:8px; border:1.5px dashed var(--line-dashed); background:var(--surface-solid); cursor:pointer;
   transition:background-color var(--dur-fast) ease, border-color var(--dur-fast) ease; }
@@ -1186,24 +1145,16 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .semana-name { display:block; font-size:15px; font-weight:600; line-height:22px; color:var(--text); overflow-wrap:anywhere; cursor:pointer; }
 .semana-meta { margin-top:2px; font-size:12px; line-height:1.5; color:var(--text-2); }
 .semana-hours { grid-area:hours; font-size:13px; font-weight:600; color:var(--text-mid); white-space:nowrap; font-variant-numeric:tabular-nums; }
-/* Estado: desplegable nativo con el aspecto del indicador de Habilidades (.hab-chip pone el círculo y el borde) */
-.semana-status { grid-area:status; position:relative; min-width:148px; cursor:pointer; }
-.semana-select { position:absolute; inset:0; width:100%; padding:0 32px 0 30px; border:0; border-radius:inherit; background:transparent;
-  appearance:none; -webkit-appearance:none; font:inherit; color:inherit; cursor:pointer; }
-.semana-select option { color:var(--text); background:var(--surface-solid); }
-.semana-status:focus-within { outline:var(--focus-ring); outline-offset:2px; }
-.semana-select:focus { outline:none; }
-.semana-status[aria-busy="true"], .semana-status[aria-busy="true"] .semana-select { cursor:progress; }
-.semana-status .hab-chip-caret { position:relative; pointer-events:none; }
+.semana-status { grid-area:status; min-width:0; }
+.semana-status .status-option { min-height:40px; font-size:12px; }
 .semana-error { grid-column:1 / -1; font-size:13px; font-weight:600; line-height:1.5; color:var(--pink-ink); }
 .semana-foot { display:flex; flex-direction:column; gap:4px; margin-top:8px; padding-top:16px; border-top:1px solid var(--divider); }
 .semana-total { font-size:13px; font-weight:600; color:var(--text-mid); font-variant-numeric:tabular-nums; }
 .semana-hint { font-size:12px; line-height:1.5; color:var(--text-2); text-wrap:pretty; }
-/* Tarjeta angosta: el estado baja bajo el nombre, alineado con él */
-@container (max-width:400px) {
-  .semana-row { grid-template-columns:24px minmax(0,1fr) auto; grid-template-areas:"check skill hours" ". status status"; }
-  .semana-status { justify-self:start; }
+@container (max-width:560px) {
+  .semana-row { grid-template-columns:24px minmax(0,1fr) auto; grid-template-areas:"check skill hours" "status status status"; }
 }
+@container (max-width:340px) { .semana-status .status-option { padding:0 4px; font-size:11.5px; } }
 
 /* Mi Ruta: "Tu ritmo" (js/rachas.js). Meta semanal con botones − / + (40px), la semana como tramos (uno por avance de
    la meta: menta = dominada, rosa→violeta = aprendiendo, punteado = todavía no), las dos rachas con números grandes y
@@ -1235,8 +1186,8 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .ritmo-streak dd { margin-top:4px; font-size:13px; color:var(--text-mid); }
 .ritmo-streak dd strong { margin-right:4px; font-size:2rem; font-weight:300; line-height:1; letter-spacing:-.02em; color:var(--text); font-variant-numeric:tabular-nums; }
 .ritmo-streak-note { margin-top:12px; font-size:13px; line-height:1.5; color:var(--text-mid); text-wrap:pretty; }
-.ritmo-month > .ruta-card-title { margin-bottom:16px; }
-.ritmo-month-text { margin-top:0; font-size:14px; font-weight:600; line-height:1.5; color:var(--text); text-wrap:pretty; }
+.ruta-ritmo > .route-divider { margin:24px 0 16px; }
+.ritmo-month-text { margin-top:8px; font-size:14px; font-weight:600; line-height:1.5; color:var(--text); text-wrap:pretty; }
 .ritmo-month-bar { display:flex; align-items:center; gap:4px; height:10px; margin-top:12px; }
 .ritmo-month-seg { flex:0 1 auto; min-width:6px; height:10px; border-radius:var(--radius-pill); }
 .ritmo-month-seg--before { background:var(--mint-line-hover); }
@@ -1265,7 +1216,7 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 .skel-line--half { width:40%; }
 .skel-line--short { width:72%; }
 .skel-line--shorter { width:50%; }
-.skel-ring { width:142px; height:142px; margin:calc(1.25rem + 9px) 0 calc(1rem + 9px); background:none; border:18px solid var(--faint); }
+.skel-ring { width:142px; height:142px; margin:calc(1.75rem + 9px) 0 calc(1.5rem + 9px); background:none; border:18px solid var(--faint); }
 .skel-pill { width:11rem; height:2.9rem; margin-top:1.6rem; }
 .skel-bar { height:10px; margin-top:.7rem; }
 .skel-chart { height:13rem; border-radius:1rem; }
@@ -1275,11 +1226,11 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
    de vista queda como un fundido breve, para no perder el aviso de que algo cambió. */
 @media (prefers-reduced-motion: reduce) {
   main > section:not(.hidden) { animation-name:view-fade; animation-duration:120ms; }
-  .ruta-grid:not(.ruta-skeleton) > .ruta-band > *, .gap-bar span, .skel, .skel-action { animation:none; }
+  .ruta-grid:not(.ruta-skeleton) > .ruta-col > *, .gap-bar span, .skel, .skel-action { animation:none; }
   .btn-pill:hover, .btn-pill:active { transform:none; }
 }
 :root[data-motion="reduced"] main > section:not(.hidden) { animation-name:view-fade; animation-duration:120ms; }
-:root[data-motion="reduced"] .ruta-grid:not(.ruta-skeleton) > .ruta-band > *, :root[data-motion="reduced"] .gap-bar span, :root[data-motion="reduced"] .skel, :root[data-motion="reduced"] .skel-action { animation:none; }
+:root[data-motion="reduced"] .ruta-grid:not(.ruta-skeleton) > .ruta-col > *, :root[data-motion="reduced"] .gap-bar span, :root[data-motion="reduced"] .skel, :root[data-motion="reduced"] .skel-action { animation:none; }
 :root[data-motion="reduced"] .btn-pill:hover, :root[data-motion="reduced"] .btn-pill:active { transform:none; }
 
 /* ---------- Motivo de Ruta ---------- */
