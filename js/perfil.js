@@ -517,14 +517,40 @@ function printCv() {
 
 // ---------- Seguridad ----------
 
-// Campo de contraseña con su etiqueta. describedBy: ids del aviso y del error de su formulario; hintKey opcional.
-function renderPasswordField(id, labelKey, autocomplete, describedBy, hintKey = "") {
-  const hint = hintKey ? `<p id="${id}-hint" class="perfil-hint">${t(hintKey, { min: PERFIL_MIN_PASSWORD })}</p>` : "";
+// Requisito a la vista desde el inicio que se marca mientras se escribe (mismo componente que Acceso: .acceso-rule)
+function renderPerfilPasswordRule(id, text) {
+  return `
+    <p id="${id}" class="acceso-rule" data-met="false">
+      <svg class="acceso-rule-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path class="acceso-rule-check" d="M8 12.5l2.7 2.7L16 9.8"/></svg>
+      <span>${text}</span>
+      <span class="sr-only" data-rule-state>${t("acceso.ruleUnmet")}</span>
+    </p>`;
+}
+
+function setPerfilPasswordRule(rule, met) {
+  if (!rule) return;
+  rule.dataset.met = String(met);
+  rule.querySelector("[data-rule-state]").textContent = t(met ? "acceso.ruleMet" : "acceso.ruleUnmet");
+}
+
+// Cambiar contraseña: largo mínimo de la nueva y que la repetición coincida, mientras se escribe
+function updatePasswordRules() {
+  const next = document.getElementById("perfil-password-new");
+  const confirm = document.getElementById("perfil-password-confirm");
+  if (!next || !confirm) return;
+  setPerfilPasswordRule(document.getElementById("perfil-password-new-hint"), codePoints(next.value) >= PERFIL_MIN_PASSWORD);
+  setPerfilPasswordRule(document.getElementById("perfil-password-confirm-hint"), Boolean(confirm.value) && confirm.value === next.value);
+}
+
+// Campo de contraseña con su etiqueta. describedBy: ids del aviso y del error de su formulario; ruleText opcional: el
+// requisito del campo, a la vista y marcado al cumplirse.
+function renderPasswordField(id, labelKey, autocomplete, describedBy, ruleText = "") {
+  const hint = ruleText ? renderPerfilPasswordRule(`${id}-hint`, ruleText) : "";
   return `
     <div>
       <label for="${id}" class="perfil-label">${t(labelKey)}</label>
       <input id="${id}" type="password" class="perfil-input" autocomplete="${autocomplete}" maxlength="72" required
-        autocapitalize="off" spellcheck="false" aria-describedby="${hintKey ? `${id}-hint ` : ""}${describedBy}">
+        autocapitalize="off" spellcheck="false" aria-describedby="${ruleText ? `${id}-hint ` : ""}${describedBy}">
       ${hint}
     </div>`;
 }
@@ -539,8 +565,8 @@ function renderSecurityCard() {
           <h3 id="perfil-password-title" class="perfil-security-title">${t("perfil.password.title")}</h3>
           <p class="perfil-security-text">${t("perfil.password.text")}</p>
           ${renderPasswordField("perfil-password-current", "perfil.password.current", "current-password", "perfil-password-error")}
-          ${renderPasswordField("perfil-password-new", "perfil.password.new", "new-password", "perfil-password-error", "perfil.password.hint")}
-          ${renderPasswordField("perfil-password-confirm", "perfil.password.confirm", "new-password", "perfil-password-error")}
+          ${renderPasswordField("perfil-password-new", "perfil.password.new", "new-password", "perfil-password-error", t("perfil.password.hint", { min: PERFIL_MIN_PASSWORD }))}
+          ${renderPasswordField("perfil-password-confirm", "perfil.password.confirm", "new-password", "perfil-password-error", t("perfil.password.matchRule"))}
           <p id="perfil-password-error" class="perfil-error" aria-live="assertive" aria-atomic="true"></p>
           <p class="perfil-success" role="status"></p>
           <div class="perfil-form-actions">
@@ -872,6 +898,7 @@ async function submitPassword(form) {
   if (next.value !== confirm.value) return setPerfilFormError(form, t("perfil.password.mismatch"), confirm);
   const body = JSON.stringify({ currentPassword: current.value, newPassword: next.value });
   [current, next, confirm].forEach(input => { input.value = ""; }); // tras enviar no quedan en los campos
+  updatePasswordRules();
   setPerfilFormError(form, "");
   setPerfilFormBusy(form, true);
   try {
@@ -963,6 +990,9 @@ function handlePerfilClick(e) {
 function initPerfil() {
   const view = document.getElementById("view-perfil");
   view.addEventListener("click", handlePerfilClick);
+  view.addEventListener("input", e => {
+    if (e.target.matches("#perfil-password-new, #perfil-password-confirm")) updatePasswordRules();
+  });
   view.addEventListener("submit", e => {
     e.preventDefault();
     const form = e.target;

@@ -352,7 +352,7 @@ button.objetivo-card[aria-checked="true"]:hover, button.objetivo-card[aria-check
   transition:opacity .12s ease, transform .12s ease; }
 .objetivo-card-check path { stroke-dasharray:1; stroke-dashoffset:1; transition:stroke-dashoffset .1s ease; }
 .objetivo-card[aria-checked="true"] .objetivo-card-check { opacity:1; transform:none;
-  transition:opacity .15s ease, transform .35s cubic-bezier(.34,1.56,.64,1); }
+  transition:opacity .15s ease, transform .35s var(--ease-out); }
 .objetivo-card[aria-checked="true"] .objetivo-card-check path { stroke-dashoffset:0; transition:stroke-dashoffset .28s cubic-bezier(.65,0,.35,1) .12s; }
 .objetivo-card-title { margin-top:1.3rem; font-size:1rem; font-weight:700; line-height:1.3; letter-spacing:-.01em; color:var(--ink); overflow-wrap:anywhere; }
 .objetivo-card-desc { margin-top:.55rem; font-size:.78rem; line-height:1.6; color:var(--muted); }
@@ -575,7 +575,7 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 .perfil-achievement-icon { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:2.5rem; height:2.5rem; border-radius:.8rem; }
 .perfil-achievement-title { font-size:.85rem; font-weight:700; color:var(--ink); }
 .perfil-achievement-how { margin-top:.2rem; font-size:.75rem; line-height:1.5; color:var(--muted); }
-.perfil-achievement-state { margin-top:.45rem; font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+.perfil-achievement-state { margin-top:.45rem; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
 .perfil-achievement--done { background:var(--mint-soft); border:1px solid var(--mint-line); }
 .perfil-achievement--done .perfil-achievement-icon { background:var(--mastered-bg); color:var(--mastered-fg); }
 .perfil-achievement--done .perfil-achievement-state { color:var(--mint-ink); }
@@ -843,12 +843,13 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 
 /* ---------- Mi Ruta ---------- */
 .ruta-eyebrow { display:block; width:fit-content; padding:4px 10px; border-radius:9999px; background:var(--chip-eyebrow-bg); color:var(--chip-eyebrow-fg);
-  font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; }
+  font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; }
 /* Encabezado: objetivo a la izquierda y demanda de mercado a la derecha, alineados abajo como el mockup */
 .ruta-header { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:32px; }
 .ruta-goal { display:flex; flex-direction:column; align-items:flex-start; gap:16px; }
 /* Rótulo y "Cambiar objetivo" (abre la selección completa; la lista del título cambia rápido sin salir) */
 .ruta-goal-top { display:flex; flex-wrap:wrap; align-items:center; gap:16px; }
+.ruta-eyebrow.ruta-eyebrow--plain { padding:0; background:none; color:var(--text-2-page); font-size:14px; font-weight:500; letter-spacing:0; text-transform:none; }
 .btn-pill.ruta-change-goal { gap:8px; padding:8px 16px; font-size:13px; font-weight:600; }
 .goal-error { font-size:14px; font-weight:600; line-height:1.5; color:var(--pink-ink); }
 .goal-error[hidden] { display:none; }
@@ -888,6 +889,7 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .market-demand-value--high { color:var(--mint-ink); }
 .market-demand-value--mid { color:var(--pink-ink); }
 .market-demand-value--low { color:var(--chip-azul-fg); }
+.market-demand-explain { max-width:16rem; font-size:12px; line-height:1.45; color:var(--text-2); font-variant-numeric:tabular-nums; }
 .market-demand-note { max-width:18rem; margin-top:4px; font-size:.72rem; line-height:1.9; color:var(--text-2); }
 /* Angostas: la píldora baja debajo del título y se alinea a la izquierda con él */
 @media (max-width:639px) {
@@ -907,7 +909,7 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .ruta-card-hint { font-size:.78rem; color:var(--muted); }
 
 .sample-tag { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:9999px; border:1px dashed var(--tag-border); background:transparent;
-  color:var(--tag-fg); font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
+  color:var(--tag-fg); font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
 .sample-tag::before { content:""; width:6px; height:6px; border-radius:9999px; background:var(--tag-border); }
 
 .btn-pill { display:inline-flex; align-items:center; justify-content:center; gap:.55rem; min-height:44px; padding:.9rem 1.6rem; white-space:nowrap; border-radius:var(--radius-pill);
@@ -934,7 +936,13 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .gap-list { display:flex; flex-direction:column; gap:24px; }
 .gap-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:.7rem; }
 .gap-name { display:flex; align-items:center; gap:.75rem; min-width:0; overflow-wrap:anywhere; font-size:.9rem; font-weight:600; color:var(--ink); }
-.gap-badge { flex-shrink:0; padding:3px 8px; border-radius:5px; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; }
+/* El nombre abre el detalle: texto normal, rosa y subrayado en hover (como Mis habilidades en Perfil) */
+.gap-name.gap-context { gap:.4rem; min-height:32px; margin:0; padding:0 .25rem 0 0; font-size:.9rem; color:var(--ink); text-align:left; cursor:pointer; }
+.gap-name.gap-context svg { flex-shrink:0; color:var(--text-2); }
+.gap-name.gap-context:hover { color:var(--pink-ink); }
+.gap-name.gap-context:hover svg { color:currentColor; }
+.btn-pill.gaps-more { margin-top:1.25rem; min-height:40px; padding:8px 20px; font-size:.85rem; }
+.gap-badge { flex-shrink:0; padding:3px 8px; border-radius:5px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; }
 .gap-badge--hot { background:var(--chip-rosa-bg); color:var(--chip-rosa-fg); }
 .gap-badge--neutral { background:var(--chip-azul-bg); color:var(--chip-azul-fg); }
 .gap-bar { height:10px; border-radius:9999px; background:var(--faint); overflow:hidden; }
@@ -950,16 +958,21 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .perfil-card > .route-divider { margin-top:24px; }
 .perfil-sample-note { margin-top:16px; padding-top:0; border-top:0; }
 
+/* Error de carga (renderApiError): Reintentar y el detalle técnico plegado */
+.btn-pill.api-error-retry { margin-top:14px; min-height:40px; padding:8px 18px; font-size:.85rem; }
+.api-error-detail { margin-top:14px; font-size:12px; color:var(--text-2); }
+.api-error-detail summary { width:fit-content; cursor:pointer; border-radius:6px; }
+.api-error-detail summary:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.api-error-detail p { margin-top:6px; overflow-wrap:anywhere; }
+
 /* Siguiente acción */
 .ruta-action { position:relative; overflow:hidden; padding:1.75rem; border-radius:var(--radius-card); background:var(--action); color:#fff;
   box-shadow:var(--action-card-shadow); }
-.ruta-action > :not(.ruta-action-bolt) { position:relative; z-index:1; }
 .ruta-action-head { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; }
 .ruta-action-eyebrow { display:inline-block; padding:4px 10px; border-radius:var(--radius-pill); background:var(--action-chip-bg);
-  font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+  font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
 .ruta-action-title { margin-top:1rem; font-size:1.3rem; font-weight:700; line-height:1.25; letter-spacing:-.01em; overflow-wrap:anywhere; text-wrap:balance; }
 .ruta-action-text { margin:.75rem 0 1.5rem; font-size:.8rem; line-height:1.6; opacity:.92; text-wrap:pretty; }
-.ruta-action-bolt { position:absolute; right:-18px; bottom:-22px; width:110px; height:110px; color:#fff; opacity:.14; transform:rotate(18deg); }
 
 /* Tendencia */
 .trend-plot { position:relative; }
@@ -1396,7 +1409,6 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 /* ---------- Ajustes ---------- */
 /* Valores de docs/mockups/v2 (Ajustes · modo claro): dos tarjetas arriba, Ofertas de empleo a lo ancho y el pie */
 .ajustes-header { display:flex; flex-direction:column; align-items:flex-start; gap:16px; margin-bottom:40px; }
-.ajustes-header .ruta-eyebrow { padding:5px 12px; font-size:12px; }
 .ajustes-header .objetivo-subtitle { font-size:1rem; }
 .ajustes-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
 .ajustes-card { display:flex; flex-direction:column; padding:32px; }
@@ -1642,7 +1654,7 @@ p.ofertas-state { font-size:.85rem; color:var(--muted); }
 /* Error de un campo, junto al campo */
 .acceso-field-error { display:flex; gap:6px; margin-top:8px; font-size:13px; line-height:1.45; font-weight:600; color:var(--pink-ink); }
 .acceso-field-error:empty { display:none; }
-/* Requisito de la contraseña: círculo vacío hasta cumplirse, luego check en menta */
+/* Requisito de la contraseña (Acceso y Cambiar contraseña en Perfil): círculo vacío hasta cumplirse, luego check en menta */
 .acceso-rule { display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px; font-weight:500; color:var(--text-2);
   transition:color var(--dur) var(--ease-out); }
 .acceso-rule[hidden] { display:none; }

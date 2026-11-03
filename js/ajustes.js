@@ -82,7 +82,7 @@ function renderKeyView() {
       ${chip}
     </div>
     <div class="ajustes-key-actions">
-      <button type="button" class="btn-pill" data-key-action="edit">${action}</button>
+      <button type="button" class="btn-pill btn-pill--outline" data-key-action="edit">${action}</button>
       ${keyLink()}
     </div>`;
 }
