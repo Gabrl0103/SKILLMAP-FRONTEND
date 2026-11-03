@@ -37,15 +37,11 @@ function setAccesoError(text, field = null) {
   if (field) setFieldError(field, text);
 }
 
-// Formato del correo, con el arreglo en el mensaje. Devuelve el texto del error o "" si está bien (o vacío).
+// Formato del correo: un solo mensaje con un ejemplo. Devuelve el texto del error o "" si está bien (o vacío).
 function emailProblem(value) {
   const email = value.trim();
   if (!email) return "";
-  if (!email.includes("@")) return t("acceso.emailNoAt");
-  const [local, domain = ""] = email.split("@");
-  if (!domain) return t("acceso.emailNoDomain");
-  if (!local || /\s/.test(email) || !/^[^@.]+(\.[^@.]+)+$/.test(domain)) return t("acceso.emailInvalid");
-  return "";
+  return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email) ? "" : t("acceso.emailInvalid");
 }
 
 // Requisito de la contraseña al crear cuenta: se marca mientras se escribe
