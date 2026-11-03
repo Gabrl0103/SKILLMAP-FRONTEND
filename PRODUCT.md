@@ -78,7 +78,7 @@ Los textos hablan como un navegador GPS amable y breve: orientan, indican el sig
 | Mi Ruta · aviso al cambiar objetivo | Objetivo cambiado a Backend Java. Tu progreso se conserva. | Objetivo cambiado a Backend Java. Recalculando tu ruta; tu progreso se conserva. |
 | Mi Ruta · tendencia vacía | Aún no hay suficiente historial: marca tu avance y aquí verás tu tendencia. | Aún no hay recorrido que mostrar: marca tu avance y aquí verás tu tendencia. |
 | Objetivo · subtítulo | Define tu objetivo profesional para que el GPS pueda trazar la ruta más eficiente hacia tu meta. | Elige tu destino y Cenit traza la ruta: qué habilidades te faltan y en qué orden aprenderlas. |
-| Acceso · crear cuenta | Tu progreso se guarda en este equipo, separado del de otras cuentas. | Marca tu punto de partida. Tu progreso se guarda en este equipo, separado del de otras cuentas. |
+| Acceso · crear cuenta | Tu progreso se guarda en este equipo, separado del de otras cuentas. | Marca tu punto de partida. (La frase "Tu progreso se guarda en este equipo…" pasa a la nota bajo el botón.) |
 | Analizador · sin análisis | …para ver tu porcentaje de match y las habilidades que te faltan. | …: verás tu porcentaje de match y qué habilidades te faltan para llegar a ese puesto. |
 | Perfil · filtro Aprendiendo vacío | No estás aprendiendo ninguna habilidad ahora mismo. | No estás aprendiendo ninguna ahora mismo. Mi Ruta te indica el siguiente giro. |
 | Perfil · filtro Dominadas vacío | Aún no tienes habilidades dominadas. | Aún no dominas ninguna. Tu primera parada está en Mi Ruta. |
