@@ -9,7 +9,7 @@ const API_BASE_URL = location.protocol === "file:" ||
 // tGoalTitle (i18n.js). Los datos se
 // piden al iniciar sesión (loadRuta, desde session.js).
 
-const VISIBLE_GAPS = 3; // el mockup muestra 3 brechas; "Ver detalle de brechas" despliega el resto
+const VISIBLE_GAPS = 3; // el mockup muestra 3 brechas; "Ver más (n)", al pie de la tarjeta, despliega el resto
 
 // ---------- Demanda ----------
 
@@ -71,13 +71,15 @@ function renderMarketDemand(goalSkills, catalog) {
     ratio >= MARKET_HIGH_RATIO ? { label: t("ruta.market.high"), tone: "high", icon: "m3 17 6-6 4 4 8-8M15 7h6v6" } :
     ratio > MARKET_LOW_RATIO   ? { label: t("ruta.market.mid"), tone: "mid", icon: "M4 12h16M14 6l6 6-6 6" } :
                                  { label: t("ruta.market.low"), tone: "low", icon: "m3 7 6 6 4-4 8 8M15 17h6v-6" };
-  const title = t("ruta.market.title", { goal: Math.round(goalAvg), market: Math.round(marketAvg) });
+  const numbers = { goal: Math.round(goalAvg), market: Math.round(marketAvg) };
+  // El valor ("Alta", "Media", "Baja") va con la comparación que lo explica, a la vista y no solo en un tooltip
   el.innerHTML = `
     <p class="market-demand-label">${t("ruta.market")}</p>
-    <p class="market-demand-value market-demand-value--${level.tone}" title="${title}">
+    <p class="market-demand-value market-demand-value--${level.tone}" title="${t("ruta.market.title", numbers)}">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${level.icon}"/></svg>
       ${level.label}
     </p>
+    <p class="market-demand-explain">${t("ruta.market.note", numbers)}</p>
     ${sampleDemandNote("market-demand-note", goalSkills)}`;
   el.hidden = false;
 }
@@ -108,25 +110,27 @@ function renderGauge(r) {
         <p class="gauge-value" aria-hidden="true" style="--pct:${Math.round(r.readinessPercentage)};"><span>${r.readinessPercentage}%</span></p>
       </div>
       <p class="ruta-gauge-text">${message}</p>
-      ${r.gaps.length ? `<button type="button" class="btn-pill" data-action="show-gaps">${t("ruta.showGaps")}</button>` : ""}
     </article>`;
 }
 
-// reference: habilidades del objetivo contra las que se calculan los badges y el largo de las barras. Las brechas van
-// unidas por el riel del Motivo de Ruta (un punto de control por brecha, con su estado) hasta el objetivo.
+// reference: habilidades del objetivo contra las que se calculan los badges. La barra es el % real de ofertas (0–100),
+// el mismo número que dice el texto. Las brechas van unidas por el riel del Motivo de Ruta (un punto de control por
+// brecha, con su estado) hasta el objetivo. El nombre abre el contexto de la habilidad, como en Mis habilidades (Perfil).
 function renderBrechas(gaps, reference, jobStats, goalTitle) {
   const demands = reference.map(s => s.demandPercentage);
-  const maxDemand = Math.max(0, ...demands);
   // La API ya manda las brechas ordenadas por demanda.
   const rows = gaps.map((s, i) => {
     const badge = urgencyBadge(s.demandPercentage, demands);
-    const barWidth = maxDemand ? Math.min(100, (s.demandPercentage / maxDemand) * 100) : 0;
+    const barWidth = Math.max(0, Math.min(100, s.demandPercentage));
     const extra = i >= VISIBLE_GAPS;
     // --i: orden de entrada del punto; las brechas ocultas entran desde 0 al mostrarse
     return `
       <li class="gap-row ${routeStopClass(s.status)}" style="--i:${extra ? i - VISIBLE_GAPS : i};"${extra ? " data-extra hidden" : ""}>
         <div class="gap-head">
-          <span class="gap-name">${escapeHtml(tSkill(s.name))}</span>
+          <button type="button" class="gap-name gap-context" data-context="${s.id}" aria-label="${escapeHtml(t("skill.contextFor", { name: tSkill(s.name) }))}">
+            ${escapeHtml(tSkill(s.name))}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
           <span class="gap-badge gap-badge--${badge.tone}">${badge.label}</span>
         </div>
         <div class="gap-bar" aria-hidden="true"><span style="width:${barWidth}%"></span></div>
@@ -134,10 +138,6 @@ function renderBrechas(gaps, reference, jobStats, goalTitle) {
           <span>${t("ruta.gaps.demand", { pct: s.demandPercentage })}</span>
           <span class="mapa-chip mapa-chip--${SKILL_STATE_CLASS[s.status] || "pending"} gap-status">${statusLabel(s.status)}</span>
         </div>
-        <button type="button" class="gap-context" data-context="${s.id}" aria-label="${escapeHtml(t("skill.contextFor", { name: tSkill(s.name) }))}">
-          ${t("skill.context")}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
       </li>`;
   }).join("");
 
@@ -146,8 +146,11 @@ function renderBrechas(gaps, reference, jobStats, goalTitle) {
   const note = demandIsSample(gaps) ? `<p class="ruta-sample-note">${sampleTag()} ${t("demand.sample")}</p>`
     : statsText ? `<p class="ruta-sample-note">${statsText}</p>` : "";
   const destination = routeDestination(escapeHtml(tGoalTitle(goalTitle)), Math.min(gaps.length, VISIBLE_GAPS));
+  const hidden = Math.max(0, gaps.length - VISIBLE_GAPS);
+  // Mismo botón con contorno que "Ver más" de Ofertas para ti
+  const more = hidden ? `<button type="button" class="btn-pill btn-pill--outline gaps-more" data-action="show-gaps">${t("ruta.showGaps", { n: hidden })}</button>` : "";
   const body = gaps.length
-    ? `<ul class="gap-list route-rail">${rows}</ul>${destination}${note}`
+    ? `<ul class="gap-list route-rail">${rows}</ul>${destination}${more}${note}`
     : `<div class="route-state">${routeDraw()}<p class="text-sm text-muted">${t("ruta.gaps.none")}</p></div>`;
 
   return `
@@ -171,11 +174,11 @@ function renderNextAction(topGap, goalTitle) {
       </div>
       <h2 class="ruta-action-title">${t(titleKey, { skill: escapeHtml(tSkill(topGap.name)) })}</h2>
       <p class="ruta-action-text">${t("ruta.next.text", { pct: topGap.demandPercentage, goal: escapeHtml(tGoalTitle(goalTitle)) })}</p>
-      <button type="button" class="btn-pill btn-pill--light" data-action="open-map">
-        ${t("ruta.next.cta")}
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4v16l14-8z"/></svg>
+      <!-- La acción principal de Mi Ruta: abre la habilidad (qué es, cómo aprenderla y su estado) -->
+      <button type="button" class="btn-pill btn-pill--light" data-context="${topGap.id}">
+        ${t(topGap.status === "IN_PROGRESS" ? "ruta.next.ctaProgress" : "ruta.next.cta")}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button>
-      <svg class="ruta-action-bolt" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
     </article>`;
 }
 
@@ -355,27 +358,36 @@ function renderRutaSkeleton() {
     </div>`;
 }
 
+// Error de carga: qué pasó, cómo seguir (Reintentar recarga la página; la sesión se conserva) y el detalle técnico
+// plegado, para quien lo necesite sin ponerlo delante de todos
 function renderApiError(err) {
   return `
-    <div class="card p-6 md:col-span-2 border border-dashed border-pink">
+    <div class="card p-6 md:col-span-2 border border-dashed border-pink api-error" role="alert">
       <p class="text-sm font-medium text-ink">${t("error.loadTitle")}</p>
       <p class="text-xs text-muted mt-1">${t("error.loadText")}</p>
-      <p class="text-xs text-muted mt-2">${t("error.techDetail", { server: `<code>${API_BASE_URL || location.origin}</code>`,
-        cmd: "<code>./mvnw spring-boot:run</code>" })} · ${escapeHtml(errorText(err))}</p>
+      <button type="button" class="btn-pill btn-pill--outline api-error-retry" data-api-retry>${t("error.retry")}</button>
+      <details class="api-error-detail">
+        <summary>${t("error.techSummary")}</summary>
+        <p>${t("error.techDetail", { server: `<code>${API_BASE_URL || location.origin}</code>`,
+          cmd: "<code>./mvnw spring-boot:run</code>" })} · ${escapeHtml(errorText(err))}</p>
+      </details>
     </div>`;
 }
 
+document.addEventListener("click", e => { if (e.target.closest("[data-api-retry]")) location.reload(); });
+
 function revealExtraGaps(card) {
   card.querySelectorAll(".gap-row[data-extra]").forEach(row => { row.hidden = false; });
+  card.querySelector(".gaps-more")?.remove(); // ya no queda nada que mostrar
 }
 
-// "Ver detalle de brechas": muestra las brechas ocultas y lleva la vista a la tarjeta.
+// "Ver más (n)": muestra las brechas ocultas, quita el botón y pasa el foco a la primera nueva (como en Ofertas para ti)
 function showAllGaps() {
   const card = document.getElementById("brechas-card");
   if (!card) return;
+  const first = card.querySelector(".gap-row[data-extra] [data-context]");
   revealExtraGaps(card);
-  card.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
-  card.focus({ preventScroll: true });
+  first?.focus();
 }
 
 // ---------- Foco en las brechas ----------
@@ -670,13 +682,11 @@ function initRuta() {
   setGoalTitle(t("common.loading"));
   document.getElementById("app-content").innerHTML = renderRutaSkeleton(); // hasta que haya sesión y lleguen los datos
   bindGoalPicker();
-  document.getElementById("change-goal").addEventListener("click", openGoalSelection); // objetivo.js
   document.getElementById("app-content").addEventListener("click", e => {
     const context = e.target.closest("[data-context]");
     if (context) { openSkillDetail(Number(context.dataset.context), context); return; } // skill-detalle.js
     const action = e.target.closest("[data-action]")?.dataset.action;
     if (action === "show-gaps") showAllGaps();
-    if (action === "open-map") showView("mapa");
   });
 }
 

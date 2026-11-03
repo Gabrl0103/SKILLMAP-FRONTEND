@@ -183,8 +183,8 @@ Los datos simulados se muestran siempre con la etiqueta "Datos de ejemplo" (bord
 Paleta de dos acentos con significado (rosa y menta) sobre neutrales tibios con un leve tinte rosado.
 
 ### Primary
-- **Rosa Ruta** (pink): el camino y la acción. Botón principal, ítem activo del sidebar, gauge de preparación y match, barras de brechas, contorno de foco y la tarjeta "Siguiente acción". Es el único color que pide un clic.
-- **Bruma Rosa** (pink-soft): fondos de hover (sidebar, controles del mapa, leyenda), la etiqueta "Objetivo actual" y el fondo del ícono en tarjetas.
+- **Rosa Ruta** (pink): el camino y la acción. Botón principal, ítem activo del sidebar, gauge de preparación y match, barras de brechas, contorno de foco y la tarjeta "Siguiente giro". Es el único color que pide un clic.
+- **Bruma Rosa** (pink-soft): fondos de hover (sidebar, controles del mapa, leyenda), la etiqueta "Objetivo actual" de las tarjetas de Objetivo y el fondo del ícono en tarjetas.
 - **Tinte Rosa** (pink-tint), **Línea Rosa** (pink-line) y **Línea Rosa Viva** (pink-line-hover): fondo y borde de los chips "en desarrollo"; la línea viva es el borde de hover de chips y tarjetas de objetivo.
 
 ### Secondary
@@ -205,7 +205,7 @@ Paleta de dos acentos con significado (rosa y menta) sobre neutrales tibios con 
 ### Named Rules
 **The Two Voices Rule.** El rosa significa "por hacer / siguiente paso" y el menta significa "logrado". No se intercambian ni se usan como decoración: un chip rosa nunca representa algo dominado.
 
-**The One Pink Action Rule.** Cada pantalla tiene una sola acción principal en rosa sólido (Trazar mi ruta, Ver detalle de brechas, Analizar Compatibilidad). Las acciones secundarias van en blanco con contorno o en rosa sobre blanco.
+**The One Pink Action Rule.** Cada pantalla tiene una sola acción principal en rosa sólido (Trazar mi ruta, Analizar compatibilidad, Recalcular ruta con ofertas nuevas); en Mi Ruta es "Ver cómo empezar" de la tarjeta Siguiente giro. Las acciones secundarias ("Ver más", "Reintentar", "Añadir clave") van en blanco con contorno o en rosa sobre blanco.
 
 ## Typography
 
@@ -220,7 +220,7 @@ Paleta de dos acentos con significado (rosa y menta) sobre neutrales tibios con 
 - **Numeral** (300, 2.6rem, cifras tabulares): el valor dentro del gauge, con "%" en 1.2rem. Liviano a propósito: el número es grande, no pesado.
 - **Title** (600, 1.05rem): títulos de tarjeta. El peso varía según el mockup de cada vista (500 en Perfil, 700 en Analizador y en las tarjetas de objetivo); se respeta el mockup.
 - **Body** (400, 0.78–0.9rem, 1.55–1.6): subtítulos, descripciones y mensajes del gauge, con ancho máximo de unos 15–16rem en textos centrados.
-- **Label** (600–700, 0.6–0.66rem o 10px, 0.06–0.12em, MAYÚSCULAS): rótulos de grupo, badges de urgencia, tags de proyecto y la etiqueta "Datos de ejemplo".
+- **Label** (600–700, 11px como mínimo, 0.06–0.12em, MAYÚSCULAS): rótulos de grupo, badges de urgencia, tags de proyecto y la etiqueta "Datos de ejemplo".
 
 ### Named Rules
 **The Light Numbers Rule.** Los porcentajes y métricas grandes van en peso 300 con cifras tabulares; nunca en negrita. Lo que pesa es el color del anillo, no el número.
@@ -264,7 +264,7 @@ Suaves y táctiles: todo lo que se toca responde al hover y al clic sin brusqued
 
 ### Chips
 - **Dominado:** Bruma Menta, borde Línea Menta y texto Tinta Menta.
-- **En desarrollo:** Tinte Rosa, borde Línea Rosa y texto rosa.
+- **Aprendiendo:** Tinte Rosa, borde Línea Rosa y texto rosa.
 - **Faltante:** blanco con borde punteado gris y texto Pizarra.
 - **Hover:** sube 1px y el borde pasa a su línea viva. No son clicables: el cursor no cambia.
 
@@ -346,6 +346,16 @@ Estrella de brújula de 4 puntas con los flancos curvados hacia dentro; la punta
 - **Búsqueda (Introducción y Acceso):** oscila unos grados (barridos de 400ms con pausas, ciclo de 4s, `brand-search`). Al enviar el formulario de Acceso se detiene y vuelve al norte con el rebote; si el envío falla, sigue buscando (`setBrandSearchFound`).
 - **Animaciones reducidas:** quieta, sin giro ni oscilación. Solo se anima `transform`.
 - **Favicon:** `assets/cenit-star.svg`, la misma estrella con colores fijos (los del tema oscuro si el navegador está en oscuro).
+
+### Reglas de la guía de UX (heurísticas de Nielsen)
+- **Un vocabulario de estado:** Dominada · Aprendiendo · Pendiente en todas las vistas (mapa, leyendas, chips, filtros, Analizador y estadísticas).
+- **Mayúscula solo al inicio** en títulos y botones en español ("Brechas prioritarias", "Editar perfil"); los nombres de sección del nav (Mi Ruta, Mapa Visual) son nombres propios.
+- **Títulos que dicen qué es la vista** ("Ajustes", no una metáfora) y sin rótulo encima del título.
+- **Números con su significado:** una barra de demanda mide el % real de ofertas que dice su texto; un valor relativo ("Demanda baja") va con la comparación que lo explica.
+- **Botones solo con ícono** (tema, Ajustes, zoom del mapa) llevan `title` además de `aria-label`.
+- **Errores de carga:** qué pasó, "Reintentar" con contorno y el detalle técnico plegado en un `<details>`.
+- **Seguridad en Ajustes:** cambiar contraseña y eliminar cuenta van en una tarjeta a todo el ancho al final de Ajustes, con las demás preferencias de la cuenta; Perfil queda para lo que se muestra de ti.
+- **Contraseñas nuevas** (Acceso y Seguridad en Ajustes): requisitos visibles desde el inicio que se marcan en menta al cumplirse, incluida la coincidencia al repetirla.
 
 ### Acceso (iniciar sesión / crear cuenta)
 Pantalla completa sin barra superior (`js/acceso.js`), en dos columnas centradas (máx. 1120px; una sola columna por debajo de 900px):

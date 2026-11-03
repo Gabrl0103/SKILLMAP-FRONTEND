@@ -517,30 +517,57 @@ function printCv() {
 
 // ---------- Seguridad ----------
 
-// Campo de contraseña con su etiqueta. describedBy: ids del aviso y del error de su formulario; hintKey opcional.
-function renderPasswordField(id, labelKey, autocomplete, describedBy, hintKey = "") {
-  const hint = hintKey ? `<p id="${id}-hint" class="perfil-hint">${t(hintKey, { min: PERFIL_MIN_PASSWORD })}</p>` : "";
+// Requisito a la vista desde el inicio que se marca mientras se escribe (mismo componente que Acceso: .acceso-rule)
+function renderPerfilPasswordRule(id, text) {
+  return `
+    <p id="${id}" class="acceso-rule" data-met="false">
+      <svg class="acceso-rule-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path class="acceso-rule-check" d="M8 12.5l2.7 2.7L16 9.8"/></svg>
+      <span>${text}</span>
+      <span class="sr-only" data-rule-state>${t("acceso.ruleUnmet")}</span>
+    </p>`;
+}
+
+function setPerfilPasswordRule(rule, met) {
+  if (!rule) return;
+  rule.dataset.met = String(met);
+  rule.querySelector("[data-rule-state]").textContent = t(met ? "acceso.ruleMet" : "acceso.ruleUnmet");
+}
+
+// Cambiar contraseña: largo mínimo de la nueva y que la repetición coincida, mientras se escribe
+function updatePasswordRules() {
+  const next = document.getElementById("perfil-password-new");
+  const confirm = document.getElementById("perfil-password-confirm");
+  if (!next || !confirm) return;
+  setPerfilPasswordRule(document.getElementById("perfil-password-new-hint"), codePoints(next.value) >= PERFIL_MIN_PASSWORD);
+  setPerfilPasswordRule(document.getElementById("perfil-password-confirm-hint"), Boolean(confirm.value) && confirm.value === next.value);
+}
+
+// Campo de contraseña con su etiqueta. describedBy: ids del aviso y del error de su formulario; ruleText opcional: el
+// requisito del campo, a la vista y marcado al cumplirse.
+function renderPasswordField(id, labelKey, autocomplete, describedBy, ruleText = "") {
+  const hint = ruleText ? renderPerfilPasswordRule(`${id}-hint`, ruleText) : "";
   return `
     <div>
       <label for="${id}" class="perfil-label">${t(labelKey)}</label>
       <input id="${id}" type="password" class="perfil-input" autocomplete="${autocomplete}" maxlength="72" required
-        autocapitalize="off" spellcheck="false" aria-describedby="${hintKey ? `${id}-hint ` : ""}${describedBy}">
+        autocapitalize="off" spellcheck="false" aria-describedby="${ruleText ? `${id}-hint ` : ""}${describedBy}">
       ${hint}
     </div>`;
 }
 
-// Seguridad: cambiar contraseña y eliminar cuenta (con aviso y confirmación escribiendo la contraseña)
+// Seguridad: cambiar contraseña y eliminar cuenta (con aviso y confirmación escribiendo la contraseña). Vive en
+// Ajustes (#ajustes-security), con las demás preferencias de la cuenta; Perfil queda para lo que se muestra de ti.
 function renderSecurityCard() {
   return `
-    <article id="perfil-security" class="perfil-card perfil-security">
-      <h2 class="perfil-card-title">${t("perfil.security")}</h2>
+    <section id="perfil-security" class="ruta-card ajustes-card perfil-security" aria-labelledby="perfil-security-title">
+      <h2 id="perfil-security-title" class="ajustes-card-title">${t("perfil.security")}</h2>
       <div class="perfil-security-grid">
         <form class="perfil-form" data-form="password" aria-labelledby="perfil-password-title" novalidate>
           <h3 id="perfil-password-title" class="perfil-security-title">${t("perfil.password.title")}</h3>
           <p class="perfil-security-text">${t("perfil.password.text")}</p>
           ${renderPasswordField("perfil-password-current", "perfil.password.current", "current-password", "perfil-password-error")}
-          ${renderPasswordField("perfil-password-new", "perfil.password.new", "new-password", "perfil-password-error", "perfil.password.hint")}
-          ${renderPasswordField("perfil-password-confirm", "perfil.password.confirm", "new-password", "perfil-password-error")}
+          ${renderPasswordField("perfil-password-new", "perfil.password.new", "new-password", "perfil-password-error", t("perfil.password.hint", { min: PERFIL_MIN_PASSWORD }))}
+          ${renderPasswordField("perfil-password-confirm", "perfil.password.confirm", "new-password", "perfil-password-error", t("perfil.password.matchRule"))}
           <p id="perfil-password-error" class="perfil-error" aria-live="assertive" aria-atomic="true"></p>
           <p class="perfil-success" role="status"></p>
           <div class="perfil-form-actions">
@@ -562,7 +589,12 @@ function renderSecurityCard() {
           </form>
         </section>
       </div>
-    </article>`;
+    </section>`;
+}
+
+// Pinta (o repinta, vacía) la tarjeta de Seguridad de Ajustes
+function renderAjustesSecurity() {
+  document.getElementById("ajustes-security").innerHTML = renderSecurityCard();
 }
 
 // ---------- Carga ----------
@@ -588,7 +620,7 @@ function renderPerfil() {
   side.append(renderItemsCard("link"));
   // "Mis Habilidades" va a todo el ancho bajo la cabecera: sus filas caben en tres columnas
   document.getElementById("perfil-content").replaceChildren(renderPerfilHeader(), perfilBlock(renderPerfilSkillsCard(perfilState.skills)),
-    grid, perfilBlock(renderSecurityCard()));
+    grid);
 }
 
 // Reemplaza un bloque ya pintado sin reiniciar la entrada: sigue desde donde iba o, si ya había terminado, aparece
@@ -872,6 +904,7 @@ async function submitPassword(form) {
   if (next.value !== confirm.value) return setPerfilFormError(form, t("perfil.password.mismatch"), confirm);
   const body = JSON.stringify({ currentPassword: current.value, newPassword: next.value });
   [current, next, confirm].forEach(input => { input.value = ""; }); // tras enviar no quedan en los campos
+  updatePasswordRules();
   setPerfilFormError(form, "");
   setPerfilFormBusy(form, true);
   try {
@@ -922,6 +955,7 @@ document.addEventListener("skillmap:user", () => {
   Object.assign(perfilState, { links: null, projects: null, editing: false, edit: null, confirm: null });
   if (perfilState.cv) setCvOpen(false);
   document.getElementById("perfil-content").replaceChildren();
+  renderAjustesSecurity(); // otra cuenta: formularios vacíos y el borrado cerrado
 });
 document.addEventListener("skillmap:progress", e => {
   if (e.detail?.source === "perfil") {
@@ -961,8 +995,16 @@ function handlePerfilClick(e) {
 }
 
 function initPerfil() {
-  const view = document.getElementById("view-perfil");
+  renderAjustesSecurity();
+  // Perfil y la tarjeta de Seguridad de Ajustes comparten formularios, acciones y teclas
+  document.querySelectorAll("#view-perfil, #ajustes-security").forEach(bindPerfilEvents);
+}
+
+function bindPerfilEvents(view) {
   view.addEventListener("click", handlePerfilClick);
+  view.addEventListener("input", e => {
+    if (e.target.matches("#perfil-password-new, #perfil-password-confirm")) updatePasswordRules();
+  });
   view.addEventListener("submit", e => {
     e.preventDefault();
     const form = e.target;
@@ -988,6 +1030,7 @@ function initPerfil() {
 // abierto pasa al idioma nuevo
 document.addEventListener("skillmap:language", () => {
   if (document.getElementById("perfil-content").childElementCount) renderPerfil();
+  renderAjustesSecurity();
   refreshCv();
 });
 

@@ -237,7 +237,7 @@ function renderAnalyzerError(err, titleKey = "analyzer.error.title") {
         <p class="text-xs text-muted mt-1">${escapeHtml(errorText(err))}</p>
         ${hint}
       </div>
-      <button type="button" class="btn-pill analizador-retry" data-retry>${t("analyzer.retry")}</button>
+      <button type="button" class="btn-pill btn-pill--outline analizador-retry" data-retry>${t("analyzer.retry")}</button>
     </div>`;
 }
 
@@ -417,7 +417,7 @@ function renderHistory() {
           <p class="text-sm font-medium text-ink">${t("analyzer.history.error.title")}</p>
           <p class="text-xs text-muted mt-1">${escapeHtml(errorText(error))}</p>
         </div>
-        <button type="button" class="btn-pill analizador-retry" data-history-retry>${t("analyzer.retry")}</button>
+        <button type="button" class="btn-pill btn-pill--outline analizador-retry" data-history-retry>${t("analyzer.retry")}</button>
       </div>`;
     return;
   }

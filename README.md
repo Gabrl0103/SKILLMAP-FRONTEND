@@ -12,15 +12,15 @@ Diseño basado en los mockups de `docs/mockups/`. Paleta: rosa `#D95F8E` (princi
 
 Datos de `GET /api/goals/{id}/readiness`:
 
-- **GoalSelector**: selector en el encabezado para cambiar de objetivo; carga la lista desde `GET /api/goals` y recarga la vista con el readiness del objetivo elegido.
-- **Mercado Laboral**: Alta / Media / Baja demanda según el promedio de `demandPercentage` de las brechas del objetivo.
-- **Nivel de preparación**: gauge con el % de preparación y cuántas habilidades clave faltan. El botón "Ver detalle de brechas" despliega todas las brechas y lleva a la tarjeta.
-- **Brechas prioritarias**: las 3 habilidades pendientes con más demanda (el resto se ve con "Ver detalle"), cada una con barra de demanda y estado (En desarrollo / Por aprender).
-- **Siguiente acción**: la brecha con mayor demanda; "Empezar ahora" abre el Mapa Visual.
+- **GoalSelector**: el título del objetivo es un desplegable para cambiarlo (el único control para eso en el encabezado; la selección completa está en Objetivo); carga la lista desde `GET /api/goals` y recarga la vista con el readiness del objetivo elegido.
+- **Demanda de este rol**: Alta / Media / Baja según el promedio de `demandPercentage` de las habilidades del objetivo frente al catálogo, con la comparación a la vista ("Sus habilidades salen en el 7% de las ofertas; el promedio es 12%").
+- **Nivel de preparación**: gauge con el % de preparación y cuántas habilidades clave faltan.
+- **Brechas prioritarias**: las 3 habilidades pendientes con más demanda y "Ver más (n)" para el resto. Cada una con su nombre como enlace al detalle, una barra con el % real de ofertas ("En el 15% de las ofertas") y su estado (Aprendiendo / Pendiente).
+- **Siguiente giro**: la brecha con mayor demanda; "Ver cómo empezar" (o "Ver los siguientes pasos" si ya la estás aprendiendo) abre su detalle. Es la única acción principal de la vista.
 
 **Datos de ejemplo** — la API aún no provee estos datos, así que se simulan en funciones aparte de `js/dashboard.js` y se muestran con la etiqueta "Datos de ejemplo":
 
-- `sampleUrgencyBadge()`: badges de urgencia de cada brecha (Alta demanda / Crítica / Media), asignados según la posición en el ranking.
+- `urgencyBadge()`: badges de cada brecha (Más pedida / Alta demanda / Media), asignados por tercios de demanda entre las habilidades del objetivo.
 
 Cuando el backend exponga ese campo, basta con reemplazar esa función.
 

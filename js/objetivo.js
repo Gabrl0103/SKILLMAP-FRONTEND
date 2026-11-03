@@ -50,9 +50,7 @@ function renderGoalCard(goal, index) {
       <span class="objetivo-card-title">${escapeHtml(title)}</span>
       <span class="ruta-eyebrow objetivo-card-current" hidden>${t("objetivo.current")}</span>
       <span class="objetivo-card-desc">${escapeHtml(tGoalDescription(goal.title, goal.description || ""))}</span>
-      <span class="objetivo-card-count">${tn("objetivo.skills", count)}
-        <svg width="12" height="12" viewBox="0 0 24 24" ${ICON_STROKE} aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </span>
+      <span class="objetivo-card-count">${tn("objetivo.skills", count)}</span>
     </button>`;
 }
 
@@ -165,7 +163,7 @@ async function openObjetivo() {
   }
 }
 
-// "Cambiar objetivo" (Mi Ruta y Perfil): la misma selección del primer uso, con el objetivo actual marcado y enfocado
+// "Cambiar objetivo" (Perfil): la misma selección del primer uso, con el objetivo actual marcado y enfocado
 function openGoalSelection() {
   objetivoState.focusOnOpen = true;
   showView("objetivo");

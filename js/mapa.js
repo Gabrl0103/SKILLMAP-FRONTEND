@@ -207,13 +207,13 @@ function renderMapa(skills) {
           </div>
 
           <div class="mapa-controls" role="group" aria-label="${t("mapa.zoom")}">
-            <button type="button" data-zoom="in" aria-label="${t("mapa.zoomIn")}">
+            <button type="button" data-zoom="in" aria-label="${t("mapa.zoomIn")}" title="${t("mapa.zoomIn")}">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
             </button>
-            <button type="button" data-zoom="out" aria-label="${t("mapa.zoomOut")}">
+            <button type="button" data-zoom="out" aria-label="${t("mapa.zoomOut")}" title="${t("mapa.zoomOut")}">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
             </button>
-            <button type="button" data-zoom="center" aria-label="${t("mapa.center")}">
+            <button type="button" data-zoom="center" aria-label="${t("mapa.center")}" title="${t("mapa.center")}">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
               </svg>
