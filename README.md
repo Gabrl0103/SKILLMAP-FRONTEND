@@ -17,6 +17,8 @@ Datos de `GET /api/goals/{id}/readiness`:
 - **Nivel de preparación**: gauge con el % de preparación y cuántas habilidades clave faltan.
 - **Brechas prioritarias**: las 3 habilidades pendientes con más demanda y "Ver más (n)" para el resto. Cada una con su nombre como enlace al detalle, una barra con el % real de ofertas ("En el 15% de las ofertas") y su estado (Aprendiendo / Pendiente).
 - **Siguiente giro**: la brecha con mayor demanda; "Ver cómo empezar" (o "Ver los siguientes pasos" si ya la estás aprendiendo) abre su detalle. Es la única acción principal de la vista.
+- **Tu semana** (`js/plan-semanal.js`): plan de estudio de 3 habilidades para la semana (lunes a domingo, hora local), sacado de las brechas: primero las que ya están en Aprendiendo y, dentro, por demanda. Cada una con horas sugeridas (`planHours`: 2 h + 1 h por cada 25 % de demanda, 1 h menos si ya la estás aprendiendo; entre 2 y 6 h), una casilla para marcar el avance de la semana y el selector Pendiente / Aprendiendo / Dominada (`PUT /api/skills/{id}/status`). El backend no guarda planes: vive en `localStorage` por usuario y objetivo (`skillmap.plan.{userId}.{goalId}`) y se rehace el primer día que se abre Mi Ruta en una semana nueva. Cambiar un estado desde aquí recarga Mi Ruta sin skeleton y deja el foco donde estaba.
+- **Tu ritmo** (`js/rachas.js`): meta semanal editable (1–10, por defecto 2: habilidades que pasan a Aprendiendo o Dominada), "Esta semana: n de meta", racha actual y mejor racha (semanas seguidas cumpliendo la meta) y "Este mes": las habilidades del objetivo dominadas desde el día 1, sobre una barra del objetivo. La fecha de cada avance es `statusUpdatedAt` de `/api/skills` (cuándo pasó la habilidad a su estado actual). Como el backend solo guarda el último cambio, cada semana cerrada se queda con lo máximo que se vio de ella y con su meta de entonces (`localStorage`: `skillmap.ritmo.{userId}`), para que un avance nuevo no rompa una racha ya ganada.
 
 **Datos de ejemplo** — la API aún no provee estos datos, así que se simulan en funciones aparte de `js/dashboard.js` y se muestran con la etiqueta "Datos de ejemplo":
 
@@ -50,6 +52,8 @@ SKILLMAP-FRONTEND/
 └── js/
     ├── brand.js        # Logo de Cenit (estrella de brújula): brandMark() y las marcas de index.html
     ├── dashboard.js    # Vista Mi Ruta: fetch a la API, render y datos de ejemplo
+    ├── plan-semanal.js # "Tu semana" de Mi Ruta: plan de 3 habilidades, horas sugeridas y avance (localStorage)
+    ├── rachas.js       # "Tu ritmo" de Mi Ruta: meta semanal, rachas y lo dominado este mes
     ├── mapa.js         # Vista Mapa Visual (2D, consejo de primera vez) y navegación entre vistas
     ├── habilidades.js  # Vista Habilidades: resumen, filtros, demanda y estado de cada habilidad
     ├── intro.js        # Introducción: slides, teclado, pausa y arranque del mapa de glifos
