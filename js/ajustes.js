@@ -1,12 +1,10 @@
-// Vista "Ajustes". Usa loadSettings, setTheme, setReduceMotion, setLanguage, getTheme, getReduceMotion y settingsState
-// (theme.js); fetchJobStats y las cachés de datos (dashboard.js); resetPerfilSkills (perfil.js); apiFetch, apiError y
-// friendlyError (session.js); escapeHtml (mapa.js); t, tn, tError, getLanguage y formatNumber (i18n.js).
-
-const GEMINI_KEY_URL = "https://aistudio.google.com/app/apikey";
+// Vista "Ajustes": Apariencia, Idioma, Ofertas de empleo y Seguridad (perfil.js). Usa loadSettings, setTheme,
+// setReduceMotion, setLanguage, getTheme y getReduceMotion (theme.js); fetchJobStats y las cachés de datos
+// (dashboard.js); resetPerfilSkills (perfil.js); apiFetch, apiError y friendlyError (session.js); escapeHtml (mapa.js);
+// t, tn, tError, getLanguage y formatNumber (i18n.js). La key propia de Gemini ya no se muestra aquí: el Analizador usa
+// la IA incluida y el endpoint /api/settings/gemini-key sigue en el backend sin cambios.
 
 const ajustesState = {
-  keyEditing: false,
-  keyError: null,   // error al leer /api/settings (estado de la key desconocido)
   syncing: false,
   syncResult: null, // último recálculo: { data } o { error }, para volver a pintarlo al cambiar de idioma
 };
@@ -50,126 +48,6 @@ function bindApariencia() {
     setReduceMotion(!getReduceMotion())
       .then(() => setStatus("ajustes-apariencia-status", ""))
       .catch(() => setStatus("ajustes-apariencia-status", t("ajustes.settingError"), "warning"));
-  });
-}
-
-// ---------- Key de Gemini ----------
-
-function keyLink() {
-  return `<a class="ajustes-link" href="${GEMINI_KEY_URL}" target="_blank" rel="noopener noreferrer">${t("ajustes.keyHelp")}<span class="sr-only">${t("common.newTab")}</span></a>`;
-}
-
-// La key nunca llega al navegador: con key, el campo muestra puntos fijos; sin ella, un texto
-function renderKeyView() {
-  const gemini = settingsState?.gemini;
-  let field, chip = "";
-  if (!settingsState) {
-    field = `<span class="ajustes-key-empty">${t(ajustesState.keyError ? "ajustes.keyUnknown" : "common.loading")}</span>`;
-  } else if (gemini.configured) {
-    field = `<span class="ajustes-key-dots" aria-hidden="true">••••••••••••••••••••</span><span class="sr-only">${t("ajustes.keySavedHidden")}</span>`;
-    chip = gemini.source === "env"
-      ? `<span class="ajustes-chip ajustes-chip--env">${t("ajustes.keyEnv")}</span>`
-      : `<span class="ajustes-chip ajustes-chip--ok">${t("ajustes.keySaved")}</span>`;
-  } else {
-    // Sin key propia no es un error: el Analizador usa la IA incluida
-    field = `<span class="ajustes-key-empty">${t("ajustes.keyNone")}</span>`;
-  }
-  const action = t(gemini?.configured ? "ajustes.keyChange" : "ajustes.keyAdd");
-  return `
-    <p id="ajustes-key-label" class="ajustes-label">${t("ajustes.keyLabel")}</p>
-    <div class="ajustes-key-row">
-      <div class="ajustes-key-field" role="group" aria-labelledby="ajustes-key-label">${field}</div>
-      ${chip}
-    </div>
-    <div class="ajustes-key-actions">
-      <button type="button" class="btn-pill btn-pill--outline" data-key-action="edit">${action}</button>
-      ${keyLink()}
-    </div>`;
-}
-
-function renderKeyForm() {
-  return `
-    <form class="ajustes-key-form" novalidate>
-      <label for="ajustes-key-input" class="ajustes-label">${t("ajustes.keyLabel")}</label>
-      <div class="ajustes-key-row">
-        <input id="ajustes-key-input" class="ajustes-key-input" type="password" autocomplete="off" spellcheck="false"
-          autocapitalize="off" maxlength="200" placeholder="${t("ajustes.keyPlaceholder")}" aria-describedby="ajustes-key-status">
-      </div>
-      <div class="ajustes-key-actions">
-        <button type="submit" class="btn-pill">${t("ajustes.save")}</button>
-        <button type="button" class="btn-pill btn-pill--outline" data-key-action="cancel">${t("ajustes.cancel")}</button>
-        ${keyLink()}
-      </div>
-    </form>`;
-}
-
-function renderKey({ focus = false } = {}) {
-  const container = document.getElementById("ajustes-key");
-  container.innerHTML = ajustesState.keyEditing ? renderKeyForm() : renderKeyView();
-  if (!focus) return;
-  const target = ajustesState.keyEditing ? "#ajustes-key-input" : "[data-key-action='edit']";
-  container.querySelector(target)?.focus();
-}
-
-async function saveGeminiKey(form) {
-  const input = form.querySelector("#ajustes-key-input");
-  const submit = form.querySelector("button[type='submit']");
-  let key = input.value.trim();
-  if (!key) {
-    setStatus("ajustes-key-status", t("ajustes.keyMissing"), "error");
-    input.focus();
-    return;
-  }
-  submit.disabled = true;
-  submit.setAttribute("aria-busy", "true");
-  submit.textContent = t("ajustes.saving");
-  setStatus("ajustes-key-status", "");
-  try {
-    const res = await apiFetch("/api/settings/gemini-key", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key }),
-    });
-    if (!res.ok) throw await apiError(res);
-    // 204: la key guardada es la que se usa. 200: se guardó, pero la variable de entorno tiene prioridad.
-    const warning = res.status === 204 ? null : (await res.json().catch(() => null))?.warning;
-    ajustesState.keyEditing = false;
-    await loadSettings({ fresh: true }).catch(() => null);
-    renderKey({ focus: true });
-    if (warning) setStatus("ajustes-key-status", tError(warning), "warning");
-    else setStatus("ajustes-key-status", t("ajustes.keyOk"), "ok");
-  } catch (err) {
-    setStatus("ajustes-key-status", t("ajustes.keyError", { error: friendlyError(err) }), "error");
-    submit.disabled = false;
-    submit.removeAttribute("aria-busy");
-    submit.textContent = t("ajustes.save");
-    input.focus();
-  } finally {
-    // La key no se queda en el campo ni en memoria, salga bien o mal
-    key = null;
-    input.value = "";
-  }
-}
-
-function bindKey() {
-  const container = document.getElementById("ajustes-key");
-  container.addEventListener("click", e => {
-    const action = e.target.closest("[data-key-action]")?.dataset.keyAction;
-    if (!action) return;
-    ajustesState.keyEditing = action === "edit";
-    setStatus("ajustes-key-status", "");
-    renderKey({ focus: true });
-  });
-  container.addEventListener("submit", e => {
-    e.preventDefault();
-    saveGeminiKey(e.target);
-  });
-  // Escape cancela la edición
-  container.addEventListener("keydown", e => {
-    if (e.key !== "Escape" || !ajustesState.keyEditing) return;
-    ajustesState.keyEditing = false;
-    setStatus("ajustes-key-status", "");
-    renderKey({ focus: true });
   });
 }
 
@@ -295,44 +173,34 @@ async function syncJobs() {
 
 // ---------- Vista ----------
 
-// Cada apertura vuelve a leer ajustes (estado de la key) y estadísticas
+// Cada apertura vuelve a leer ajustes (tema, animaciones e idioma guardados) y estadísticas
 function openAjustes() {
   syncApariencia();
-  if (!ajustesState.keyEditing) renderKey();
   loadSettings({ fresh: true })
-    .then(() => { ajustesState.keyError = null; setStatus("ajustes-apariencia-status", ""); })
-    .catch(err => {
-      ajustesState.keyError = err;
-      setStatus("ajustes-apariencia-status", t("ajustes.readError", { error: friendlyError(err) }), "warning");
-    })
-    .finally(() => { syncApariencia(); if (!ajustesState.keyEditing) renderKey(); });
+    .then(() => setStatus("ajustes-apariencia-status", ""))
+    .catch(err => setStatus("ajustes-apariencia-status", t("ajustes.readError", { error: friendlyError(err) }), "warning"))
+    .finally(syncApariencia);
   loadJobStats();
 }
 
 function initAjustes() {
   bindApariencia();
-  bindKey();
   document.getElementById("ajustes-sync").addEventListener("click", syncJobs);
   // Tema o animaciones cambiados desde otro sitio (barra superior, respuesta del backend)
   document.addEventListener("skillmap:settings", syncApariencia);
   syncApariencia();
 }
 
-// Cambio de usuario: no quedan mensajes ni formularios a medias de la sesión anterior
+// Cambio de usuario: no quedan mensajes de la sesión anterior
 document.addEventListener("skillmap:user", () => {
-  ajustesState.keyEditing = false;
-  ajustesState.keyError = null;
-  renderKey();
-  ["ajustes-apariencia-status", "ajustes-key-status"].forEach(id => setStatus(id, ""));
+  ["ajustes-apariencia-status", "ajustes-idioma-status"].forEach(id => setStatus(id, ""));
   ajustesState.syncResult = null;
   renderSyncResult();
 });
 
-// Cambio de idioma: se vuelve a pintar lo dibujado con JS. Los avisos de guardado se borran (eran del otro idioma);
-// el formulario de la key, si está abierto, no se toca para no perder lo escrito.
+// Cambio de idioma: se vuelve a pintar lo dibujado con JS. Los avisos de guardado se borran (eran del otro idioma)
 document.addEventListener("skillmap:language", () => {
-  ["ajustes-apariencia-status", "ajustes-key-status"].forEach(id => setStatus(id, ""));
-  if (!ajustesState.keyEditing) renderKey();
+  ["ajustes-apariencia-status", "ajustes-idioma-status"].forEach(id => setStatus(id, ""));
   document.querySelector("#ajustes-sync [data-label]").textContent = t(ajustesState.syncing ? "ajustes.syncing" : "ajustes.sync");
   if (!ajustesState.syncing) renderSyncResult();
   if (!document.getElementById("view-ajustes").classList.contains("hidden")) loadJobStats();

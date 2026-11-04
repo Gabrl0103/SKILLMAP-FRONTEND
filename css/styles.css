@@ -201,8 +201,8 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 :root[data-motion="reduced"] .gauge-fill, :root[data-motion="reduced"] .gauge-value { animation:none; }
 
 /* ---------- Barra superior ---------- */
-/* Tres zonas alineadas con el contenido (1200px): marca, nav de 6 secciones en píldora y, a la derecha, Ajustes y el menú
-   de la cuenta. El tema se cambia en Ajustes > Apariencia */
+/* Tres zonas alineadas con el contenido (1200px): marca, nav de 6 secciones en píldora y, a la derecha, Ajustes, el
+   botón de tema y el menú de la cuenta */
 .topbar { position:sticky; top:0; z-index:20; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px 24px;
   padding:12px max(var(--page-gutter), calc((100% - var(--content-max)) / 2)); background:var(--header-bg); border-bottom:1px solid var(--header-border);
   backdrop-filter:var(--header-blur); -webkit-backdrop-filter:var(--header-blur); }
@@ -256,7 +256,10 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
   background:var(--surface-solid); border:1px solid var(--card-border); color:var(--nav-fg); cursor:pointer;
   transition:color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out); }
 .topbar-settings:hover { color:var(--text); background:var(--surface-2); }
-.topbar-settings[aria-current="page"] { background:var(--action); border-color:transparent; color:var(--on-action); box-shadow:var(--nav-active-shadow); }
+.topbar-settings[aria-current="page"] { background:var(--surface-2); border-color:var(--pink-ink); color:var(--pink-ink); }
+/* Tema: mismo botón redondo que Ajustes. Muestra a qué tema lleva: luna en claro, sol en oscuro */
+.topbar-theme .theme-icon-sun, .topbar-theme[aria-pressed="true"] .theme-icon-moon { display:none; }
+.topbar-theme[aria-pressed="true"] .theme-icon-sun { display:block; }
 
 /* Menú de la cuenta (js/session.js): botón redondo con la inicial en el gradiente de acción. Abre un menú con nombre,
    correo, "Ver mi perfil" y "Cerrar sesión" */
@@ -328,68 +331,66 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 .objetivo-others-head .ruta-card-title { border-radius:8px; }
 .objetivo-others-head .ruta-card-title:focus { outline:none; }
 .objetivo-others-text { margin-top:var(--space-2); max-width:60ch; font-size:var(--fs-body); color:var(--text-2-page); }
-.objetivo-search { display:flex; align-items:center; gap:var(--space-3); flex:0 1 380px; height:var(--hit); padding:0 var(--space-4); border-radius:var(--radius-pill);
-  background:var(--surface-solid); border:1px solid var(--card-border); color:var(--text-2); cursor:text; transition:box-shadow .2s ease, color .2s ease; }
+/* Búsqueda: misma superficie, borde, radio y tipografía que las tarjetas de la rejilla */
+.objetivo-search { display:flex; align-items:center; gap:var(--space-3); flex:0 1 320px; height:var(--hit); padding:0 var(--space-4); border-radius:var(--radius-pill);
+  background:var(--surface); border:1px solid var(--card-border); box-shadow:var(--card-shadow); color:var(--text-2); cursor:text; transition:box-shadow .2s ease, color .2s ease; }
 /* Foco: anillo del tema y la lupa toma el mismo color mientras se escribe */
 .objetivo-search:focus-within { box-shadow:0 0 0 2px var(--focus); color:var(--focus); }
 .objetivo-search svg { flex-shrink:0; }
-.objetivo-search input { flex:1; min-width:0; height:100%; border:0; background:transparent; font:inherit; font-size:var(--fs-sm); color:var(--ink); }
+.objetivo-search input { flex:1; min-width:0; height:100%; border:0; background:transparent; font:inherit; font-size:var(--fs-sm); font-weight:600; color:var(--ink); }
 .objetivo-search input:focus { outline:none; }
-.objetivo-search input::placeholder { color:var(--text-2); text-overflow:ellipsis; }
+.objetivo-search input::placeholder { color:var(--text-2); font-weight:400; text-overflow:ellipsis; }
 .objetivo-empty { font-size:var(--fs-body); color:var(--text-2-page); }
 .objetivo-empty[hidden], .objetivo-error[hidden] { display:none; }
 .objetivo-error { font-size:14px; font-weight:600; line-height:1.5; color:var(--pink-ink); }
 
+/* Rejilla de 3: "Otro objetivo" ocupa las columnas que quedan en su fila (filterGoalCards), así no quedan huecos */
 .objetivo-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:var(--space-4); }
-.objetivo-card { display:flex; flex-direction:column; gap:var(--space-4); padding:var(--space-6); border-radius:var(--radius-card); background:var(--surface);
-  border:1px solid var(--card-border); box-shadow:var(--card-shadow); backdrop-filter:var(--card-blur); -webkit-backdrop-filter:var(--card-blur);
-  transition:border-color var(--dur) ease; }
-.objetivo-card[hidden] { display:none; }
-.objetivo-card.is-comparing { border-color:var(--pink-ink); }
+.objetivo-item { display:flex; min-width:0; }
+.objetivo-item[hidden] { display:none; }
+/* Tarjeta común a rutas y "Otro objetivo": título 20/800 con el % o la etiqueta a la derecha y los datos debajo */
+.objetivo-card { flex:1; min-width:0; display:flex; flex-direction:column; gap:var(--space-4); padding:var(--space-6); border-radius:var(--radius-card);
+  background:var(--surface); border:1px solid var(--card-border); box-shadow:var(--card-shadow); backdrop-filter:var(--card-blur); -webkit-backdrop-filter:var(--card-blur);
+  text-align:left; color:inherit; font:inherit;
+  transition:border-color var(--dur) ease, box-shadow var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
 .objetivo-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-3); }
 .objetivo-card-title { font-size:20px; font-weight:800; line-height:1.25; color:var(--ink); overflow-wrap:anywhere; }
 .objetivo-card-pct { flex:none; font-size:20px; font-weight:800; color:var(--pink-ink); font-variant-numeric:tabular-nums; }
 .objetivo-card-meta { font-size:var(--fs-sm); line-height:1.5; color:var(--text-2); }
-.objetivo-card-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); margin-top:auto; }
+/* Toda la tarjeta elige la ruta: "Elegir esta ruta →" siempre a la vista al pie; en hover y foco la tarjeta sube, el borde
+   toma el rosa de acción y la flecha avanza */
+.objetivo-card--choose { cursor:pointer; }
+.objetivo-card-cta { display:inline-flex; align-items:center; gap:6px; margin-top:auto; padding-top:var(--space-2); font-size:var(--fs-sm); font-weight:800;
+  color:var(--pink-ink); }
+.objetivo-card-cta svg { transition:translate var(--dur-fast) var(--ease-out); }
+.objetivo-card--choose:hover, .objetivo-card--choose:focus-visible { border-color:var(--pink-line-hover); transform:translateY(-2px);
+  box-shadow:0 1px 2px var(--card-border), 0 18px 38px var(--action-shadow-color); }
+.objetivo-card--choose:hover .objetivo-card-cta svg, .objetivo-card--choose:focus-visible .objetivo-card-cta svg { translate:3px 0; }
+.objetivo-card--choose:active { transform:translateY(0) scale(.99); transition-duration:.08s; }
+.objetivo-card--choose:focus { outline:none; }
+.objetivo-card--choose:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
+.objetivo-card.is-pending { border-color:var(--pink-ink); }
+.objetivo-card-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); }
 .objetivo-confirm { display:flex; flex-direction:column; gap:var(--space-3); margin-top:auto; padding:var(--space-4); border-radius:16px; background:var(--surface-2);
   font-size:var(--fs-sm); line-height:1.5; color:var(--text); }
-.objetivo-confirm .objetivo-card-actions { margin-top:0; }
-/* Contorno fuerte: la acción de la tarjeta (Elegir, Sí, cambiar, Deshacer) sin competir con el botón principal */
+/* Contorno fuerte: la acción de una tarjeta (Sí, cambiar, Deshacer) sin competir con el botón principal */
 .btn-ghost--strong { border-color:var(--text-2); font-weight:800; }
-.btn-ghost[aria-pressed="true"] { background:var(--surface-2); border-color:var(--pink-ink); }
 .btn-ghost[aria-busy="true"] { cursor:progress; }
-/* "Otro objetivo": todavía no existe (punteado = aún no) */
-.objetivo-card--otro { align-items:center; justify-content:center; gap:.35rem; text-align:center; background:var(--surface-2); border:1.5px dashed var(--line-dashed);
-  box-shadow:none; backdrop-filter:none; cursor:not-allowed; }
-.objetivo-otro-plus { display:flex; align-items:center; justify-content:center; width:2.6rem; height:2.6rem; margin-bottom:.6rem; border-radius:9999px;
-  background:var(--surface-solid); color:var(--text-2); box-shadow:0 4px 12px rgba(16,16,20,.08); }
-.objetivo-card--otro .objetivo-card-title { font-size:var(--fs-row); }
-.objetivo-otro-text { font-size:var(--fs-xs); color:var(--text-2); margin-bottom:.6rem; }
-
-/* Comparación: dos fichas iguales con compatibilidad y habilidades propias, y lo que comparten */
-.objetivo-compare { display:flex; flex-direction:column; gap:var(--space-6); animation:card-in 320ms var(--ease-out) backwards; }
-.objetivo-compare .ruta-card-header { margin-bottom:0; align-items:center; }
-.objetivo-compare .ruta-card-title { border-radius:8px; }
-.objetivo-compare .ruta-card-title:focus { outline:none; }
-.objetivo-compare-summary { font-size:var(--fs-row); font-weight:700; color:var(--text); }
-.objetivo-compare-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:var(--space-4); }
-.objetivo-compare-tile { display:flex; flex-direction:column; gap:var(--space-4); padding:var(--space-6); border-radius:var(--radius-tile); background:var(--surface-2); }
-.objetivo-compare-label { font-size:var(--fs-label); font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-2); }
-.objetivo-compare-name { font-size:24px; font-weight:800; color:var(--text); }
-.objetivo-compare-stats { display:flex; gap:var(--space-8); }
-.objetivo-compare-stats div { display:flex; flex-direction:column-reverse; gap:2px; }
-.objetivo-compare-stats dt { font-size:var(--fs-xs); color:var(--text-2); }
-.objetivo-compare-stats dd { font-size:32px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; }
-.objetivo-compare-shared { font-size:var(--fs-sm); color:var(--text-2); }
-.objetivo-compare > .btn-ghost { align-self:flex-start; }
+/* "Otro objetivo": la misma tarjeta, todavía no disponible (borde punteado = aún no), sin hover ni foco */
+.objetivo-card--otro { border:1px dashed var(--line-dashed); box-shadow:none; cursor:not-allowed; }
 
 /* Entrada: las tarjetas en orden */
-.objetivo-grid > .objetivo-card { animation:card-in 420ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 12) * 45ms + 40ms); }
+.objetivo-grid > .objetivo-item { animation:card-in 420ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 12) * 45ms + 40ms); }
 @media (prefers-reduced-motion: reduce) {
-  .objetivo-grid > .objetivo-card, .objetivo-compare, .objetivo-toast, .objetivo-bar > span { animation:none; }
+  .objetivo-grid > .objetivo-item, .objetivo-toast, .objetivo-bar > span { animation:none; }
+  .objetivo-card--choose:hover, .objetivo-card--choose:focus-visible, .objetivo-card--choose:active { transform:none; }
+  .objetivo-card-cta svg { transition:none; translate:none !important; }
 }
-:root[data-motion="reduced"] .objetivo-grid > .objetivo-card, :root[data-motion="reduced"] .objetivo-compare,
-:root[data-motion="reduced"] .objetivo-toast, :root[data-motion="reduced"] .objetivo-bar > span { animation:none; }
+:root[data-motion="reduced"] .objetivo-grid > .objetivo-item, :root[data-motion="reduced"] .objetivo-toast,
+:root[data-motion="reduced"] .objetivo-bar > span { animation:none; }
+:root[data-motion="reduced"] .objetivo-card--choose:hover, :root[data-motion="reduced"] .objetivo-card--choose:focus-visible,
+:root[data-motion="reduced"] .objetivo-card--choose:active { transform:none; }
+:root[data-motion="reduced"] .objetivo-card-cta svg { transition:none; translate:none !important; }
 
 /* ---------- Perfil ---------- */
 .perfil-card { padding:1.75rem; }
@@ -1010,19 +1011,37 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .ruta-gauge-text { font-size:17px; line-height:1.5; color:var(--text-2); text-wrap:pretty; }
 .prep-count { font-size:var(--fs-body); color:var(--text-2); font-variant-numeric:tabular-nums; }
 .prep-count strong { font-weight:800; color:var(--text); }
-.prep-route { position:relative; display:grid; grid-template-columns:repeat(var(--stops), minmax(0,1fr)); gap:var(--space-2); }
-/* Tramo punteado detrás de los puntos, del centro de la primera parada al de la última */
-.prep-route::before { content:""; position:absolute; top:19px; left:calc(50% / var(--stops)); right:calc(50% / var(--stops)); height:2px; background:var(--route-dash-x); }
-.prep-stop { position:relative; display:flex; flex-direction:column; align-items:center; gap:10px; min-width:0; text-align:center; }
-.prep-dot { display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; }
-.prep-stop--mastered .prep-dot { background:var(--mastered-bg); color:var(--mastered-fg); }
+/* Ruta del objetivo (como el riel de Brechas): una parada por brecha y el destino al final, en una fila. Cada tramo
+   punteado va del punto de una parada al de la siguiente (::after) y se traza al entrar */
+.prep-route { display:grid; grid-template-columns:repeat(var(--stops), minmax(0,1fr)); gap:var(--space-2); --route-step:var(--space-2); }
+.prep-stop { position:relative; min-width:0; display:flex; justify-content:center; text-align:center; }
+.prep-stop:not(:last-child)::after { content:""; position:absolute; top:23px; left:calc(50% + 24px); width:calc(100% - 48px + var(--route-step)); height:2px;
+  background:var(--route-dash-x); transform-origin:left; pointer-events:none; }
+.prep-stop-btn, .prep-stop--dest { display:flex; flex-direction:column; align-items:center; gap:10px; min-width:0; max-width:100%; padding:4px 8px 8px; border-radius:16px; }
+.prep-stop-btn { color:inherit; cursor:pointer; transition:background-color var(--dur-fast) ease; }
+.prep-stop-btn:hover { background:var(--surface-2); }
+.prep-stop-btn:hover .prep-stop-name { color:var(--pink-ink); text-decoration:underline; text-underline-offset:3px; }
+.prep-stop-btn:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.prep-dot { display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; flex:none; }
 .prep-stop--progress .prep-dot { background:var(--progress-bg); box-shadow:0 0 0 6px var(--pink-tint); }
 .prep-stop--progress .prep-dot::after { content:""; width:12px; height:12px; border-radius:50%; background:var(--progress-fg); }
 .prep-stop--pending .prep-dot { background:var(--surface-solid); border:2px dashed var(--line-dashed); }
+.prep-stop--mastered .prep-dot { background:var(--mastered-bg); }
+/* Destino: diana con el gradiente de acción, como el final del riel */
+.prep-stop--dest .prep-dot { position:relative; background:var(--surface-solid); border:2px solid var(--pink); }
+.prep-stop--dest .prep-dot::after { content:""; position:absolute; inset:7px; border-radius:50%; background:var(--action); }
 .prep-stop-name { max-width:100%; font-size:var(--fs-body); font-weight:700; line-height:1.3; color:var(--text); overflow-wrap:anywhere; }
 .prep-stop-state { font-size:var(--fs-xs); font-weight:600; color:var(--text-2); }
-.prep-stop--mastered .prep-stop-state { color:var(--mint-ink); }
 .prep-stop--progress .prep-stop-state { color:var(--pink-ink); }
+.prep-stop--dest .prep-stop-name { color:var(--text-2); }
+/* Preparación a todo el ancho: anillo y texto a la izquierda, la ruta a la derecha */
+.ruta-row--single > .ruta-gauge { flex-direction:row; flex-wrap:wrap; align-items:center; gap:var(--space-8) var(--space-10); }
+.ruta-row--single > .ruta-gauge .prep-top { flex:0 1 460px; flex-wrap:nowrap; }
+.ruta-row--single > .ruta-gauge .prep-route { flex:1 1 560px; }
+/* Siguiente giro al final, a todo el ancho: el texto a la izquierda y la acción a la derecha */
+.ruta-row--single > .ruta-action { flex-direction:row; flex-wrap:wrap; align-items:center; gap:var(--space-6) var(--space-10); }
+.ruta-row--single > .ruta-action .ruta-action-copy { flex:1 1 520px; max-width:72ch; }
+.ruta-row--single > .ruta-action .btn-pill { align-self:center; }
 .gap-meta, .trend-axis { font-variant-numeric:tabular-nums; }
 
 /* Siguiente giro: la única tarjeta de color, con su acción abajo */
@@ -1168,6 +1187,9 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 /* Barras: se llenan al aparecer; las paradas de la ruta entran en orden */
 .gap-bar span, .market-bar-fill { animation:bar-fill 600ms var(--ease-out) 200ms backwards; }
 .prep-dot { animation:route-stop-in 320ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 8) * 60ms + 200ms); }
+@keyframes route-segment-x { from { scale:0 1; } }
+.prep-stop:not(:last-child)::after { animation:route-segment-x 360ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 8) * 60ms + 280ms); }
+.prep-stop--dest .prep-stop-name, .prep-stop--dest .prep-stop-state { animation:fade-in 320ms ease-out backwards; animation-delay:calc(min(var(--i, 0), 8) * 60ms + 280ms); }
 .market-demand:not([hidden]) { animation:fade-in 240ms ease-out backwards; }
 
 /* Mi Ruta: "Ofertas para ti" (js/ofertas.js). Rejilla de 3 fichas: título que enlaza a la oferta original con el % de
@@ -1279,11 +1301,13 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 @media (prefers-reduced-motion: reduce) {
   main > section:not(.hidden) { animation-name:view-fade; animation-duration:120ms; }
   .ruta-grid:not(.ruta-skeleton) > .ruta-row > *, .gap-bar span, .market-bar-fill, .prep-dot, .skel, .skel-action { animation:none; }
+  .prep-stop::after, .prep-stop--dest .prep-stop-name, .prep-stop--dest .prep-stop-state, .market-demand:not([hidden]) { animation:none !important; }
   .btn-pill:hover, .btn-pill:active { transform:none; }
 }
 :root[data-motion="reduced"] main > section:not(.hidden) { animation-name:view-fade; animation-duration:120ms; }
 :root[data-motion="reduced"] .ruta-grid:not(.ruta-skeleton) > .ruta-row > *, :root[data-motion="reduced"] .gap-bar span, :root[data-motion="reduced"] .market-bar-fill,
 :root[data-motion="reduced"] .prep-dot, :root[data-motion="reduced"] .skel, :root[data-motion="reduced"] .skel-action { animation:none; }
+:root[data-motion="reduced"] .prep-stop::after, :root[data-motion="reduced"] .prep-stop--dest .prep-stop-name, :root[data-motion="reduced"] .prep-stop--dest .prep-stop-state, :root[data-motion="reduced"] .market-demand:not([hidden]) { animation:none !important; }
 :root[data-motion="reduced"] .btn-pill:hover, :root[data-motion="reduced"] .btn-pill:active { transform:none; }
 
 /* ---------- Motivo de Ruta ---------- */
@@ -1605,9 +1629,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .ajustes-card { display:flex; flex-direction:column; padding:32px; }
 .ajustes-jobs, .ajustes-security { grid-column:1 / -1; }
 .ajustes-card-title { margin-bottom:24px; font-size:20px; font-weight:600; letter-spacing:-.01em; color:var(--text); }
-.ajustes-text { font-size:15px; line-height:1.6; color:var(--text-2); }
 .ajustes-note { margin-top:24px; font-size:14px; line-height:1.55; color:var(--text-2); }
-.ajustes-label { display:block; margin-top:28px; font-size:15px; font-weight:600; color:var(--text); }
 /* Mensajes de guardado y error: vacíos no ocupan sitio */
 .ajustes-status { margin-top:16px; font-size:14px; line-height:1.5; color:var(--text-mid); }
 .ajustes-status:empty { display:none; }
@@ -1660,26 +1682,6 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .ajustes-switch:hover { filter:brightness(1.08); }
 .ajustes-switch:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
 
-/* Key de Gemini: campo de solo lectura con puntos fijos (la key real nunca llega al navegador) y chip de estado */
-.ajustes-key-row { display:flex; align-items:center; gap:16px; margin-top:10px; }
-.ajustes-key-field, .ajustes-key-input { flex:1; min-width:0; height:48px; padding:0 16px; border-radius:14px; background:var(--field-bg);
-  font:inherit; font-size:15px; color:var(--text); }
-.ajustes-key-field { display:flex; align-items:center; border:1px solid var(--field-border); }
-.ajustes-key-dots { font-size:13px; letter-spacing:.14em; color:var(--text); }
-.ajustes-key-empty { font-size:14px; color:var(--text-2); }
-/* Campo editable: borde con contraste de control (≥3:1) */
-.ajustes-key-input { border:1px solid var(--field-border-strong); }
-.ajustes-key-input::placeholder { color:var(--text-2); }
-.ajustes-key-input:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
-.ajustes-chip { flex-shrink:0; padding:6px 12px; border-radius:var(--radius-pill); font-size:13px; font-weight:600; white-space:nowrap; }
-.ajustes-chip--ok { background:var(--mint-soft); color:var(--mint-ink); }
-.ajustes-chip--env { background:var(--chip-azul-bg); color:var(--chip-azul-fg); }
-.ajustes-key-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; margin-top:24px; }
-.ajustes-key-actions .btn-pill { min-width:8rem; padding:.85rem 1.5rem; font-size:15px; }
-.ajustes-key-actions .btn-pill:disabled { cursor:progress; }
-.ajustes-link { display:inline-flex; align-items:center; min-height:var(--hit); font-size:15px; font-weight:500; color:var(--link); text-decoration:underline; text-underline-offset:3px; border-radius:4px; }
-.ajustes-link:hover { text-decoration-thickness:2px; }
-.ajustes-link:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
 
 /* Ofertas de empleo: total, desglose por fuente y, a la derecha, el recálculo */
 .ajustes-jobs .ajustes-card-title { margin-bottom:28px; }
@@ -1887,7 +1889,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 }
 
 .acceso-label, .perfil-label { display:block; margin-bottom:8px; font-size:15px; font-weight:600; color:var(--text); }
-/* Campos editables: borde con contraste de control (≥3:1), como la key de Ajustes */
+/* Campos editables: borde con contraste de control (≥3:1) */
 .acceso-input, .perfil-input { width:100%; height:48px; padding:0 16px; border-radius:14px; background:var(--field-bg);
   border:1px solid var(--field-border-strong); font:inherit; font-size:15px; color:var(--text); }
 .acceso-input:focus-visible, .perfil-input:focus-visible { outline:var(--focus-ring); outline-offset:2px; }

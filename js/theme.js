@@ -111,16 +111,23 @@ function setLanguage(language) {
   return saveSettings({ language });
 }
 
-// Sol y luna: el botón del tema activo queda presionado
+// Botón de tema de la barra superior ("Modo oscuro", presionado en oscuro) y botones de opción si los hubiera
 function syncThemeSwitch() {
   const theme = getTheme();
   document.querySelectorAll("[data-theme-option]").forEach(button => {
     button.setAttribute("aria-pressed", String(button.dataset.themeOption === theme));
   });
+  document.querySelectorAll("[data-theme-toggle]").forEach(button => {
+    button.setAttribute("aria-pressed", String(theme === "dark"));
+  });
 }
 
 document.querySelectorAll("[data-theme-option]").forEach(button => {
   button.addEventListener("click", () => setTheme(button.dataset.themeOption).catch(() => { /* sin backend: solo esta sesión */ }));
+});
+// Alterna al instante; setTheme guarda la copia local y la preferencia en el backend, como el tema de Ajustes
+document.querySelectorAll("[data-theme-toggle]").forEach(button => {
+  button.addEventListener("click", () => setTheme(getTheme() === "dark" ? "light" : "dark").catch(() => { /* sin backend: solo esta sesión */ }));
 });
 syncThemeSwitch();
 // Cambio de usuario: lo cambiado en la sesión anterior ya no tapa la respuesta del backend

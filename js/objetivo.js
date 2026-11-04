@@ -1,8 +1,9 @@
 // Vista "Objetivo": el objetivo actual arriba (su preparación y "Ver mi ruta") y debajo las otras rutas posibles, cada una
 // con su compatibilidad de hoy (el % de preparación que da /api/goals/{id}/readiness), cuántas habilidades comparte con
-// el objetivo actual y la demanda de su mercado. Cada ruta se puede comparar lado a lado con la actual o elegir: elegir
-// pide confirmación en la propia tarjeta y, ya cambiado, un aviso ofrece "Deshacer" (vuelve al objetivo anterior). El
-// progreso por habilidad es del usuario, no del objetivo: cambiar no borra nada.
+// el objetivo actual y la demanda de su mercado. Toda la tarjeta de una ruta es el botón para elegirla: pide
+// confirmación en la propia tarjeta (Esc la cancela) y, ya cambiado, un aviso ofrece "Deshacer" (vuelve al objetivo
+// anterior con el mismo PUT /api/auth/me/goal). El progreso por habilidad es del usuario, no del objetivo: cambiar no
+// borra nada.
 // Usa fetchGoals, fetchSkills, fetchReadiness, setActiveGoal, getActiveGoalId, savedGoalId, marketLevel y renderApiError
 // (dashboard.js), escapeHtml/showView (mapa.js), routeDraw (route-motif.js), friendlyError (session.js) y t, tn,
 // tGoalTitle y tGoalDescription (i18n.js).
@@ -12,9 +13,9 @@ function normalizeText(text) {
 }
 
 // goals: /api/goals; catalog: /api/skills ([] si falló); readiness: % de preparación por id de objetivo (null si falló).
-// pending: ruta que espera confirmación; compare: ruta en la comparación; prev: objetivo anterior (para Deshacer);
+// pending: ruta que espera confirmación; prev: objetivo anterior (para Deshacer);
 // query: búsqueda; focusOnOpen: al abrir desde "Cambiar objetivo" (Perfil) el foco va al objetivo actual.
-const objetivoState = { goals: null, catalog: [], readiness: new Map(), pending: null, compare: null, prev: null, busy: false,
+const objetivoState = { goals: null, catalog: [], readiness: new Map(), pending: null, prev: null, busy: false,
   error: null, query: "", focusOnOpen: false };
 
 // Objetivo activo actual: el de Mi Ruta; si aún no cargó, el guardado; si no, el primero.
@@ -80,71 +81,51 @@ function renderHero(goal) {
     </section>`;
 }
 
+// Partes comunes de todas las tarjetas de la rejilla (rutas y "Otro objetivo"): título con el % o la etiqueta a la derecha
+// y la línea de datos
+function goalCardBody(goal, current, id) {
+  const pct = readinessOf(goal);
+  return `
+    <span class="objetivo-card-top">
+      <span class="objetivo-card-title">${goalName(goal)}</span>
+      ${pct == null ? "" : `<span class="objetivo-card-pct">${pct}%</span>`}
+    </span>
+    <span class="objetivo-card-meta" id="objetivo-meta-${id}">${goalMeta(goal, current)}</span>
+    ${pct == null ? "" : `<span class="objetivo-bar objetivo-bar--thin" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>`}`;
+}
+
+// Toda la tarjeta es el botón para elegir la ruta. En espera de confirmación la tarjeta deja de ser botón (la
+// confirmación lleva sus propios botones) y muestra la pregunta en su lugar.
 function renderGoalCard(goal, current, index) {
   const id = String(goal.id);
   const pct = readinessOf(goal);
-  const name = goalName(goal);
-  const comparing = objetivoState.compare === id;
   const title = normalizeText(`${goal.title} ${tGoalTitle(goal.title)}`);
-  const actions = objetivoState.pending === id
-    ? `<div class="objetivo-confirm" role="group" aria-labelledby="objetivo-confirm-${id}">
-        <p id="objetivo-confirm-${id}">${t("objetivo.confirm", { goal: `<strong>${name}</strong>` })}</p>
-        <div class="objetivo-card-actions">
-          <button type="button" class="btn-ghost btn-ghost--strong" data-action="confirm" data-goal-id="${id}"${objetivoState.busy ? ` aria-busy="true" disabled` : ""}>
-            ${t(objetivoState.busy ? "objetivo.saving" : "objetivo.confirmYes")}</button>
-          <button type="button" class="btn-ghost" data-action="cancel" data-goal-id="${id}"${objetivoState.busy ? " disabled" : ""}>${t("objetivo.cancel")}</button>
+  const item = body => `<li class="objetivo-item" data-goal-id="${id}" data-title="${escapeHtml(title)}" style="--i:${index};">${body}</li>`;
+  if (objetivoState.pending === id) {
+    const busy = objetivoState.busy;
+    return item(`
+      <div class="objetivo-card is-pending">
+        ${goalCardBody(goal, current, id)}
+        <div class="objetivo-confirm" role="group" aria-labelledby="objetivo-confirm-${id}">
+          <p id="objetivo-confirm-${id}">${t("objetivo.confirm", { goal: `<strong>${goalName(goal)}</strong>` })}</p>
+          <div class="objetivo-card-actions">
+            <button type="button" class="btn-ghost btn-ghost--strong" data-action="confirm" data-goal-id="${id}"${busy ? ` aria-busy="true" disabled` : ""}>
+              ${t(busy ? "objetivo.saving" : "objetivo.confirmYes")}</button>
+            <button type="button" class="btn-ghost" data-action="cancel" data-goal-id="${id}"${busy ? " disabled" : ""}>${t("objetivo.cancel")}</button>
+          </div>
         </div>
-      </div>`
-    : `<div class="objetivo-card-actions">
-        <button type="button" class="btn-ghost" data-action="compare" data-goal-id="${id}" aria-pressed="${comparing}">${t(comparing ? "objetivo.comparing" : "objetivo.compare")}</button>
-        <button type="button" class="btn-ghost btn-ghost--strong" data-action="choose" data-goal-id="${id}" aria-label="${escapeHtml(t("objetivo.chooseFor", { goal: tGoalTitle(goal.title) }))}">${t("objetivo.choose")}</button>
-      </div>`;
-  return `
-    <li class="objetivo-card${comparing ? " is-comparing" : ""}" data-goal-id="${id}" data-title="${escapeHtml(title)}" style="--i:${index};">
-      <div class="objetivo-card-top">
-        <h3 class="objetivo-card-title">${name}</h3>
-        ${pct == null ? "" : `<span class="objetivo-card-pct"><span class="sr-only">${t("objetivo.compatLabel")}: </span>${pct}%</span>`}
-      </div>
-      <p class="objetivo-card-meta">${goalMeta(goal, current)}</p>
-      ${pct == null ? "" : `<span class="objetivo-bar objetivo-bar--thin" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>`}
-      ${actions}
-    </li>`;
-}
-
-// Comparación lado a lado: compatibilidad de cada una, cuántas habilidades son solo de cada ruta y cuántas comparten
-function renderCompare(current, other) {
-  const a = readinessOf(current), b = readinessOf(other);
-  const shared = sharedSkills(current, other);
-  const curName = goalName(current), otherName = goalName(other);
-  let summary = "";
-  if (a != null && b != null) {
-    summary = a === b ? t("objetivo.cmp.same", { a: curName, b: otherName })
-      : a > b ? t("objetivo.cmp.closer", { n: a - b, a: curName, b: otherName })
-      : t("objetivo.cmp.closer", { n: b - a, a: otherName, b: curName });
+      </div>`);
   }
-  const tile = (label, goal, pct, only) => `
-    <div class="objetivo-compare-tile">
-      <span class="objetivo-compare-label">${label}</span>
-      <span class="objetivo-compare-name">${goalName(goal)}</span>
-      <dl class="objetivo-compare-stats">
-        <div><dt>${t("objetivo.cmp.compat")}</dt><dd>${pct == null ? "—" : `${pct}%`}</dd></div>
-        <div><dt>${t("objetivo.cmp.only")}</dt><dd>${only}</dd></div>
-      </dl>
-    </div>`;
-  return `
-    <section class="ruta-card objetivo-compare" aria-labelledby="objetivo-compare-title">
-      <header class="ruta-card-header">
-        <h2 id="objetivo-compare-title" class="ruta-card-title" tabindex="-1">${t("objetivo.cmp.title")}</h2>
-        <button type="button" class="btn-ghost" data-action="close-compare">${t("objetivo.cmp.close")}</button>
-      </header>
-      ${summary ? `<p class="objetivo-compare-summary">${summary}</p>` : ""}
-      <div class="objetivo-compare-grid">
-        ${tile(t("objetivo.cmp.yours"), current, a, current.skills.length - shared)}
-        ${tile(t("objetivo.cmp.other"), other, b, other.skills.length - shared)}
-      </div>
-      <p class="objetivo-compare-shared">${tn("objetivo.cmp.shared", shared)}</p>
-      <button type="button" class="btn-ghost btn-ghost--strong" data-action="choose" data-goal-id="${other.id}">${t("objetivo.cmp.choose", { goal: otherName })}</button>
-    </section>`;
+  const label = pct == null ? t("objetivo.chooseFor", { goal: tGoalTitle(goal.title) })
+    : t("objetivo.chooseForPct", { goal: tGoalTitle(goal.title), pct });
+  return item(`
+    <button type="button" class="objetivo-card objetivo-card--choose" data-action="choose" data-goal-id="${id}"
+      aria-label="${escapeHtml(label)}" aria-describedby="objetivo-meta-${id}">
+      ${goalCardBody(goal, current, id)}
+      <span class="objetivo-card-cta" aria-hidden="true">${t("objetivo.choose")}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </span>
+    </button>`);
 }
 
 function renderObjetivo() {
@@ -158,7 +139,6 @@ function renderObjetivo() {
       <p>${t("objetivo.changedTo", { goal: goalName(current) })}</p>
       <button type="button" class="btn-ghost btn-ghost--strong" data-action="undo">${t("objetivo.undo")}</button>
     </div>` : "";
-  const compared = objetivoState.compare && goalById(objetivoState.compare);
   return `
     ${toast}
     ${renderHero(current)}
@@ -178,27 +158,32 @@ function renderObjetivo() {
       <p class="objetivo-empty" hidden></p>
       <ul class="objetivo-grid">
         ${others.map((g, i) => renderGoalCard(g, current, i)).join("")}
-        <li class="objetivo-card objetivo-card--otro" aria-disabled="true" style="--i:${others.length};">
-          <span class="objetivo-otro-plus" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          </span>
-          <span class="objetivo-card-title">${t("objetivo.other")}</span>
-          <span class="objetivo-otro-text">${t("objetivo.otherText")}</span>
-          <span class="sample-tag">${t("common.soon")}</span>
+        <!-- "Otro objetivo": misma tarjeta, todavía no disponible (borde punteado = aún no; sin acción) -->
+        <li class="objetivo-item objetivo-item--otro" style="--i:${others.length};">
+          <div class="objetivo-card objetivo-card--otro" aria-disabled="true">
+            <span class="objetivo-card-top">
+              <span class="objetivo-card-title">${t("objetivo.other")}</span>
+              <span class="sample-tag">${t("common.soon")}</span>
+            </span>
+            <span class="objetivo-card-meta">${t("objetivo.otherText")}</span>
+          </div>
         </li>
       </ul>
-    </section>
-    ${compared && compared !== current ? renderCompare(current, compared) : ""}`;
+    </section>`;
 }
 
+// Filtra por la búsqueda y ajusta "Otro objetivo" para que la última fila de la rejilla (3 columnas) no deje huecos: ocupa
+// las columnas que quedan libres en su fila, o la fila entera si empieza una nueva
 function filterGoalCards() {
   const q = normalizeText(objetivoState.query.trim());
-  const cards = [...document.querySelectorAll("#objetivo-content .objetivo-card[data-title]")];
+  const cards = [...document.querySelectorAll("#objetivo-content .objetivo-item[data-title]")];
   let visible = 0;
   cards.forEach(card => {
     card.hidden = !card.dataset.title.includes(q);
     if (!card.hidden) visible++;
   });
+  const otro = document.querySelector("#objetivo-content .objetivo-item--otro");
+  if (otro) otro.style.gridColumn = `span ${3 - (visible % 3)}`;
   const empty = document.querySelector("#objetivo-content .objetivo-empty");
   if (empty && cards.length) {
     empty.hidden = visible > 0;
@@ -260,7 +245,7 @@ async function switchGoal(goalId, { undo = false } = {}) {
   paintObjetivo();
   try {
     await setActiveGoal(goalId); // dashboard.js: guarda en el backend y recalcula Mi Ruta
-    Object.assign(objetivoState, { prev: undo ? null : before, pending: null, compare: null });
+    Object.assign(objetivoState, { prev: undo ? null : before, pending: null });
     const goal = goalById(goalId);
     announceObjetivo(t(undo ? "objetivo.undone" : "goal.changed", { goal: tGoalTitle(goal.title) }));
   } catch (err) {
@@ -288,20 +273,10 @@ function initObjetivo() {
         window.scrollTo(0, 0);
         document.getElementById("goal-button").focus();
         break;
-      case "compare":
-        objetivoState.compare = objetivoState.compare === id ? null : id;
-        paintObjetivo(objetivoState.compare ? "#objetivo-compare-title" : `[data-action='compare'][data-goal-id='${id}']`);
-        break;
-      case "close-compare": {
-        const was = objetivoState.compare;
-        objetivoState.compare = null;
-        paintObjetivo(`[data-action='compare'][data-goal-id='${was}']`);
-        break;
-      }
       case "choose":
         objetivoState.pending = id;
         paintObjetivo(`[data-action='confirm'][data-goal-id='${id}']`);
-        container.querySelector(`.objetivo-card[data-goal-id='${id}']`)?.scrollIntoView({ block: "nearest" });
+        container.querySelector(`.objetivo-item[data-goal-id='${id}']`)?.scrollIntoView({ block: "nearest" });
         break;
       case "cancel":
         objetivoState.pending = null;
@@ -315,16 +290,24 @@ function initObjetivo() {
         break;
     }
   });
+  // Esc en la confirmación la cancela y devuelve el foco a la tarjeta
+  container.addEventListener("keydown", e => {
+    if (e.key !== "Escape" || !objetivoState.pending || objetivoState.busy || !e.target.closest(".objetivo-confirm")) return;
+    e.preventDefault();
+    const id = objetivoState.pending;
+    objetivoState.pending = null;
+    paintObjetivo(`[data-action='choose'][data-goal-id='${id}']`);
+  });
 }
 
 // Cambio de usuario: la vista se vuelve a armar la próxima vez que se abra
 document.addEventListener("skillmap:user", () => {
-  Object.assign(objetivoState, { goals: null, catalog: [], readiness: new Map(), pending: null, compare: null, prev: null,
+  Object.assign(objetivoState, { goals: null, catalog: [], readiness: new Map(), pending: null, prev: null,
     busy: false, error: null, query: "", focusOnOpen: false });
   document.getElementById("objetivo-content").innerHTML = "";
 });
 
-// Cambio de idioma: se vuelve a pintar conservando la búsqueda, la comparación y el aviso
+// Cambio de idioma: se vuelve a pintar conservando la búsqueda, la confirmación y el aviso
 document.addEventListener("skillmap:language", () => {
   if (objetivoState.goals) paintObjetivo();
 });
