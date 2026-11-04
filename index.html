@@ -174,8 +174,8 @@
   </footer>
 </section>
 
-<!-- BARRA SUPERIOR (sticky en todas las vistas; ver .topbar en styles.css): marca, nav de 6 secciones, Ajustes y menú de la
-     cuenta. El tema se cambia en Ajustes > Apariencia -->
+<!-- BARRA SUPERIOR (sticky en todas las vistas; ver .topbar en styles.css): marca, nav de 6 secciones, Ajustes, tema y
+     menú de la cuenta -->
 <header class="topbar">
   <div class="topbar-brand">
     <span class="logo-mark" data-brand-mark="28" aria-hidden="true"></span> <!-- estrella: js/brand.js -->
@@ -198,6 +198,13 @@
     <!-- Ajustes: una vista más (showView en mapa.js), fuera del nav principal -->
     <button type="button" class="topbar-settings" data-view="ajustes" aria-label="Ajustes" data-i18n-aria-label="nav.ajustes" title="Ajustes" data-i18n-title="nav.ajustes">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </button>
+    <!-- Tema: alterna claro y oscuro al instante (js/theme.js). "Modo oscuro" presionado = oscuro; luna en claro, sol en
+         oscuro. Ajustes > Apariencia usa la misma preferencia -->
+    <button type="button" class="topbar-settings topbar-theme" data-theme-toggle aria-pressed="false" aria-label="Modo oscuro"
+      data-i18n-aria-label="theme.dark" title="Modo oscuro" data-i18n-title="theme.dark">
+      <svg class="theme-icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="theme-icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
     </button>
     <!-- Menú de la cuenta (js/session.js): botón con la inicial que abre un menú con nombre, correo, "Ver mi perfil" y
          "Cerrar sesión". Flechas, Inicio y Fin recorren las opciones; Esc lo cierra y devuelve el foco al botón -->
@@ -418,15 +425,6 @@
             <div id="ajustes-sync-result" class="ajustes-sync-result" role="status"></div>
           </div>
         </div>
-      </section>
-      <!-- Inteligencia artificial: la key nunca vuelve del backend; aquí solo se ve su estado -->
-      <section class="ruta-card ajustes-card" aria-labelledby="ajustes-ia-title">
-        <h2 id="ajustes-ia-title" class="ajustes-card-title" data-i18n="ajustes.ai">Inteligencia artificial</h2>
-        <p class="ajustes-text" data-i18n="ajustes.aiText">El Analizador ya incluye IA. Solo agrega tu propia clave si quieres usar tu cuota personal.</p>
-        <!-- Lo llena js/ajustes.js: estado de la key o el formulario para cambiarla -->
-        <div id="ajustes-key"></div>
-        <p id="ajustes-key-status" class="ajustes-status" role="status"></p>
-        <p class="ajustes-note" data-i18n="ajustes.aiNote">Tu clave se guarda solo en este equipo y nunca se sube a ningún repositorio. El plan gratuito de Gemini tiene un límite diario de consultas.</p>
       </section>
     </div>
       <!-- Seguridad de la cuenta (cambiar contraseña y eliminar cuenta): la pinta y la maneja js/perfil.js -->

@@ -59,9 +59,9 @@ function jobStatsText(stats, key = "jobs.basedOn") {
 }
 
 // ---------- Bloques de la vista ----------
-// Orden de Mi Ruta (rediseño visual): encabezado con el objetivo y la demanda del mercado en una palabra; fila 1,
-// preparación con la ruta del objetivo + Siguiente giro; fila 2, Tu semana con las brechas prioritarias + Tu ritmo; fila 3,
-// tendencia + Mercado laboral con la comparación; fila 4, Ofertas para ti.
+// Orden de Mi Ruta: encabezado con el objetivo y la demanda del mercado en una palabra; fila 1, preparación con la ruta
+// del objetivo a todo el ancho; fila 2, Tu semana con las brechas prioritarias + Tu ritmo; fila 3, tendencia + Mercado
+// laboral con la comparación; fila 4, Ofertas para ti; al final, Siguiente giro a todo el ancho.
 
 // Nivel de la demanda del objetivo frente al catálogo: null sin datos
 function marketLevel(goalSkills, catalog) {
@@ -113,32 +113,36 @@ function renderMarketCard(goalSkills, catalog, goalTitle) {
     </article>`;
 }
 
-// Paradas de la ruta del objetivo: las dominadas primero y después las brechas, en el orden de la API (por demanda).
-// Sin las habilidades del objetivo (la petición falló) quedan solo las brechas.
-function routeStops(r, goalSkills) {
-  const gapIds = new Set(r.gaps.map(s => s.id));
-  const mastered = goalSkills.filter(s => s.status === "MASTERED" && !gapIds.has(s.id));
-  return [...mastered, ...r.gaps];
-}
-
-const STOP_CHECK = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>`;
-
-function renderRouteStops(stops) {
-  if (!stops.length) return "";
-  const items = stops.map((s, i) => {
+// Ruta del objetivo (como el riel de Brechas antes del rediseño): una parada por brecha, en el orden de la API (por
+// demanda), con su punto de estado (punteado = pendiente, rosa→violeta = aprendiendo) y el nombre, que abre el contexto de
+// la habilidad; al final, el destino (el objetivo, ya dicho en el h1: va oculto a lectores). Entrada: los puntos aparecen
+// en orden (--i) y cada tramo se traza hacia la parada siguiente.
+function renderRouteStops(gaps, goalTitle) {
+  if (!gaps.length) return "";
+  const items = gaps.map((s, i) => {
     const state = SKILL_STATE_CLASS[s.status] || "pending";
+    const name = tSkill(s.name);
     return `
       <li class="prep-stop prep-stop--${state}" style="--i:${i};">
-        <span class="prep-dot" aria-hidden="true">${state === "mastered" ? STOP_CHECK : ""}</span>
-        <span class="prep-stop-name">${escapeHtml(tSkill(s.name))}</span>
-        <span class="prep-stop-state">${statusLabel(s.status)}</span>
+        <button type="button" class="prep-stop-btn" data-context="${s.id}"
+          aria-label="${escapeHtml(`${t("skill.contextFor", { name })} · ${statusLabel(s.status)}`)}">
+          <span class="prep-dot" aria-hidden="true"></span>
+          <span class="prep-stop-name">${escapeHtml(name)}</span>
+          <span class="prep-stop-state" aria-hidden="true">${statusLabel(s.status)}</span>
+        </button>
       </li>`;
   }).join("");
-  return `<ol class="prep-route" aria-label="${escapeHtml(t("ruta.route.aria"))}" style="--stops:${stops.length};">${items}</ol>`;
+  const dest = `
+      <li class="prep-stop prep-stop--dest" style="--i:${gaps.length};" aria-hidden="true">
+        <span class="prep-dot"></span>
+        <span class="prep-stop-name">${escapeHtml(tGoalTitle(goalTitle))}</span>
+        <span class="prep-stop-state">${t("ruta.route.dest")}</span>
+      </li>`;
+  return `<ol class="prep-route" aria-label="${escapeHtml(t("ruta.route.aria"))}" style="--stops:${gaps.length + 1};">${items}${dest}</ol>`;
 }
 
 // Preparación: anillo con el %, qué falta para llegar y la ruta del objetivo parada por parada
-function renderGauge(r, goalSkills) {
+function renderGauge(r) {
   const radius = 72;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (r.readinessPercentage / 100) * circumference;
@@ -171,7 +175,7 @@ function renderGauge(r, goalSkills) {
           ${count}
         </div>
       </div>
-      ${renderRouteStops(routeStops(r, goalSkills))}
+      ${renderRouteStops(r.gaps, r.goalTitle)}
     </article>`;
 }
 
@@ -396,13 +400,12 @@ function renderRutaSkeleton() {
   return `
     <div class="ruta-grid ruta-skeleton" role="status">
       <span class="sr-only">${t("ruta.loading")}</span>
-      <div class="ruta-row" aria-hidden="true">
+      <div class="ruta-row ruta-row--single" aria-hidden="true">
         <div class="ruta-card ruta-gauge">
           <div class="prep-top"><span class="skel skel-ring"></span>
             <div class="prep-copy"><span class="skel skel-line skel-line--title"></span><span class="skel skel-line skel-line--short"></span>${routeDraw({ loop: true })}</div></div>
           <span class="skel skel-bar"></span>
         </div>
-        <div class="skel-action"></div>
       </div>
       <div class="ruta-row" aria-hidden="true">
         ${card(row.repeat(3))}
@@ -412,6 +415,8 @@ function renderRutaSkeleton() {
         ${card(`<span class="skel skel-chart"></span>`)}
         ${card(row.repeat(2))}
       </div>
+      <div class="ruta-row ruta-row--single" aria-hidden="true">${card(row.repeat(2))}</div>
+      <div class="ruta-row ruta-row--single" aria-hidden="true"><div class="skel-action"></div></div>
     </div>`;
 }
 
@@ -452,8 +457,11 @@ function showAllGaps() {
 
 let gapFocus = null; // { skillId, index } pendiente
 
+// Dónde se abrió el detalle: en una parada de la ruta (preparación) o en la tarjeta de brechas; el foco vuelve ahí
+let gapScope = "#brechas-card";
+
 function gapLinks() {
-  return [...document.querySelectorAll("#brechas-card [data-context]")];
+  return [...document.querySelectorAll(`${gapScope} [data-context]`)];
 }
 
 function keepGapFocus(skillId) {
@@ -703,8 +711,11 @@ async function loadDashboard(goalId, { quiet = false } = {}) {
   const container = document.getElementById("app-content");
   const requestId = ++latestRequest;
   rutaStale = false;
-  const focusedGap = document.activeElement?.closest("#brechas-card [data-context]");
-  if (focusedGap) keepGapFocus(Number(focusedGap.dataset.context));
+  const focusedGap = document.activeElement?.closest(".prep-route [data-context], #brechas-card [data-context]");
+  if (focusedGap) {
+    gapScope = focusedGap.closest(".prep-route") ? ".prep-route" : "#brechas-card";
+    keepGapFocus(Number(focusedGap.dataset.context));
+  }
   const silent = quiet && Boolean(container.querySelector(".ruta-grid:not(.ruta-skeleton)"));
   if (!silent) {
     document.getElementById("market-demand").hidden = true;
@@ -732,10 +743,11 @@ async function loadDashboard(goalId, { quiet = false } = {}) {
     };
     container.innerHTML = `
       <div class="ruta-grid${silent ? " is-quiet" : ""}">
-        ${row(renderGauge(r, demand.goalSkills), renderNextAction(r.gaps[0], r.goalTitle))}
+        ${row(renderGauge(r))}
         ${row(renderBrechas(r, reference, jobStats, demand.catalog, goalId), renderRitmoCard(demand.catalog, demand.goalSkills, r))}
         ${row(renderTrend(history), renderMarketCard(demand.goalSkills, demand.catalog, r.goalTitle))}
         ${row(renderOffersCard(goal))}
+        ${row(renderNextAction(r.gaps[0], r.goalTitle))}
       </div>`;
     bindTrendHover(container, history);
     loadOffers(goal, goalId, { quiet: silent }); // ofertas.js: llega después, sin frenar el resto de la vista
@@ -755,6 +767,7 @@ function initRuta() {
   bindGoalPicker();
   document.getElementById("app-content").addEventListener("click", e => {
     const context = e.target.closest("[data-context]");
+    if (context) gapScope = context.closest(".prep-route") ? ".prep-route" : "#brechas-card";
     if (context) { openSkillDetail(Number(context.dataset.context), context); return; } // skill-detalle.js
     const action = e.target.closest("[data-action]")?.dataset.action;
     if (action === "show-gaps") showAllGaps();
