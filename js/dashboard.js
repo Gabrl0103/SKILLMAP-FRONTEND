@@ -13,13 +13,13 @@ const VISIBLE_GAPS = 3; // el mockup muestra 3 brechas; "Ver más (n)", al pie d
 
 // ---------- Demanda ----------
 
-// Urgencia relativa a las habilidades del objetivo: tercio de mayor demanda = "Crítica", tercio medio =
-// "Alta demanda", resto = "Media". Se compara por valor: habilidades con la misma demanda llevan el mismo badge.
+// Demanda relativa a las habilidades del objetivo: tercio de mayor demanda = "Más demandada", tercio medio =
+// "Intermedia", resto = "Menos demandada". Se compara por valor: habilidades con la misma demanda llevan el mismo badge.
 function urgencyBadge(demand, referenceDemands) {
   const sorted = [...referenceDemands].sort((a, b) => b - a);
   const cut = third => sorted[Math.ceil((sorted.length * third) / 3) - 1];
   if (demand > 0 && demand >= cut(1)) return { label: t("ruta.urgency.critical"), tone: "hot" };
-  if (demand > 0 && demand >= cut(2)) return { label: t("ruta.urgency.high"), tone: "hot" };
+  if (demand > 0 && demand >= cut(2)) return { label: t("ruta.urgency.high"), tone: "mid" };
   return { label: t("ruta.urgency.medium"), tone: "neutral" };
 }
 
@@ -59,33 +59,87 @@ function jobStatsText(stats, key = "jobs.basedOn") {
 }
 
 // ---------- Bloques de la vista ----------
+// Orden de Mi Ruta (rediseño visual): encabezado con el objetivo y la demanda del mercado en una palabra; fila 1,
+// preparación con la ruta del objetivo + Siguiente giro; fila 2, Tu semana con las brechas prioritarias + Tu ritmo; fila 3,
+// tendencia + Mercado laboral con la comparación; fila 4, Ofertas para ti.
 
-// "Mercado Laboral" del encabezado: las habilidades del objetivo frente al catálogo completo. Sin datos, se oculta.
-function renderMarketDemand(goalSkills, catalog) {
-  const el = document.getElementById("market-demand");
+// Nivel de la demanda del objetivo frente al catálogo: null sin datos
+function marketLevel(goalSkills, catalog) {
   const marketAvg = catalog.length ? averageDemandOf(catalog) : 0;
-  if (!goalSkills.length || marketAvg === 0) { el.hidden = true; return; }
+  if (!goalSkills.length || marketAvg === 0) return null;
   const goalAvg = averageDemandOf(goalSkills);
   const ratio = goalAvg / marketAvg;
   const level =
     ratio >= MARKET_HIGH_RATIO ? { label: t("ruta.market.high"), tone: "high", icon: "m3 17 6-6 4 4 8-8M15 7h6v6" } :
     ratio > MARKET_LOW_RATIO   ? { label: t("ruta.market.mid"), tone: "mid", icon: "M4 12h16M14 6l6 6-6 6" } :
                                  { label: t("ruta.market.low"), tone: "low", icon: "m3 7 6 6 4-4 8 8M15 17h6v-6" };
-  const numbers = { goal: Math.round(goalAvg), market: Math.round(marketAvg) };
-  // El valor ("Alta", "Media", "Baja") va con la comparación que lo explica, a la vista y no solo en un tooltip
+  return { ...level, numbers: { goal: Math.round(goalAvg), market: Math.round(marketAvg) } };
+}
+
+// "Mercado laboral" del encabezado: solo el nivel ("Demanda baja"); la comparación que lo explica está en la tarjeta
+// Mercado laboral (renderMarketCard) y en el title. Sin datos, se oculta.
+function renderMarketDemand(goalSkills, catalog) {
+  const el = document.getElementById("market-demand");
+  const level = marketLevel(goalSkills, catalog);
+  if (!level) { el.hidden = true; return; }
   el.innerHTML = `
     <p class="market-demand-label">${t("ruta.market")}</p>
-    <p class="market-demand-value market-demand-value--${level.tone}" title="${t("ruta.market.title", numbers)}">
+    <p class="market-demand-value market-demand-value--${level.tone}" title="${t("ruta.market.title", level.numbers)}">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${level.icon}"/></svg>
       ${level.label}
-    </p>
-    <p class="market-demand-explain">${t("ruta.market.note", numbers)}</p>
-    ${sampleDemandNote("market-demand-note", goalSkills)}`;
+    </p>`;
   el.hidden = false;
 }
 
-function renderGauge(r) {
-  const radius = 62;
+// Tarjeta "Mercado laboral": demanda media de las habilidades del objetivo y del catálogo completo. Cada barra mide el %
+// real de ofertas que dice su texto (0–100), como las barras de demanda de las brechas.
+function renderMarketCard(goalSkills, catalog, goalTitle) {
+  const level = marketLevel(goalSkills, catalog);
+  if (!level) return "";
+  const row = (label, pct, kind) => `
+    <div class="market-row">
+      <div class="market-row-head"><span class="market-row-name">${label}</span><span>${t("ruta.market.avg", { n: pct })}</span></div>
+      <span class="market-bar" aria-hidden="true"><span class="market-bar-fill market-bar-fill--${kind}" style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>
+    </div>`;
+  return `
+    <article class="ruta-card ruta-market" aria-labelledby="market-title">
+      <h2 id="market-title" class="ruta-card-title">${t("ruta.market")}</h2>
+      <div class="market-rows">
+        ${row(escapeHtml(tGoalTitle(goalTitle)), level.numbers.goal, "goal")}
+        ${row(t("ruta.market.catalog"), level.numbers.market, "catalog")}
+      </div>
+      <p class="market-text">${t("ruta.market.note", level.numbers)}</p>
+      ${sampleDemandNote("ruta-sample-note", goalSkills)}
+    </article>`;
+}
+
+// Paradas de la ruta del objetivo: las dominadas primero y después las brechas, en el orden de la API (por demanda).
+// Sin las habilidades del objetivo (la petición falló) quedan solo las brechas.
+function routeStops(r, goalSkills) {
+  const gapIds = new Set(r.gaps.map(s => s.id));
+  const mastered = goalSkills.filter(s => s.status === "MASTERED" && !gapIds.has(s.id));
+  return [...mastered, ...r.gaps];
+}
+
+const STOP_CHECK = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>`;
+
+function renderRouteStops(stops) {
+  if (!stops.length) return "";
+  const items = stops.map((s, i) => {
+    const state = SKILL_STATE_CLASS[s.status] || "pending";
+    return `
+      <li class="prep-stop prep-stop--${state}" style="--i:${i};">
+        <span class="prep-dot" aria-hidden="true">${state === "mastered" ? STOP_CHECK : ""}</span>
+        <span class="prep-stop-name">${escapeHtml(tSkill(s.name))}</span>
+        <span class="prep-stop-state">${statusLabel(s.status)}</span>
+      </li>`;
+  }).join("");
+  return `<ol class="prep-route" aria-label="${escapeHtml(t("ruta.route.aria"))}" style="--stops:${stops.length};">${items}</ol>`;
+}
+
+// Preparación: anillo con el %, qué falta para llegar y la ruta del objetivo parada por parada
+function renderGauge(r, goalSkills) {
+  const radius = 72;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (r.readinessPercentage / 100) * circumference;
   const remaining = r.totalCount - r.masteredCount;
@@ -95,71 +149,75 @@ function renderGauge(r) {
     : remaining === 0
     ? t("ruta.gauge.done", { goal })
     : tn("ruta.gauge.remaining", remaining, { goal });
+  const count = r.totalCount
+    ? `<p class="prep-count">${t("ruta.gauge.stops", { n: `<strong>${r.masteredCount}</strong>`, total: `<strong>${r.totalCount}</strong>` })}</p>` : "";
 
   // Gauge compartido con el Analizador: --pct alimenta el conteo del número (styles.css); el span es el respaldo sin CSS.
   return `
-    <article class="ruta-card ruta-gauge">
-      <h2 class="ruta-card-title">${t("ruta.gauge.title")}</h2>
-      <div class="gauge-ring ruta-gauge-ring">
-        <svg viewBox="0 0 160 160" role="img" aria-label="${t("ruta.gauge.aria", { pct: r.readinessPercentage })}">
-          <defs><linearGradient id="gauge-grad-ruta" x1="0" y1="0" x2="1" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs>
-          <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-track"/>
-          <circle cx="80" cy="80" r="${radius}" fill="none" stroke-width="18" class="gauge-fill" stroke="url(#gauge-grad-ruta)"
-            transform="rotate(-90 80 80)" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
-        </svg>
-        <p class="gauge-value" aria-hidden="true" style="--pct:${Math.round(r.readinessPercentage)};"><span>${r.readinessPercentage}%</span></p>
+    <article class="ruta-card ruta-gauge" aria-labelledby="prep-title">
+      <div class="prep-top">
+        <div class="gauge-ring ruta-gauge-ring">
+          <svg viewBox="0 0 168 168" role="img" aria-label="${t("ruta.gauge.aria", { pct: r.readinessPercentage })}">
+            <defs><linearGradient id="gauge-grad-ruta" x1="0" y1="0" x2="1" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs>
+            <circle cx="84" cy="84" r="${radius}" fill="none" stroke-width="14" class="gauge-track"/>
+            <circle cx="84" cy="84" r="${radius}" fill="none" stroke-width="14" class="gauge-fill" stroke="url(#gauge-grad-ruta)"
+              transform="rotate(-90 84 84)" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
+          </svg>
+          <p class="gauge-value" aria-hidden="true" style="--pct:${Math.round(r.readinessPercentage)};"><span>${r.readinessPercentage}%</span></p>
+        </div>
+        <div class="prep-copy">
+          <h2 id="prep-title" class="ruta-card-title">${t("ruta.gauge.title")}</h2>
+          <p class="ruta-gauge-text">${message}</p>
+          ${count}
+        </div>
       </div>
-      <p class="ruta-gauge-text">${message}</p>
+      ${renderRouteStops(routeStops(r, goalSkills))}
     </article>`;
 }
 
-// reference: habilidades del objetivo contra las que se calculan los badges. La barra es el % real de ofertas (0–100),
-// el mismo número que dice el texto. Las brechas van unidas por el riel del Motivo de Ruta (un punto de control por
-// brecha, con su estado) hasta el objetivo. El nombre abre el contexto de la habilidad, como en Mis habilidades (Perfil).
-function renderBrechas(gaps, reference, jobStats, goalTitle) {
-  const demands = reference.map(s => s.demandPercentage);
-  // La API ya manda las brechas ordenadas por demanda.
-  const rows = gaps.map((s, i) => {
-    const badge = urgencyBadge(s.demandPercentage, demands);
-    const barWidth = Math.max(0, Math.min(100, s.demandPercentage));
-    const extra = i >= VISIBLE_GAPS;
-    // --i: orden de entrada del punto; las brechas ocultas entran desde 0 al mostrarse
-    return `
-      <li class="gap-row ${routeStopClass(s.status)}" style="--i:${extra ? i - VISIBLE_GAPS : i};"${extra ? " data-extra hidden" : ""}>
-        <div class="gap-head">
-          <button type="button" class="gap-name gap-context" data-context="${s.id}" aria-label="${escapeHtml(t("skill.contextFor", { name: tSkill(s.name) }))}">
-            ${escapeHtml(tSkill(s.name))}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          </button>
-          <span class="gap-badge gap-badge--${badge.tone}">${badge.label}</span>
-        </div>
-        <div class="gap-bar" aria-hidden="true"><span style="width:${barWidth}%"></span></div>
-        <div class="gap-meta">
-          <span>${t("ruta.gaps.demand", { pct: s.demandPercentage })}</span>
-          <span class="mapa-chip mapa-chip--${SKILL_STATE_CLASS[s.status] || "pending"} gap-status">${statusLabel(s.status)}</span>
-        </div>
-      </li>`;
-  }).join("");
+// Fila de una brecha fuera del plan de la semana (se ven con "Ver más"): estado, nombre que abre el detalle, demanda y
+// su nivel frente a las demás habilidades del objetivo
+function renderGapRow(s, demands, i) {
+  const badge = urgencyBadge(s.demandPercentage, demands);
+  const state = SKILL_STATE_CLASS[s.status] || "pending";
+  return `
+    <li class="gap-row" style="--i:${i};" data-extra hidden>
+      <span class="gap-dot gap-dot--${state}" aria-hidden="true"></span>
+      <button type="button" class="gap-name gap-context" data-context="${s.id}" aria-label="${escapeHtml(t("skill.contextFor", { name: tSkill(s.name) }))}">
+        ${escapeHtml(tSkill(s.name))}
+      </button>
+      <span class="sr-only">${statusLabel(s.status)}.</span>
+      <span class="gap-demand">${t("ruta.gaps.demand", { pct: s.demandPercentage })}</span>
+      <span class="gap-badge gap-badge--${badge.tone}">${badge.label}</span>
+    </li>`;
+}
 
-  // Demanda sembrada: aviso de ejemplo. Demanda real: de cuántas ofertas sale.
+// "Tu semana · brechas prioritarias": el plan de la semana (plan-semanal.js, con su casilla de avance, horas y estado) y,
+// plegadas detrás de "Ver más (n)", las demás brechas del objetivo. reference: habilidades del objetivo contra las que se
+// calculan los niveles de demanda. Al pie, de cuántas ofertas sale la demanda o el aviso de datos de ejemplo.
+function renderBrechas(r, reference, jobStats, catalog, goalId) {
+  const gaps = r.gaps;
+  const demands = reference.map(s => s.demandPercentage);
+  const semana = renderSemanaCard(gaps, catalog, goalId, r.goalTitle, demands);
+  const planIds = new Set(semanaPlanIds());
+  const rest = gaps.filter(s => !planIds.has(s.id));
   const statsText = jobStatsText(jobStats);
   const note = demandIsSample(gaps) ? `<p class="ruta-sample-note">${sampleTag()} ${t("demand.sample")}</p>`
     : statsText ? `<p class="ruta-sample-note">${statsText}</p>` : "";
-  const destination = routeDestination(escapeHtml(tGoalTitle(goalTitle)), Math.min(gaps.length, VISIBLE_GAPS));
-  const hidden = Math.max(0, gaps.length - VISIBLE_GAPS);
   // Mismo botón con contorno que "Ver más" de Ofertas para ti
-  const more = hidden ? `<button type="button" class="btn-pill btn-pill--outline gaps-more" data-action="show-gaps">${t("ruta.showGaps", { n: hidden })}</button>` : "";
-  const body = gaps.length
-    ? `<ul class="gap-list route-rail">${rows}</ul>${destination}${more}${note}`
-    : `<div class="route-state">${routeDraw()}<p class="text-sm text-muted">${t("ruta.gaps.none")}</p></div>`;
+  const more = rest.length
+    ? `<button type="button" class="btn-pill btn-pill--outline gaps-more" data-action="show-gaps">${t("ruta.showGaps", { n: rest.length })}</button>
+       <ul class="gap-list">${rest.map((s, i) => renderGapRow(s, demands, i)).join("")}</ul>` : "";
+  const foot = more || note ? `<div class="brechas-foot">${more}${note}</div>` : "";
 
   return `
-    <article id="brechas-card" class="ruta-card ruta-brechas" tabindex="-1">
+    <article id="brechas-card" class="ruta-card ruta-brechas" tabindex="-1" aria-labelledby="brechas-title">
       <header class="ruta-card-header">
-        <h2 id="brechas-title" class="ruta-card-title" tabindex="-1">${t("ruta.gaps.title")}</h2>
-        <span class="ruta-card-hint">${t("ruta.gaps.hint")}</span>
+        <h2 id="brechas-title" class="ruta-card-title" tabindex="-1">${t("ruta.week.title")}</h2>
+        <span class="ruta-card-hint">${semanaRange()}</span>
       </header>
-      ${body}
+      ${semana}
+      ${foot}
     </article>`;
 }
 
@@ -167,13 +225,15 @@ function renderNextAction(topGap, goalTitle) {
   if (!topGap) return "";
   const titleKey = topGap.status === "IN_PROGRESS" ? "ruta.next.progress" : "ruta.next.start";
   return `
-    <article class="ruta-action">
-      <div class="ruta-action-head">
-        <span class="ruta-action-eyebrow">${t("ruta.next.eyebrow")}</span>
-        ${demandIsSample([topGap]) ? sampleTag() : ""}
+    <article class="ruta-action" aria-labelledby="next-title">
+      <div class="ruta-action-copy">
+        <div class="ruta-action-head">
+          <span class="ruta-action-eyebrow">${t("ruta.next.eyebrow")}</span>
+          ${demandIsSample([topGap]) ? sampleTag() : ""}
+        </div>
+        <h2 id="next-title" class="ruta-action-title">${t(titleKey, { skill: escapeHtml(tSkill(topGap.name)) })}</h2>
+        <p class="ruta-action-text">${t("ruta.next.text", { pct: topGap.demandPercentage, goal: escapeHtml(tGoalTitle(goalTitle)) })}</p>
       </div>
-      <h2 class="ruta-action-title">${t(titleKey, { skill: escapeHtml(tSkill(topGap.name)) })}</h2>
-      <p class="ruta-action-text">${t("ruta.next.text", { pct: topGap.demandPercentage, goal: escapeHtml(tGoalTitle(goalTitle)) })}</p>
       <!-- La acción principal de Mi Ruta: abre la habilidad (qué es, cómo aprenderla y su estado) -->
       <button type="button" class="btn-pill btn-pill--light" data-context="${topGap.id}">
         ${t(topGap.status === "IN_PROGRESS" ? "ruta.next.ctaProgress" : "ruta.next.cta")}
@@ -331,38 +391,26 @@ function bindTrendHover(container, history) {
 
 // Skeleton de carga: misma grilla y tarjetas que la vista final. El texto solo lo leen los lectores de pantalla.
 function renderRutaSkeleton() {
-  const gapRow = `<div><span class="skel skel-line skel-line--half"></span><span class="skel skel-bar"></span></div>`;
+  const row = `<div class="skel-row"><span class="skel skel-line skel-line--half"></span><span class="skel skel-bar"></span></div>`;
+  const card = (body, cls = "") => `<div class="ruta-card ${cls}"><div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span></div>${body}</div>`;
   return `
     <div class="ruta-grid ruta-skeleton" role="status">
       <span class="sr-only">${t("ruta.loading")}</span>
-      <div class="ruta-col" aria-hidden="true">
+      <div class="ruta-row" aria-hidden="true">
         <div class="ruta-card ruta-gauge">
-          <span class="skel skel-line skel-line--title"></span>
-          <span class="skel skel-ring"></span>
-          <span class="skel skel-line skel-line--short"></span>
-          <span class="skel skel-line skel-line--shorter"></span>
-          <span class="skel skel-pill"></span>
-        </div>
-        <div class="skel-action"></div>
-        <div class="ruta-card">
-          <span class="skel skel-line skel-line--title"></span>
-          <span class="skel skel-line skel-line--short"></span>
+          <div class="prep-top"><span class="skel skel-ring"></span>
+            <div class="prep-copy"><span class="skel skel-line skel-line--title"></span><span class="skel skel-line skel-line--short"></span>${routeDraw({ loop: true })}</div></div>
           <span class="skel skel-bar"></span>
         </div>
+        <div class="skel-action"></div>
       </div>
-      <div class="ruta-col" aria-hidden="true">
-        <div class="ruta-card">
-          <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span>${routeDraw({ loop: true })}</div>
-          <div class="gap-list">${gapRow.repeat(3)}</div>
-        </div>
-        <div class="ruta-card">
-          <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span></div>
-          <div class="gap-list">${gapRow.repeat(3)}</div>
-        </div>
-        <div class="ruta-card">
-          <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span></div>
-          <span class="skel skel-chart"></span>
-        </div>
+      <div class="ruta-row" aria-hidden="true">
+        ${card(row.repeat(3))}
+        ${card(row.repeat(2))}
+      </div>
+      <div class="ruta-row" aria-hidden="true">
+        ${card(`<span class="skel skel-chart"></span>`)}
+        ${card(row.repeat(2))}
       </div>
     </div>`;
 }
@@ -677,10 +725,17 @@ async function loadDashboard(goalId, { quiet = false } = {}) {
     const reference = demand.goalSkills.length ? demand.goalSkills : r.gaps;
     renderMarketDemand(demand.goalSkills, demand.catalog);
     const goal = escapeHtml(tGoalTitle(r.goalTitle));
+    // Filas de dos columnas (ancha + angosta); si falta la angosta, la ancha ocupa toda la fila
+    const row = (...cards) => {
+      const shown = cards.filter(Boolean);
+      return `<div class="ruta-row${shown.length < 2 ? " ruta-row--single" : ""}">${shown.join("")}</div>`;
+    };
     container.innerHTML = `
       <div class="ruta-grid${silent ? " is-quiet" : ""}">
-        <div class="ruta-col">${renderGauge(r)}${renderNextAction(r.gaps[0], r.goalTitle)}${renderRitmoCard(demand.catalog, demand.goalSkills, r)}</div>
-        <div class="ruta-col">${renderBrechas(r.gaps, reference, jobStats, r.goalTitle)}${renderSemanaCard(r.gaps, demand.catalog, goalId, r.goalTitle)}${renderOffersCard(goal)}${renderTrend(history)}</div>
+        ${row(renderGauge(r, demand.goalSkills), renderNextAction(r.gaps[0], r.goalTitle))}
+        ${row(renderBrechas(r, reference, jobStats, demand.catalog, goalId), renderRitmoCard(demand.catalog, demand.goalSkills, r))}
+        ${row(renderTrend(history), renderMarketCard(demand.goalSkills, demand.catalog, r.goalTitle))}
+        ${row(renderOffersCard(goal))}
       </div>`;
     bindTrendHover(container, history);
     loadOffers(goal, goalId, { quiet: silent }); // ofertas.js: llega después, sin frenar el resto de la vista

@@ -1,114 +1,199 @@
-// Vista "Objetivo": elegir el objetivo profesional la primera vez y cambiarlo después ("Cambiar objetivo" en Mi Ruta y
-// Perfil). El progreso por habilidad es del usuario, no del objetivo: cambiar es reversible y no pide confirmación.
-// Usa fetchGoals, setActiveGoal, getActiveGoalId, savedGoalId y renderApiError (dashboard.js), escapeHtml/showView
-// (mapa.js), routeDraw y routeDivider (route-motif.js), friendlyError (session.js) y t, tn, tGoalTitle y
-// tGoalDescription (i18n.js).
-
-// Ícono y color de cada tarjeta según palabras clave del título (sin acentos, en minúsculas).
-// Gana el primer tema que coincide; sin coincidencia se usa GENERIC_THEME. El fondo del ícono lo deriva styles.css
-// del color (color-mix), así funciona en claro y oscuro.
-const ICON_STROKE = `fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
-const GOAL_THEMES = [
-  { match: /front|react|angular|vue|\bweb\b/, color: "#D95F8E",
-    icon: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 6l-3 12"/></svg>` },
-  { match: /data|datos|analis|analyst|machine|\bml\b|\bia\b|\bai\b/, color: "#3B82F6",
-    icon: `<svg viewBox="0 0 24 24" fill="currentColor"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 8.4v3.1c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V8.4c-1.5 1.2-4.3 1.9-7.5 1.9s-6-.7-7.5-1.9zm0 6v3.6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-3.6c-1.5 1.2-4.3 1.9-7.5 1.9s-6-.7-7.5-1.9z"/></svg>` },
-  { match: /disen|design|\bux\b|\bui\b/, color: "#A855F7",
-    icon: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><path d="m12 19 7-7 3 3-7 7z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18z"/><path d="m2 2 7.6 7.6"/><circle cx="11" cy="11" r="2"/></svg>` },
-  { match: /cloud|nube|devops|aws|azure|infra/, color: "#F97316",
-    icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 19H7a5 5 0 1 1 .9-9.9A6 6 0 0 1 19.3 11a4 4 0 0 1-1.8 8z"/></svg>` },
-  { match: /mobile|movil|android|\bios\b|flutter/, color: "#14B8A6",
-    icon: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18h2"/></svg>` },
-  { match: /back|java|\bapi\b|server|servidor/, color: "#22A06B",
-    icon: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><rect x="3.5" y="4" width="17" height="7" rx="2"/><rect x="3.5" y="13" width="17" height="7" rx="2"/><path d="M7.5 7.5h.01M7.5 16.5h.01"/></svg>` },
-];
-const GENERIC_THEME = { color: "#8A8792",
-  icon: `<svg viewBox="0 0 24 24" ${ICON_STROKE}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>` };
+// Vista "Objetivo": el objetivo actual arriba (su preparación y "Ver mi ruta") y debajo las otras rutas posibles, cada una
+// con su compatibilidad de hoy (el % de preparación que da /api/goals/{id}/readiness), cuántas habilidades comparte con
+// el objetivo actual y la demanda de su mercado. Cada ruta se puede comparar lado a lado con la actual o elegir: elegir
+// pide confirmación en la propia tarjeta y, ya cambiado, un aviso ofrece "Deshacer" (vuelve al objetivo anterior). El
+// progreso por habilidad es del usuario, no del objetivo: cambiar no borra nada.
+// Usa fetchGoals, fetchSkills, fetchReadiness, setActiveGoal, getActiveGoalId, savedGoalId, marketLevel y renderApiError
+// (dashboard.js), escapeHtml/showView (mapa.js), routeDraw (route-motif.js), friendlyError (session.js) y t, tn,
+// tGoalTitle y tGoalDescription (i18n.js).
 
 function normalizeText(text) {
   return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
-function goalTheme(title) {
-  const t = normalizeText(title);
-  return GOAL_THEMES.find(theme => theme.match.test(t)) || GENERIC_THEME;
+// goals: /api/goals; catalog: /api/skills ([] si falló); readiness: % de preparación por id de objetivo (null si falló).
+// pending: ruta que espera confirmación; compare: ruta en la comparación; prev: objetivo anterior (para Deshacer);
+// query: búsqueda; focusOnOpen: al abrir desde "Cambiar objetivo" (Perfil) el foco va al objetivo actual.
+const objetivoState = { goals: null, catalog: [], readiness: new Map(), pending: null, compare: null, prev: null, busy: false,
+  error: null, query: "", focusOnOpen: false };
+
+// Objetivo activo actual: el de Mi Ruta; si aún no cargó, el guardado; si no, el primero.
+function currentActiveGoalId(goals) {
+  const active = getActiveGoalId(); // dashboard.js
+  if (goals.some(g => String(g.id) === active)) return active;
+  return savedGoalId(goals) ?? (goals[0] ? String(goals[0].id) : null);
 }
 
-// focusOnOpen: al abrir desde "Cambiar objetivo", el foco va a la tarjeta elegida. busy y error: guardando el cambio.
-const objetivoState = { goals: null, selectedId: null, focusOnOpen: false, busy: false, error: null };
+const goalById = id => objetivoState.goals.find(g => String(g.id) === String(id));
+const goalSkillIds = goal => new Set((goal?.skills || []).map(s => s.skillId));
+const goalName = goal => escapeHtml(tGoalTitle(goal.title));
 
-// La búsqueda encuentra el objetivo por su título original y por el traducido
-function renderGoalCard(goal, index) {
-  const theme = goalTheme(goal.title);
-  const count = goal.skills.length;
-  const title = tGoalTitle(goal.title);
-  return `
-    <button type="button" class="objetivo-card" role="radio" aria-checked="false" tabindex="-1" data-goal-id="${goal.id}"
-      data-title="${escapeHtml(normalizeText(`${goal.title} ${title}`))}" style="--goal-color:${theme.color}; --i:${index};">
-      <span class="objetivo-card-icon" aria-hidden="true">${theme.icon}</span>
-      <svg class="objetivo-card-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m7.5 12.3 3 3 6-6.3" pathLength="1" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span class="objetivo-card-title">${escapeHtml(title)}</span>
-      <span class="ruta-eyebrow objetivo-card-current" hidden>${t("objetivo.current")}</span>
-      <span class="objetivo-card-desc">${escapeHtml(tGoalDescription(goal.title, goal.description || ""))}</span>
-      <span class="objetivo-card-count">${tn("objetivo.skills", count)}</span>
-    </button>`;
+// Habilidades en común entre dos objetivos
+function sharedSkills(a, b) {
+  const ids = goalSkillIds(b);
+  return [...goalSkillIds(a)].filter(id => ids.has(id)).length;
 }
 
-function renderObjetivo(goals) {
-  const cards = goals.map(renderGoalCard).join("");
-  return `
-    <p class="objetivo-empty" role="status" ${goals.length ? "hidden" : ""}>${goals.length ? "" : t("objetivo.empty")}</p>
-    <div class="objetivo-grid">
-      <!-- display:contents: las tarjetas participan de la grilla y "Otro objetivo" queda fuera del grupo de radios -->
-      <div class="objetivo-radios" role="radiogroup" aria-label="${t("objetivo.group")}">${cards}</div>
-      <div class="objetivo-card objetivo-card--otro" aria-disabled="true" title="${t("common.soon")}" style="--i:${goals.length};">
-        <span class="objetivo-otro-plus" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        </span>
-        <span class="objetivo-card-title">${t("objetivo.other")}</span>
-        <span class="objetivo-otro-text">${t("objetivo.otherText")}</span>
-        <span class="sample-tag">${t("common.soon")}</span>
-      </div>
-    </div>
-    <div class="objetivo-actions">
-      ${goals.length ? `<p class="objetivo-note">${routeDivider()}<span>${t("objetivo.keepProgress")}</span></p>` : ""}
-      <button type="button" class="btn-pill objetivo-cta" data-action="trazar-ruta" ${goals.length ? "" : "disabled"}>${t("objetivo.cta")}</button>
-      <p class="objetivo-error" role="alert" hidden></p>
+// "demanda baja" del objetivo (Mercado laboral de Mi Ruta), en minúscula para ir dentro de la frase; "" sin datos
+function goalDemand(goal) {
+  const ids = goalSkillIds(goal);
+  const level = marketLevel(objetivoState.catalog.filter(s => ids.has(s.id)), objetivoState.catalog);
+  return level ? level.label.toLocaleLowerCase(getLanguage()) : "";
+}
+
+const readinessOf = goal => objetivoState.readiness.get(String(goal.id)) ?? null;
+
+function goalMeta(goal, current) {
+  const demand = goalDemand(goal);
+  return [
+    tn("objetivo.skills", goal.skills.length),
+    current ? tn("objetivo.common", sharedSkills(goal, current)) : "",
+    demand ? t("objetivo.demand", { demand }) : "",
+  ].filter(Boolean).join(" · ");
+}
+
+function renderHero(goal) {
+  const pct = readinessOf(goal);
+  const score = pct == null ? "" : `
+    <div class="objetivo-hero-score">
+      <span class="objetivo-hero-score-label">${t("objetivo.readiness")}</span>
+      <span class="objetivo-hero-pct">${pct}<span>%</span></span>
+      <span class="objetivo-bar" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>
+      <span class="objetivo-hero-score-note">${t("objetivo.readinessNote")}</span>
     </div>`;
+  const desc = tGoalDescription(goal.title, goal.description || "");
+  return `
+    <section class="ruta-card objetivo-hero" aria-labelledby="objetivo-current-title">
+      <div class="objetivo-hero-main">
+        <div class="objetivo-hero-head">
+          <span class="objetivo-chip">${t("objetivo.current")}</span>
+          <h2 id="objetivo-current-title" class="objetivo-hero-title" tabindex="-1">${goalName(goal)}</h2>
+          <p class="objetivo-hero-meta">${goalMeta(goal, null)}</p>
+        </div>
+        ${desc ? `<p class="objetivo-hero-desc">${escapeHtml(desc)}</p>` : ""}
+        <button type="button" class="btn-pill objetivo-cta" data-action="view-route">
+          ${t("objetivo.viewRoute")}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+      ${score}
+    </section>`;
 }
 
-// Botón y error del pie según el estado del guardado (el texto del error se arma en el idioma vigente)
-function refreshObjetivoActions() {
-  const cta = document.querySelector("#objetivo-content [data-action='trazar-ruta']");
-  const error = document.querySelector("#objetivo-content .objetivo-error");
-  if (!cta) return;
-  cta.textContent = t(objetivoState.busy ? "objetivo.saving" : "objetivo.cta");
-  cta.toggleAttribute("aria-busy", objetivoState.busy);
-  error.hidden = !objetivoState.error;
-  error.textContent = objetivoState.error ? t("goal.error", { error: friendlyError(objetivoState.error) }) : "";
+function renderGoalCard(goal, current, index) {
+  const id = String(goal.id);
+  const pct = readinessOf(goal);
+  const name = goalName(goal);
+  const comparing = objetivoState.compare === id;
+  const title = normalizeText(`${goal.title} ${tGoalTitle(goal.title)}`);
+  const actions = objetivoState.pending === id
+    ? `<div class="objetivo-confirm" role="group" aria-labelledby="objetivo-confirm-${id}">
+        <p id="objetivo-confirm-${id}">${t("objetivo.confirm", { goal: `<strong>${name}</strong>` })}</p>
+        <div class="objetivo-card-actions">
+          <button type="button" class="btn-ghost btn-ghost--strong" data-action="confirm" data-goal-id="${id}"${objetivoState.busy ? ` aria-busy="true" disabled` : ""}>
+            ${t(objetivoState.busy ? "objetivo.saving" : "objetivo.confirmYes")}</button>
+          <button type="button" class="btn-ghost" data-action="cancel" data-goal-id="${id}"${objetivoState.busy ? " disabled" : ""}>${t("objetivo.cancel")}</button>
+        </div>
+      </div>`
+    : `<div class="objetivo-card-actions">
+        <button type="button" class="btn-ghost" data-action="compare" data-goal-id="${id}" aria-pressed="${comparing}">${t(comparing ? "objetivo.comparing" : "objetivo.compare")}</button>
+        <button type="button" class="btn-ghost btn-ghost--strong" data-action="choose" data-goal-id="${id}" aria-label="${escapeHtml(t("objetivo.chooseFor", { goal: tGoalTitle(goal.title) }))}">${t("objetivo.choose")}</button>
+      </div>`;
+  return `
+    <li class="objetivo-card${comparing ? " is-comparing" : ""}" data-goal-id="${id}" data-title="${escapeHtml(title)}" style="--i:${index};">
+      <div class="objetivo-card-top">
+        <h3 class="objetivo-card-title">${name}</h3>
+        ${pct == null ? "" : `<span class="objetivo-card-pct"><span class="sr-only">${t("objetivo.compatLabel")}: </span>${pct}%</span>`}
+      </div>
+      <p class="objetivo-card-meta">${goalMeta(goal, current)}</p>
+      ${pct == null ? "" : `<span class="objetivo-bar objetivo-bar--thin" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>`}
+      ${actions}
+    </li>`;
 }
 
-// Marca la tarjeta elegida; solo ella queda en el orden de tabulación (patrón radio group).
-function selectGoalCard(goalId, { focus = false } = {}) {
-  objetivoState.selectedId = goalId == null ? null : String(goalId);
-  const cards = [...document.querySelectorAll("#objetivo-content .objetivo-card[role='radio']")];
-  const current = objetivoState.goals ? currentActiveGoalId(objetivoState.goals) : null;
-  let selected = null;
-  cards.forEach(card => {
-    const isSelected = card.dataset.goalId === objetivoState.selectedId;
-    card.setAttribute("aria-checked", String(isSelected));
-    card.tabIndex = isSelected ? 0 : -1;
-    card.querySelector(".objetivo-card-current").hidden = card.dataset.goalId !== current;
-    if (isSelected) selected = card;
-  });
-  // Sin selección visible, la primera tarjeta visible recibe el foco del Tab.
-  if (!selected || selected.hidden) cards.find(c => !c.hidden)?.setAttribute("tabindex", "0");
-  if (focus && selected) selected.focus();
+// Comparación lado a lado: compatibilidad de cada una, cuántas habilidades son solo de cada ruta y cuántas comparten
+function renderCompare(current, other) {
+  const a = readinessOf(current), b = readinessOf(other);
+  const shared = sharedSkills(current, other);
+  const curName = goalName(current), otherName = goalName(other);
+  let summary = "";
+  if (a != null && b != null) {
+    summary = a === b ? t("objetivo.cmp.same", { a: curName, b: otherName })
+      : a > b ? t("objetivo.cmp.closer", { n: a - b, a: curName, b: otherName })
+      : t("objetivo.cmp.closer", { n: b - a, a: otherName, b: curName });
+  }
+  const tile = (label, goal, pct, only) => `
+    <div class="objetivo-compare-tile">
+      <span class="objetivo-compare-label">${label}</span>
+      <span class="objetivo-compare-name">${goalName(goal)}</span>
+      <dl class="objetivo-compare-stats">
+        <div><dt>${t("objetivo.cmp.compat")}</dt><dd>${pct == null ? "—" : `${pct}%`}</dd></div>
+        <div><dt>${t("objetivo.cmp.only")}</dt><dd>${only}</dd></div>
+      </dl>
+    </div>`;
+  return `
+    <section class="ruta-card objetivo-compare" aria-labelledby="objetivo-compare-title">
+      <header class="ruta-card-header">
+        <h2 id="objetivo-compare-title" class="ruta-card-title" tabindex="-1">${t("objetivo.cmp.title")}</h2>
+        <button type="button" class="btn-ghost" data-action="close-compare">${t("objetivo.cmp.close")}</button>
+      </header>
+      ${summary ? `<p class="objetivo-compare-summary">${summary}</p>` : ""}
+      <div class="objetivo-compare-grid">
+        ${tile(t("objetivo.cmp.yours"), current, a, current.skills.length - shared)}
+        ${tile(t("objetivo.cmp.other"), other, b, other.skills.length - shared)}
+      </div>
+      <p class="objetivo-compare-shared">${tn("objetivo.cmp.shared", shared)}</p>
+      <button type="button" class="btn-ghost btn-ghost--strong" data-action="choose" data-goal-id="${other.id}">${t("objetivo.cmp.choose", { goal: otherName })}</button>
+    </section>`;
 }
 
-function filterGoalCards(query) {
-  const q = normalizeText(query.trim());
-  const cards = [...document.querySelectorAll("#objetivo-content .objetivo-card[role='radio']")];
+function renderObjetivo() {
+  const { goals } = objetivoState;
+  if (!goals.length) return `<p class="objetivo-empty">${t("objetivo.empty")}</p>`;
+  const current = goalById(currentActiveGoalId(goals));
+  const others = goals.filter(g => g !== current);
+  const prev = objetivoState.prev && goalById(objetivoState.prev);
+  const toast = prev ? `
+    <div class="objetivo-toast">
+      <p>${t("objetivo.changedTo", { goal: goalName(current) })}</p>
+      <button type="button" class="btn-ghost btn-ghost--strong" data-action="undo">${t("objetivo.undo")}</button>
+    </div>` : "";
+  const compared = objetivoState.compare && goalById(objetivoState.compare);
+  return `
+    ${toast}
+    ${renderHero(current)}
+    <section class="objetivo-others" aria-labelledby="objetivo-others-title">
+      <div class="objetivo-others-head">
+        <div>
+          <h2 id="objetivo-others-title" class="ruta-card-title" tabindex="-1">${t("objetivo.others")}</h2>
+          <p class="objetivo-others-text">${t("objetivo.othersText")}</p>
+        </div>
+        <label class="objetivo-search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span class="sr-only">${t("objetivo.search")}</span>
+          <input id="objetivo-search" type="search" autocomplete="off" placeholder="${escapeHtml(t("objetivo.searchPlaceholder"))}" value="${escapeHtml(objetivoState.query)}">
+        </label>
+      </div>
+      <p class="objetivo-error" role="alert"${objetivoState.error ? "" : " hidden"}>${objetivoState.error ? escapeHtml(t("goal.error", { error: friendlyError(objetivoState.error) })) : ""}</p>
+      <p class="objetivo-empty" hidden></p>
+      <ul class="objetivo-grid">
+        ${others.map((g, i) => renderGoalCard(g, current, i)).join("")}
+        <li class="objetivo-card objetivo-card--otro" aria-disabled="true" style="--i:${others.length};">
+          <span class="objetivo-otro-plus" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </span>
+          <span class="objetivo-card-title">${t("objetivo.other")}</span>
+          <span class="objetivo-otro-text">${t("objetivo.otherText")}</span>
+          <span class="sample-tag">${t("common.soon")}</span>
+        </li>
+      </ul>
+    </section>
+    ${compared && compared !== current ? renderCompare(current, compared) : ""}`;
+}
+
+function filterGoalCards() {
+  const q = normalizeText(objetivoState.query.trim());
+  const cards = [...document.querySelectorAll("#objetivo-content .objetivo-card[data-title]")];
   let visible = 0;
   cards.forEach(card => {
     card.hidden = !card.dataset.title.includes(q);
@@ -117,105 +202,131 @@ function filterGoalCards(query) {
   const empty = document.querySelector("#objetivo-content .objetivo-empty");
   if (empty && cards.length) {
     empty.hidden = visible > 0;
-    empty.textContent = visible ? "" : t("objetivo.noMatch", { query: query.trim() });
+    empty.textContent = visible ? "" : t("objetivo.noMatch", { query: objetivoState.query.trim() });
   }
-  selectGoalCard(objetivoState.selectedId);
 }
 
-// Flechas: mueven la selección entre las tarjetas visibles, como en un grupo de radios.
-function handleObjetivoKeys(e) {
-  const card = e.target.closest(".objetivo-card[role='radio']");
-  if (!card) return;
-  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-  if (!step) return;
-  e.preventDefault();
-  const visible = [...document.querySelectorAll("#objetivo-content .objetivo-card[role='radio']:not([hidden])")];
-  const next = visible[(visible.indexOf(card) + step + visible.length) % visible.length];
-  selectGoalCard(next.dataset.goalId, { focus: true });
+// Vuelve a pintar la vista y deja el foco en el control indicado (selector CSS) o en el que lo tenía
+function paintObjetivo(focusSelector) {
+  const container = document.getElementById("objetivo-content");
+  const active = document.activeElement;
+  const keep = !focusSelector && active && container.contains(active)
+    ? (active.id ? `#${active.id}` : active.dataset.action ? `[data-action='${active.dataset.action}'][data-goal-id='${active.dataset.goalId || ""}']` : null) : null;
+  container.innerHTML = renderObjetivo();
+  filterGoalCards();
+  const target = focusSelector || keep;
+  if (target) container.querySelector(target)?.focus({ preventScroll: !focusSelector });
 }
 
-// Objetivo activo actual: el del selector de Mi Ruta; si aún no cargó, el guardado; si no, el primero.
-function currentActiveGoalId(goals) {
-  const active = getActiveGoalId(); // dashboard.js
-  if (goals.some(g => String(g.id) === active)) return active;
-  return savedGoalId(goals) ?? (goals[0] ? String(goals[0].id) : null);
+function announceObjetivo(text) {
+  document.getElementById("objetivo-live").textContent = text;
+}
+
+async function loadObjetivoData() {
+  const goals = await fetchGoals();
+  const [catalog, readiness] = await Promise.all([
+    fetchSkills().catch(() => []),
+    Promise.all(goals.map(g => fetchReadiness(g.id).then(r => r.readinessPercentage).catch(() => null))),
+  ]);
+  Object.assign(objetivoState, { goals, catalog, readiness: new Map(goals.map((g, i) => [String(g.id), readiness[i]])) });
 }
 
 async function openObjetivo() {
   const container = document.getElementById("objetivo-content");
-  if (!objetivoState.goals) {
-    container.innerHTML = `<p class="route-state text-sm text-muted-page">${routeDraw({ loop: true })}${t("objetivo.loading")}</p>`;
-    try {
-      objetivoState.goals = await fetchGoals();
-    } catch (err) {
-      container.innerHTML = renderApiError(err); // se reintenta la próxima vez que se abra la vista
-      return;
-    }
-    container.innerHTML = renderObjetivo(objetivoState.goals);
+  if (!objetivoState.goals) container.innerHTML = `<p class="route-state text-sm text-muted-page" role="status">${routeDraw({ loop: true })}${t("objetivo.loading")}</p>`;
+  try {
+    await loadObjetivoData(); // con caché; la preparación se vuelve a pedir si cambió el progreso
+  } catch (err) {
+    container.innerHTML = renderApiError(err); // se reintenta la próxima vez que se abra la vista
+    return;
   }
-  selectGoalCard(currentActiveGoalId(objetivoState.goals));
-  filterGoalCards(document.getElementById("objetivo-search").value);
-  objetivoState.error = null;
-  refreshObjetivoActions();
-  if (objetivoState.focusOnOpen) {
-    objetivoState.focusOnOpen = false;
-    document.querySelector("#objetivo-content .objetivo-card[aria-checked='true']")?.focus();
-  }
+  Object.assign(objetivoState, { pending: null, error: null });
+  paintObjetivo(objetivoState.focusOnOpen ? "#objetivo-current-title" : null);
+  objetivoState.focusOnOpen = false;
 }
 
-// "Cambiar objetivo" (Perfil): la misma selección del primer uso, con el objetivo actual marcado y enfocado
+// "Cambiar objetivo" (Perfil): la vista Objetivo con el foco en el objetivo actual
 function openGoalSelection() {
   objetivoState.focusOnOpen = true;
   showView("objetivo");
   window.scrollTo(0, 0);
 }
 
-// "Trazar mi ruta": guarda el objetivo elegido (si cambió) y lleva a Mi Ruta, con el foco en el título del objetivo
-async function traceGoalRoute() {
-  const goalId = objetivoState.selectedId;
-  if (!goalId || objetivoState.busy) return;
-  if (goalId !== getActiveGoalId()) {
-    Object.assign(objetivoState, { busy: true, error: null });
-    refreshObjetivoActions();
-    try {
-      await setActiveGoal(goalId);
-    } catch (err) {
-      objetivoState.error = err;
-    }
-    objetivoState.busy = false;
-    refreshObjetivoActions();
-    if (objetivoState.error) return;
+// Cambia el objetivo (confirmado o desde Deshacer). Si falla, sigue el anterior y el error queda sobre la lista.
+async function switchGoal(goalId, { undo = false } = {}) {
+  if (objetivoState.busy) return;
+  const before = currentActiveGoalId(objetivoState.goals);
+  Object.assign(objetivoState, { busy: true, error: null });
+  paintObjetivo();
+  try {
+    await setActiveGoal(goalId); // dashboard.js: guarda en el backend y recalcula Mi Ruta
+    Object.assign(objetivoState, { prev: undo ? null : before, pending: null, compare: null });
+    const goal = goalById(goalId);
+    announceObjetivo(t(undo ? "objetivo.undone" : "goal.changed", { goal: tGoalTitle(goal.title) }));
+  } catch (err) {
+    objetivoState.error = err;
   }
-  showView("dashboard");
-  window.scrollTo(0, 0);
-  document.getElementById("goal-button").focus();
+  objetivoState.busy = false;
+  paintObjetivo(objetivoState.error ? null : "#objetivo-current-title");
+  if (!objetivoState.error) window.scrollTo({ top: 0 });
 }
 
 function initObjetivo() {
   const container = document.getElementById("objetivo-content");
-  document.getElementById("objetivo-search").addEventListener("input", e => filterGoalCards(e.target.value));
-  container.addEventListener("keydown", handleObjetivoKeys);
+  container.addEventListener("input", e => {
+    if (e.target.id !== "objetivo-search") return;
+    objetivoState.query = e.target.value;
+    filterGoalCards();
+  });
   container.addEventListener("click", e => {
-    const card = e.target.closest(".objetivo-card[role='radio']");
-    if (card) { selectGoalCard(card.dataset.goalId); return; }
-    if (e.target.closest("[data-action='trazar-ruta']")) traceGoalRoute();
+    const button = e.target.closest("[data-action]");
+    if (!button || button.disabled) return;
+    const id = button.dataset.goalId;
+    switch (button.dataset.action) {
+      case "view-route":
+        showView("dashboard");
+        window.scrollTo(0, 0);
+        document.getElementById("goal-button").focus();
+        break;
+      case "compare":
+        objetivoState.compare = objetivoState.compare === id ? null : id;
+        paintObjetivo(objetivoState.compare ? "#objetivo-compare-title" : `[data-action='compare'][data-goal-id='${id}']`);
+        break;
+      case "close-compare": {
+        const was = objetivoState.compare;
+        objetivoState.compare = null;
+        paintObjetivo(`[data-action='compare'][data-goal-id='${was}']`);
+        break;
+      }
+      case "choose":
+        objetivoState.pending = id;
+        paintObjetivo(`[data-action='confirm'][data-goal-id='${id}']`);
+        container.querySelector(`.objetivo-card[data-goal-id='${id}']`)?.scrollIntoView({ block: "nearest" });
+        break;
+      case "cancel":
+        objetivoState.pending = null;
+        paintObjetivo(`[data-action='choose'][data-goal-id='${id}']`);
+        break;
+      case "confirm":
+        switchGoal(id);
+        break;
+      case "undo":
+        if (objetivoState.prev) switchGoal(objetivoState.prev, { undo: true });
+        break;
+    }
   });
 }
 
 // Cambio de usuario: la vista se vuelve a armar la próxima vez que se abra
 document.addEventListener("skillmap:user", () => {
-  Object.assign(objetivoState, { goals: null, selectedId: null, focusOnOpen: false, busy: false, error: null });
+  Object.assign(objetivoState, { goals: null, catalog: [], readiness: new Map(), pending: null, compare: null, prev: null,
+    busy: false, error: null, query: "", focusOnOpen: false });
   document.getElementById("objetivo-content").innerHTML = "";
-  document.getElementById("objetivo-search").value = "";
 });
 
-// Cambio de idioma: las tarjetas se vuelven a pintar conservando la selección y la búsqueda
+// Cambio de idioma: se vuelve a pintar conservando la búsqueda, la comparación y el aviso
 document.addEventListener("skillmap:language", () => {
-  if (!objetivoState.goals) return;
-  document.getElementById("objetivo-content").innerHTML = renderObjetivo(objetivoState.goals);
-  selectGoalCard(objetivoState.selectedId);
-  filterGoalCards(document.getElementById("objetivo-search").value);
-  refreshObjetivoActions();
+  if (objetivoState.goals) paintObjetivo();
 });
 
 document.addEventListener("DOMContentLoaded", initObjetivo);

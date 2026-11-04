@@ -27,9 +27,9 @@ colors:
 typography:
   display:
     fontFamily: "Plus Jakarta Sans, ui-sans-serif, system-ui, -apple-system, sans-serif"
-    fontSize: "1.9rem"
-    fontWeight: 500
-    lineHeight: 1.2
+    fontSize: "3rem"
+    fontWeight: 800
+    lineHeight: 1.15
     letterSpacing: "-0.02em"
   headline:
     fontFamily: "Plus Jakarta Sans, ui-sans-serif, system-ui, -apple-system, sans-serif"
@@ -66,7 +66,7 @@ rounded:
   field: "1rem"
   control: "1.1rem"
   tile: "1.25rem"
-  card: "1.75rem"
+  card: "24px"
   pill: "9999px"
 spacing:
   chip-gap: "0.7rem"
@@ -227,9 +227,17 @@ Paleta de dos acentos con significado (rosa y menta) sobre neutrales tibios con 
 
 ## Layout
 
-La aplicación es solo de escritorio. Un sidebar blanco fijo de 14rem a la izquierda (4.5rem, solo íconos, por debajo de 640px) y un área de contenido con 2rem de margen lateral y un máximo de 1200px, centrada. El Mapa Visual es la excepción: ocupa de borde a borde y a alto completo.
+La aplicación es solo de escritorio (ancho de diseño 1440px). Barra superior pegada arriba y un área de contenido de 1200px útiles, centrada, con 32px de margen lateral; la barra alinea marca, nav y acciones con ese mismo ancho.
 
-Las grillas pasan a dos columnas desde 1024px. Mi Ruta y Analizador usan una columna angosta (gauge) y una ancha (1fr / 2.1fr); Perfil usa 1.7fr / 1fr. Objetivo usa una grilla de 1, 2 o 3 columnas de tarjetas iguales (640px y 1024px). La separación entre tarjetas es de 1.5rem (Perfil, Analizador) a 1.75rem (Mi Ruta), y cada tarjeta tiene 1.75rem de padding.
+### Rediseño visual (escala común)
+Fuente única de tokens en `:root` de `css/styles.css` (iguales en los dos temas):
+- **Espacios:** `--space-1…10` (4, 8, 12, 16, 20, 24, 32, 40px), `--card-pad` 32px, `--grid-gap` 24px, `--content-max` 1200px, `--page-gutter` 32px.
+- **Radios:** `--radius-card` 24px (tarjetas), `--radius-tile` 20px (fichas internas, menús), `--radius-control` 14px (opciones de menú), `--radius-pill` (botones, chips).
+- **Tipografía:** `--fs-display` 48/800 (título de cada vista, sólido, sin degradado), `--fs-h2` 22/800 (título de tarjeta), `--fs-row` 17/700 (nombre de habilidad u oferta), `--fs-body` 15, `--fs-sm` 14, `--fs-xs` 13, `--fs-label` 12/700. Los números grandes van en 800.
+- **Controles:** `--hit` 44px de alto mínimo. Un solo botón con el gradiente de acción por vista (`.btn-pill`); el resto es `.btn-ghost` (contorno fino, 14/700) o `.btn-ghost--strong` para la acción de una tarjeta (Elegir, Sí, cambiar, Deshacer).
+- **Grillas:** filas de una columna ancha y una de 360px (Mi Ruta, Perfil, Analizador); Objetivo y Ofertas para ti en rejillas de 3; Ajustes en dos columnas iguales con Seguridad a todo el ancho.
+- **Encabezado de vista** (`.view-header`): título y bajada de 18px; sin rótulo encima salvo "Objetivo actual" en Mi Ruta.
+- **Avisos con Deshacer:** píldora con borde menta (el cambio quedó hecho) y "Deshacer" a la derecha: tras cambiar de objetivo (Objetivo) y tras cambiar un estado (Habilidades, pegada bajo la barra superior).
 
 ## Elevation & Depth
 
@@ -282,7 +290,7 @@ Suaves y táctiles: todo lo que se toca responde al hover y al clic sin brusqued
 - **Toggle:** pastilla de 2.5rem; encendido en Menta Logro. La perilla se desliza con salida suave y se estira al presionar.
 
 ### Navigation
-- **Barra superior:** seis secciones en la píldora del nav: Objetivo · Mi Ruta · Mapa Visual · Habilidades · Analizador · Perfil (Habilidades junto al Mapa: son el mismo catálogo como grafo y como lista). Con texto, el nav mide ~800px; por debajo de 1280px pasa a solo íconos (los nombres quedan en `aria-label`) para que marca, nav y acciones quepan sin desbordar.
+- **Barra superior:** estrella + "Cenit", seis secciones de solo texto en la píldora del nav (Objetivo · Mi Ruta · Mapa · Habilidades · Analizador · Perfil; Habilidades junto al Mapa: son el mismo catálogo como grafo y como lista), y a la derecha el botón de Ajustes y el menú de la cuenta: un círculo de 44px con la inicial (`aria-haspopup="menu"`) que abre nombre, correo, "Ver mi perfil" y "Cerrar sesión"; flechas, Inicio y Fin recorren las opciones y Esc lo cierra devolviendo el foco. El tema se cambia en Ajustes > Apariencia.
 - **Sidebar:** blanco y fijo. Ítems de 0.9rem en 600 y gris, con radio de 1.1rem. En hover, Bruma Rosa con texto rosa; el activo va en Rosa Ruta con texto blanco y halo de acción. Por debajo de 640px quedan solo los íconos.
 
 ### Gauge
@@ -302,19 +310,19 @@ Tarjeta blanca en la columna ancha de Mi Ruta, entre Brechas Prioritarias y Tend
 Entrada: las filas suben 8px con fundido (320ms, escalonadas 40ms) solo al cargar o al mostrar las de "Ver más"; sin animación con movimiento reducido. Carga con la línea del Motivo de Ruta en bucle; vacío con el Motivo de Ruta; error con borde rosa punteado, `role="alert"` y "Reintentar". Se vuelve a pedir al cambiar el estado de una habilidad, el objetivo o el idioma, y nunca muestra datos simulados.
 
 ### Tu semana (Mi Ruta)
-Tarjeta blanca en la columna ancha, entre Brechas Prioritarias y Ofertas para ti (`js/plan-semanal.js`), con medidas en múltiplos de 8px. Título neutro ("Tu semana") y, como pista, las fechas de la semana (lunes a domingo). Una sola expresión GPS, en la entrada: "Tus próximas paradas, por demanda del mercado: primero las que ya estás aprendiendo."
-- **Plan:** 3 brechas del objetivo, primero las que están en Aprendiendo y dentro por demanda. Se arma el primer día que se abre Mi Ruta en una semana nueva y no se reordena durante la semana: una habilidad que quedó dominada sigue en el plan (es el avance de la semana).
-- **Fila (tabla, divisor de 1px entre filas):** casilla de avance de 24px (borde punteado `--line-dashed` = todavía no; marcada, relleno `--mastered-bg` con la marca en `--mastered-fg`), nombre (15px/600, es la etiqueta de la casilla) con categoría y "% de las ofertas" en 12px `--text-2`, horas sugeridas ("≈ 3 h", 13px/600 con cifras tabulares; el lector oye "3 horas sugeridas esta semana") y el selector Pendiente / Aprendiendo / Dominada del Mapa (opciones de 40px). Si la tarjeta mide menos de 560px (`@container`), el selector baja a su propia línea a todo el ancho.
-- **Pie:** "1 de 3 con avance · ≈ 8 h en total" y una pista única (descripción accesible de cada casilla) con la regla de horas: más demanda, más tiempo, y una hora menos si ya la estás aprendiendo.
-- **Cambio de estado:** la fila cambia al instante y se guarda; `#ruta-live` lo anuncia y Mi Ruta se recarga sin skeleton ni entrada (`.ruta-grid.is-quiet`: preparación, brechas, siguiente giro y Tu ritmo se ponen al día y las ofertas de antes siguen a la vista hasta que llegan las nuevas). El foco vuelve a la opción elegida. Si el backend falla, vuelve al estado anterior con el error en la fila (`role="alert"`).
-- **Vacíos:** sin brechas, el Motivo de Ruta con "Llegaste a tu destino: no te quedan brechas en {objetivo}…"; con todo el plan dominado, la entrada pasa a "Dominaste todo el plan de esta semana. El lunes llega uno nuevo."
+Primera parte de la tarjeta "Tu semana · brechas prioritarias", en la columna ancha (`js/plan-semanal.js`, la pinta `renderBrechas`). Como pista, las fechas de la semana (lunes a domingo). Una sola expresión GPS, en la entrada: "Tus próximas paradas, por demanda del mercado: primero las que ya estás aprendiendo."
+- **Plan:** 3 brechas del objetivo por hacer, primero las que están en Aprendiendo y dentro por demanda. Se arma el primer día que se abre Mi Ruta en una semana nueva. El avance sale solo del estado (no hay casilla): una habilidad que pasa a Dominada baja al final con su marca y "Esta semana" en lugar de las horas, y entra la siguiente brecha.
+- **Fila (tabla, divisor de 1px entre filas):** marca de estado de 24px (punteada = pendiente, rosa→violeta = aprendiendo, menta con marca = dominada; decorativa), nombre (17/700, abre el detalle) con su nivel de demanda, barra de 6px con el % real y "% de las ofertas · categoría" en 13px, horas sugeridas ("≈ 3 h"; el lector oye "3 horas sugeridas esta semana") y el selector Pendiente / Aprendiendo / Dominada.
+- **Pie:** "1 dominada esta semana · ≈ 7 h para lo que falta" y la regla de horas: más demanda, más horas; una menos si ya la estás aprendiendo.
+- **Cambio de estado:** la fila cambia al instante y se guarda; `#ruta-live` lo anuncia y Mi Ruta se recarga sin skeleton ni entrada (`.ruta-grid.is-quiet`). El foco vuelve a la opción elegida. Si el backend falla, vuelve al estado anterior con el error en la fila.
+- **Vacíos:** sin brechas, el Motivo de Ruta con "Llegaste a tu destino: no te quedan brechas en {objetivo}…"; con todo el plan dominado y sin brechas nuevas, "Dominaste todo lo que te faltaba para {objetivo}: llegaste a tu destino."
 
 ### Tu ritmo (Mi Ruta)
-Tarjeta blanca en la columna angosta, bajo Siguiente giro (`js/rachas.js`).
-- **Meta semanal:** rótulo en mayúsculas (11px, 700, `--text-2`) y un control − / + (botones redondos de 40px con contorno; al llegar a 1 o a 10 quedan `aria-disabled` sin perder el foco) con el número grande y liviano (28px, 300) y "habilidades por semana". Cambiarla se anuncia en `#ruta-live` y solo afecta a la semana en curso.
-- **Esta semana:** "Esta semana: 1 de 2" (15px/600) sobre una barra de tramos de 10px, uno por avance de la meta (más si se supera): menta = dominada, rosa→violeta = aprendiendo, punteado = todavía no. Debajo, cuánto falta o "Meta cumplida: vas en ruta." en `--mint-ink`.
-- **Rachas:** racha actual y mejor racha en dos columnas, con el número en 2rem/300 y cifras tabulares. Sin racha: "Aún sin racha: cumple la meta esta semana para empezar una."; con racha y la semana sin cumplir todavía: "Cumple la meta esta semana para llevarla a N semanas."
-- **Este mes:** tras el divisor del Motivo de Ruta, "Dominaste N habilidades de tu ruta este mes." y la barra del objetivo entero: dominadas antes (`--mint-line-hover`), dominadas este mes (`--mastered-bg`) y lo que falta punteado, con su leyenda y "3 de 7 dominadas en {objetivo}". Sin dominadas este mes: "Aún no dominas ninguna este mes. Tu siguiente giro: {habilidad}."
+Tarjeta en la columna angosta, junto a Tu semana (`js/rachas.js`). Solo cuentan las habilidades del objetivo actual (tu ruta), como en "Este mes".
+- **Esta semana:** el número grande (28/800) "1 de 2" sobre tramos de 8px, uno por avance de la meta: menta = dominada, rosa→violeta = aprendiendo, pista vacía = todavía no. Pasada la meta el número se queda en la meta ("2 de 2", nunca "5 de 2") y la nota dice "Meta cumplida, con N de más." Si la meta se cumplió solo empezando habilidades (ninguna dominada esta semana), la nota dice "Meta cumplida: empezaste N habilidades de tu ruta. Tu preparación sube cuando las domines.", para que un 0 % de preparación no la contradiga.
+- **Meta semanal:** rótulo y "habilidades por semana" a la izquierda; a la derecha − / + (botones redondos de 44px; al llegar a 1 o a 10 quedan `aria-disabled` sin perder el foco) con el número. Cambiarla se anuncia en `#ruta-live` y solo afecta a la semana en curso.
+- **Rachas:** racha actual y mejor racha en dos columnas (28/800). Sin racha: "Aún sin racha: cumple la meta esta semana para empezar una."; con racha y la semana sin cumplir: "Cumple la meta esta semana para llevarla a N semanas."
+- **Este mes:** "N dominadas" en grande y la barra del objetivo entero: dominadas antes, dominadas este mes y lo que falta punteado, con su leyenda y "3 de 7 dominadas en {objetivo}". Sin dominadas este mes: "Aún no dominas ninguna este mes. Tu siguiente giro: {habilidad}."
 - **Movimiento:** las barras se revelan de izquierda a derecha (`bar-fill`) con la entrada de la tarjeta; nada con movimiento reducido ni en la recarga silenciosa.
 
 ### Nodo del Mapa

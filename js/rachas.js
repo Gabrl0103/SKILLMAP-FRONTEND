@@ -1,6 +1,7 @@
 // Tarjeta "Tu ritmo" de Mi Ruta: meta semanal editable, racha (semanas seguidas cumpliéndola) y lo dominado este mes.
 // - Avance: una habilidad que pasó a Aprendiendo o Dominada. Su semana es la de statusUpdatedAt (/api/skills: cuándo
-//   pasó al estado actual; repetir el estado no la mueve). Cualquier habilidad cuenta, sea o no del objetivo.
+//   pasó al estado actual; repetir el estado no la mueve). Solo cuentan las habilidades del objetivo (tu ruta), como en
+//   "Este mes"; las semanas cerradas que se guardaron antes conservan lo que contaron.
 // - El backend solo guarda la fecha del último cambio de cada habilidad, así que un avance posterior "mueve" el
 //   anterior a la semana nueva. Para que eso no rompa rachas ya ganadas, cada semana cerrada se queda con lo máximo que
 //   se vio de ella y con la meta que tenía (registro en localStorage por usuario: "skillmap.ritmo.{userId}" =
@@ -17,8 +18,8 @@ const RITMO_GOAL = { default: 2, min: 1, max: 10 };
 const RITMO_WEEKS_KEPT = 156; // unos 3 años de semanas en el registro
 const ADVANCE_STATES = ["IN_PROGRESS", "MASTERED"];
 
-// Lo que pinta la tarjeta: datos guardados, habilidades (null si /api/skills falló), las del objetivo y su brecha
-// principal (siguiente giro)
+// Lo que pinta la tarjeta: datos guardados, habilidades que cuentan (las del objetivo; null si /api/skills falló), las
+// del objetivo para "Este mes" y su brecha principal (siguiente giro)
 const ritmo = { data: null, skills: null, goalSkills: [], goal: "", topGap: null };
 const ritmoMemory = new Map(); // respaldo sin localStorage
 
@@ -106,17 +107,22 @@ function weekAdvances(skills, current = weekKey()) {
 }
 
 // ---------- Marcado ----------
+// Orden de la tarjeta (rediseño visual): esta semana (número grande y tramos), meta semanal con − / +, rachas y este mes,
+// separados por divisores finos
 
 function renderRitmoGoal(goal) {
   const at = (limit, side) => (goal === limit ? ` aria-disabled="true"` : "") + ` data-goal-step="${side}"`;
   return `
-    <div class="ritmo-goal">
-      <p id="ritmo-goal-label" class="ritmo-label">${t("ritmo.goal.label")}</p>
+    <div class="ritmo-section ritmo-goal">
+      <div class="ritmo-goal-copy">
+        <p id="ritmo-goal-label" class="ritmo-label">${t("ritmo.goal.label")}</p>
+        <p class="ritmo-goal-unit">${tn("ritmo.goal.unit", goal)}</p>
+      </div>
       <div class="ritmo-stepper" role="group" aria-labelledby="ritmo-goal-label">
         <button type="button" class="ritmo-step"${at(RITMO_GOAL.min, -1)} aria-label="${t("ritmo.goal.less")}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
         </button>
-        <span class="ritmo-goal-value"><strong>${goal}</strong> ${tn("ritmo.goal.unit", goal)}</span>
+        <span class="ritmo-goal-value"><strong>${goal}</strong><span class="sr-only"> ${tn("ritmo.goal.unit", goal)}</span></span>
         <button type="button" class="ritmo-step"${at(RITMO_GOAL.max, 1)} aria-label="${t("ritmo.goal.more")}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         </button>
@@ -124,20 +130,32 @@ function renderRitmoGoal(goal) {
     </div>`;
 }
 
-// Esta semana: "1 de 2", una barra con un tramo por avance de la meta (menta = dominada, rosa→violeta = aprendiendo,
-// punteado = todavía no) y cuánto falta
+// Esta semana: "1 de 2" en grande, una barra con un tramo por avance de la meta (menta = dominada, rosa→violeta =
+// aprendiendo, punteado = todavía no) y cuánto falta. Pasada la meta, el número se queda en la meta ("2 de 2", nunca
+// "5 de 2") y la nota dice cuántas van de más. Si la meta se cumplió solo empezando habilidades (ninguna dominada esta
+// semana), la nota lo dice así: la preparación sube al dominar, no al empezar, y un 0 % no contradice la meta cumplida.
+function ritmoWeekNote(goal, count, advances) {
+  if (count < goal) return tn("ritmo.week.left", goal - count);
+  if (!advances.mastered) return tn("ritmo.week.metLearning", count);
+  return count > goal ? tn("ritmo.week.over", count - goal) : t("ritmo.week.met");
+}
+
 function renderRitmoWeek(goal, count, advances) {
-  const slots = Math.min(12, Math.max(goal, count));
+  const shown = Math.min(count, goal);
   const kinds = [...Array(advances.mastered).fill("mastered"), ...Array(advances.learning).fill("progress")];
-  const segments = Array.from({ length: slots }, (_, i) => `<span class="ritmo-seg ritmo-seg--${kinds[i] || "pending"}"></span>`).join("");
+  const segments = Array.from({ length: goal }, (_, i) => `<span class="ritmo-seg ritmo-seg--${kinds[i] || "pending"}"></span>`).join("");
   const left = goal - count;
-  const note = left > 0 ? tn("ritmo.week.left", left) : t("ritmo.week.met");
+  const note = ritmoWeekNote(goal, count, advances);
   return `
     <div class="ritmo-week">
-      <p class="ritmo-week-text">${t("ritmo.week", { n: count, goal })}</p>
+      <p class="ritmo-week-head">
+        <span class="ritmo-label">${t("ritmo.week.label")}</span>
+        <span class="ritmo-big"><strong>${shown}</strong> ${t("ritmo.week.of", { goal })}</span>
+        <span class="sr-only">${t("ritmo.week", { n: shown, goal })}</span>
+      </p>
       <div class="ritmo-segments" aria-hidden="true">${segments}</div>
       <p class="ritmo-week-note${left > 0 ? "" : " is-met"}">${note}</p>
-      <p class="ritmo-hint">${t("ritmo.goal.hint")}</p>
+      <p class="ritmo-hint">${t("ritmo.goal.hint", { goal: ritmo.goal })}</p>
     </div>`;
 }
 
@@ -147,15 +165,17 @@ function renderRitmoStreaks(data, metNow) {
   data.best = best;
   const stat = (label, n) => `
     <div class="ritmo-streak">
-      <dt>${label}</dt>
-      <dd><strong>${n}</strong> ${tn("ritmo.weeksUnit", n)}</dd>
+      <dt class="ritmo-label">${label}</dt>
+      <dd class="ritmo-big"><strong>${n}</strong> ${tn("ritmo.weeksUnit", n)}</dd>
     </div>`;
   let note = "";
   if (!best) note = t("ritmo.streak.none");
   else if (!metNow) note = t("ritmo.streak.keep", { weeks: tn("ritmo.weeks", current + 1) });
   return `
-    <dl class="ritmo-streaks">${stat(t("ritmo.streak"), current)}${stat(t("ritmo.best"), best)}</dl>
-    ${note ? `<p class="ritmo-streak-note">${note}</p>` : ""}`;
+    <div class="ritmo-section">
+      <dl class="ritmo-streaks">${stat(t("ritmo.streak"), current)}${stat(t("ritmo.best"), best)}</dl>
+      ${note ? `<p class="ritmo-streak-note">${note}</p>` : ""}
+    </div>`;
 }
 
 function renderRitmoMonth() {
@@ -163,15 +183,14 @@ function renderRitmoMonth() {
   if (!goalSkills.length) return "";
   const { thisMonth, before, total } = monthStats(goalSkills);
   const pct = n => (n / total) * 100;
-  const text = thisMonth
-    ? tn("ritmo.month.done", thisMonth)
-    : topGap ? t("ritmo.month.none", { skill: escapeHtml(tSkill(topGap.name)) }) : t("ritmo.month.noneArrived");
+  // Sin dominadas este mes, la frase dice cuál es el siguiente giro; con alguna, el número grande ya lo dice
+  const text = thisMonth ? "" : topGap ? t("ritmo.month.none", { skill: escapeHtml(tSkill(topGap.name)) }) : t("ritmo.month.noneArrived");
   const segment = (kind, n) => (n ? `<span class="ritmo-month-seg ritmo-month-seg--${kind}" style="flex-basis:${pct(n)}%"></span>` : "");
   return `
-    ${routeDivider()}
-    <section class="ritmo-month" aria-labelledby="ritmo-month-title">
+    <section class="ritmo-section ritmo-month" aria-labelledby="ritmo-month-title">
       <h3 id="ritmo-month-title" class="ritmo-label">${t("ritmo.month.title")}</h3>
-      <p class="ritmo-month-text">${text}</p>
+      <p class="ritmo-big"><strong>${thisMonth}</strong> ${tn("ritmo.month.unit", thisMonth)}</p>
+      ${text ? `<p class="ritmo-month-text">${text}</p>` : ""}
       <div class="ritmo-month-bar" aria-hidden="true">
         ${segment("before", before)}${segment("month", thisMonth)}${segment("left", total - before - thisMonth)}
       </div>
@@ -189,8 +208,8 @@ function renderRitmoInner() {
   const count = data.weeks[weekKey()].count;
   const body = `
     ${title}
-    ${renderRitmoGoal(data.goal)}
     ${renderRitmoWeek(data.goal, count, weekAdvances(skills))}
+    ${renderRitmoGoal(data.goal)}
     ${renderRitmoStreaks(data, count >= data.goal)}
     ${renderRitmoMonth()}`;
   saveRitmo(data); // con la mejor racha al día
@@ -201,9 +220,9 @@ function renderRitmoInner() {
 // readiness: /api/goals/{id}/readiness (título y primera brecha)
 function renderRitmoCard(catalog, goalSkills, readiness) {
   const data = readRitmo();
-  if (catalog.length) updateRitmoWeeks(data, catalog);
+  if (catalog.length) updateRitmoWeeks(data, goalSkills); // solo cuenta tu ruta
   Object.assign(ritmo, {
-    data, skills: catalog.length ? catalog : null, goalSkills,
+    data, skills: catalog.length ? goalSkills : null, goalSkills,
     goal: escapeHtml(tGoalTitle(readiness.goalTitle)), topGap: readiness.gaps[0] || null,
   });
   return `<article id="ritmo-card" class="ruta-card ruta-ritmo" aria-labelledby="ritmo-title">${renderRitmoInner()}</article>`;
