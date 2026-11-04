@@ -121,8 +121,8 @@ function renderPerfilHeader() {
       </div>
       ${editing ? "" : `
         <div class="perfil-header-actions">
-          <button type="button" class="btn-pill" data-action="edit-profile">${t("perfil.edit")}</button>
-          <button type="button" class="btn-pill perfil-btn-outline" data-action="open-cv">${t("perfil.exportCv")}</button>
+          <button type="button" class="btn-ghost btn-ghost--strong" data-action="edit-profile">${t("perfil.edit")}</button>
+          <button type="button" class="btn-ghost" data-action="open-cv">${t("perfil.exportCv")}</button>
         </div>`}
     </article>`);
   const initials = header.querySelector(".perfil-photo-initials");
@@ -638,11 +638,11 @@ function renderPerfil() {
       <div class="perfil-col">${renderStatsCard(perfilState.skills, perfilState.goal)}</div>
     </div>`);
   const [main, side] = grid.children;
-  main.append(renderItemsCard("project"), perfilBlock(renderAchievementsCard()));
-  side.append(renderItemsCard("link"));
-  // El resumen "Mis habilidades" va a todo el ancho bajo la cabecera, en una fila (Seguridad está en Ajustes)
-  document.getElementById("perfil-content").replaceChildren(renderPerfilHeader(), perfilBlock(renderPerfilSkillsSummary(perfilState.skills)),
-    grid);
+  // Columna ancha: lo que se muestra de ti (proyectos, enlaces y logros). Angosta: tus habilidades y las estadísticas con
+  // el objetivo (Seguridad está en Ajustes)
+  main.append(renderItemsCard("project"), renderItemsCard("link"), perfilBlock(renderAchievementsCard()));
+  side.prepend(perfilBlock(renderPerfilSkillsSummary(perfilState.skills)));
+  document.getElementById("perfil-content").replaceChildren(renderPerfilHeader(), grid);
 }
 
 // Reemplaza un bloque ya pintado sin reiniciar la entrada: sigue desde donde iba o, si ya había terminado, aparece

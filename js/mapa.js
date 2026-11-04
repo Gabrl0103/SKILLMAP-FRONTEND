@@ -229,10 +229,6 @@ function renderMapa(skills) {
 
           <div class="mapa-tooltip" id="mapa-tooltip" aria-hidden="true" hidden></div>
         </div>
-        <button type="button" class="mapa-list-link" data-goto-list>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="18" r="1" fill="currentColor"/></svg>
-          ${t("mapa.toList")}
-        </button>
       </div>
 
       <aside class="mapa-panel" id="mapa-panel" aria-label="${t("mapa.panel")}">${renderMapaPanelEmpty()}</aside>
@@ -676,14 +672,15 @@ function bindMapaEvents() {
 
 window.addEventListener("resize", applyMapaTransform);
 
-// Botones del panel (se redibuja con cada selección), consejo y enlace a la lista: un solo listener en el contenedor
+// Botones del panel (se redibuja con cada selección) y consejo: un solo listener en el contenedor
 document.getElementById("mapa-content").addEventListener("click", e => {
   const context = e.target.closest("#mapa-panel [data-context]");
   if (context) openSkillDetail(Number(context.dataset.context), context); // skill-detalle.js
   if (e.target.closest("[data-tip-close]")) dismissMapaTip();
-  if (e.target.closest("[data-goto-list]")) openHabilidadesList(); // habilidades.js
 });
 bindStatusPicker(document.getElementById("mapa-content"), setMapaSkillStatus);
+// "Ver mis habilidades como lista", en el encabezado de la vista
+document.querySelector("#view-mapa [data-goto-list]").addEventListener("click", () => openHabilidadesList());
 
 // Estado cambiado desde el detalle (skill-detalle.js): nodo y panel se actualizan sin redibujar el mapa y la ruta
 // sugerida se recalcula al volver a la vista. Los cambios hechos aquí mismo no traen detalle.

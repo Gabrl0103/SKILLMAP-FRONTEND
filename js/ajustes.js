@@ -41,8 +41,8 @@ function bindApariencia() {
   document.querySelectorAll("input[name='ajustes-language']").forEach(radio => {
     radio.addEventListener("change", () => {
       setLanguage(radio.value)
-        .then(() => setStatus("ajustes-apariencia-status", ""))
-        .catch(() => setStatus("ajustes-apariencia-status", t("ajustes.languageError"), "warning"));
+        .then(() => setStatus("ajustes-idioma-status", ""))
+        .catch(() => setStatus("ajustes-idioma-status", t("ajustes.languageError"), "warning"));
     });
   });
 

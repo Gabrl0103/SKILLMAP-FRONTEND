@@ -128,10 +128,14 @@ function renderUserMenu() {
   document.querySelector(".user-popover-email").textContent = sessionUser.email;
 }
 
-function openUserMenu() {
+// Opciones del menú (patrón menu: ninguna entra en el orden de Tab; las flechas mueven el foco entre ellas)
+const userMenuItems = () => [...userMenu.popover().querySelectorAll("[role='menuitem']")];
+
+function openUserMenu({ last = false } = {}) {
   userMenu.popover().hidden = false;
   userMenu.button().setAttribute("aria-expanded", "true");
-  document.getElementById("user-logout").focus();
+  const items = userMenuItems();
+  items[last ? items.length - 1 : 0].focus();
 }
 
 function closeUserMenu({ focusButton = false } = {}) {
@@ -143,9 +147,28 @@ function closeUserMenu({ focusButton = false } = {}) {
 
 function bindUserMenu() {
   userMenu.button().addEventListener("click", () => (userMenu.popover().hidden ? openUserMenu() : closeUserMenu()));
+  // ↓ / ↑ en el botón abren el menú en la primera o en la última opción
+  userMenu.button().addEventListener("keydown", e => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    openUserMenu({ last: e.key === "ArrowUp" });
+  });
   document.getElementById("user-logout").addEventListener("click", logout);
+  // "Ver mi perfil": cierra el menú y abre Perfil (showView en mapa.js)
+  document.getElementById("user-profile").addEventListener("click", () => {
+    closeUserMenu();
+    showView("perfil");
+    document.querySelector(".nav-item[data-view='perfil']")?.focus();
+  });
   userMenu.popover().addEventListener("keydown", e => {
-    if (e.key === "Escape") { e.preventDefault(); closeUserMenu({ focusButton: true }); }
+    if (e.key === "Escape") { e.preventDefault(); closeUserMenu({ focusButton: true }); return; }
+    if (e.key === "Tab") { closeUserMenu(); return; }
+    const items = userMenuItems();
+    const i = items.indexOf(document.activeElement);
+    const next = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: items.length - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    items[(next + items.length) % items.length].focus();
   });
   // Clic o foco fuera: se cierra sin robar el foco
   document.addEventListener("pointerdown", e => {

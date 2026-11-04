@@ -75,15 +75,17 @@ function renderOffer(o, i) {
   const busy = offersState.busyId === o.id;
   const error = offersState.analyzeError?.id === o.id
     ? `<p class="offer-error" role="alert">${escapeHtml(errorText(offersState.analyzeError.err))}</p>` : "";
+  // Ficha de la rejilla: título y encaje arriba, empresa y fuente, habilidades (las que tienes y las que te faltan) y,
+  // al pie, "Analizar con IA"
   return `
     <li class="offer-item"${i >= offersEnterFrom ? ` data-enter style="--i:${i - offersEnterFrom};"` : ""}>
-      <span class="offer-pct" aria-hidden="true">${pct}%</span>
-      <div class="offer-main">
+      <div class="offer-top">
         <h3 class="offer-heading">${heading}</h3>
-        <p class="offer-meta">${meta}<span class="sr-only">. ${t("ruta.offers.matchAria", { pct })}</span></p>
-        ${renderOfferChips(o)}
-        ${error}
+        <span class="offer-pct" aria-hidden="true">${pct}%</span>
       </div>
+      <p class="offer-meta">${meta}<span class="sr-only">. ${t("ruta.offers.matchAria", { pct })}</span></p>
+      ${renderOfferChips(o)}
+      ${error}
       <button type="button" class="btn-pill perfil-btn-outline offer-analyze" data-offer-analyze="${Number(o.id)}"
         aria-label="${escapeHtml(t("ruta.offers.analyzeFor", { title: o.title || t("ruta.offers.untitled") }))}"${busy ? ` aria-busy="true" disabled` : ""}>
         ${t(busy ? "ruta.offers.opening" : "ruta.offers.analyze")}
