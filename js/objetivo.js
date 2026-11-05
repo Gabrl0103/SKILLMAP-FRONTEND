@@ -1,21 +1,22 @@
 // Vista "Objetivo": el objetivo actual arriba (su preparación y "Ver mi ruta") y debajo las otras rutas posibles, cada una
 // con su compatibilidad de hoy (el % de preparación que da /api/goals/{id}/readiness), cuántas habilidades comparte con
-// el objetivo actual y la demanda de su mercado. Toda la tarjeta de una ruta es el botón para elegirla: pide
-// confirmación en la propia tarjeta (Esc la cancela) y, ya cambiado, un aviso ofrece "Deshacer" (vuelve al objetivo
-// anterior con el mismo PUT /api/auth/me/goal). El progreso por habilidad es del usuario, no del objetivo: cambiar no
-// borra nada.
+// el objetivo actual y la demanda de su mercado. Toda la tarjeta de una ruta es el botón para elegirla: al tocarla se
+// elige al instante, sin que la página se mueva (solo cambia lo que cambia), y un aviso breve (3 s, toast.js) ofrece
+// "Deshacer" (vuelve al objetivo anterior con el mismo PUT /api/auth/me/goal). El progreso por habilidad es del usuario,
+// no del objetivo: cambiar no borra nada.
 // Usa fetchGoals, fetchSkills, fetchReadiness, setActiveGoal, getActiveGoalId, savedGoalId, marketLevel y renderApiError
-// (dashboard.js), escapeHtml/showView (mapa.js), routeDraw (route-motif.js), friendlyError (session.js) y t, tn,
-// tGoalTitle y tGoalDescription (i18n.js).
+// (dashboard.js), escapeHtml/showView (mapa.js), routeDraw (route-motif.js), showToast (toast.js), friendlyError
+// (session.js) y t, tn, tGoalTitle y tGoalDescription (i18n.js).
 
 function normalizeText(text) {
   return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
 // goals: /api/goals; catalog: /api/skills ([] si falló); readiness: % de preparación por id de objetivo (null si falló).
-// pending: ruta que espera confirmación; prev: objetivo anterior (para Deshacer);
-// query: búsqueda; focusOnOpen: al abrir desde "Cambiar objetivo" (Perfil) el foco va al objetivo actual.
-const objetivoState = { goals: null, catalog: [], readiness: new Map(), pending: null, prev: null, busy: false,
+// order: ids de la rejilla en su orden (al cambiar, la ruta elegida y la anterior se cambian de lugar); saving: ruta que
+// se está guardando; query: búsqueda; focusOnOpen: al abrir desde "Cambiar objetivo" (Perfil) el foco va al objetivo
+// actual.
+const objetivoState = { goals: null, catalog: [], readiness: new Map(), order: null, saving: null, busy: false,
   error: null, query: "", focusOnOpen: false };
 
 // Objetivo activo actual: el de Mi Ruta; si aún no cargó, el guardado; si no, el primero.
@@ -43,6 +44,14 @@ function goalDemand(goal) {
 }
 
 const readinessOf = goal => objetivoState.readiness.get(String(goal.id)) ?? null;
+
+// Orden de la rejilla (todas las rutas menos la actual): el guardado si sigue valiendo para estas rutas; si no, el de la API
+function gridOrder(goals, current) {
+  const ids = goals.filter(g => g !== current).map(g => String(g.id));
+  const saved = objetivoState.order;
+  const valid = saved && saved.length === ids.length && ids.every(id => saved.includes(id));
+  return valid ? [...saved] : ids;
+}
 
 function goalMeta(goal, current) {
   const demand = goalDemand(goal);
@@ -94,53 +103,37 @@ function goalCardBody(goal, current, id) {
     ${pct == null ? "" : `<span class="objetivo-bar objetivo-bar--thin" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>`}`;
 }
 
-// Toda la tarjeta es el botón para elegir la ruta. En espera de confirmación la tarjeta deja de ser botón (la
-// confirmación lleva sus propios botones) y muestra la pregunta en su lugar.
+// Pie de la tarjeta: "Elegir esta ruta →" o, mientras se guarda, "Guardando…"
+function goalCardCta(saving) {
+  return `${t(saving ? "objetivo.saving" : "objetivo.choose")}${saving ? "" : `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`}`;
+}
+
+// Toda la tarjeta es el botón para elegir la ruta: un toque la elige al instante. Mientras se guarda, la tarjeta tocada
+// dice "Guardando…" y ninguna otra responde.
 function renderGoalCard(goal, current, index) {
   const id = String(goal.id);
   const pct = readinessOf(goal);
   const title = normalizeText(`${goal.title} ${tGoalTitle(goal.title)}`);
-  const item = body => `<li class="objetivo-item" data-goal-id="${id}" data-title="${escapeHtml(title)}" style="--i:${index};">${body}</li>`;
-  if (objetivoState.pending === id) {
-    const busy = objetivoState.busy;
-    return item(`
-      <div class="objetivo-card is-pending">
-        ${goalCardBody(goal, current, id)}
-        <div class="objetivo-confirm" role="group" aria-labelledby="objetivo-confirm-${id}">
-          <p id="objetivo-confirm-${id}">${t("objetivo.confirm", { goal: `<strong>${goalName(goal)}</strong>` })}</p>
-          <div class="objetivo-card-actions">
-            <button type="button" class="btn-ghost btn-ghost--strong" data-action="confirm" data-goal-id="${id}"${busy ? ` aria-busy="true" disabled` : ""}>
-              ${t(busy ? "objetivo.saving" : "objetivo.confirmYes")}</button>
-            <button type="button" class="btn-ghost" data-action="cancel" data-goal-id="${id}"${busy ? " disabled" : ""}>${t("objetivo.cancel")}</button>
-          </div>
-        </div>
-      </div>`);
-  }
+  const saving = objetivoState.saving === id;
   const label = pct == null ? t("objetivo.chooseFor", { goal: tGoalTitle(goal.title) })
     : t("objetivo.chooseForPct", { goal: tGoalTitle(goal.title), pct });
-  return item(`
-    <button type="button" class="objetivo-card objetivo-card--choose" data-action="choose" data-goal-id="${id}"
-      aria-label="${escapeHtml(label)}" aria-describedby="objetivo-meta-${id}">
-      ${goalCardBody(goal, current, id)}
-      <span class="objetivo-card-cta" aria-hidden="true">${t("objetivo.choose")}
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </span>
-    </button>`);
+  return `
+    <li class="objetivo-item" data-goal-id="${id}" data-title="${escapeHtml(title)}" style="--i:${index};">
+      <button type="button" class="objetivo-card objetivo-card--choose" data-action="choose" data-goal-id="${id}"
+        aria-label="${escapeHtml(label)}" aria-describedby="objetivo-meta-${id}"${saving ? ` aria-busy="true"` : ""}${objetivoState.busy ? ` aria-disabled="true"` : ""}>
+        ${goalCardBody(goal, current, id)}
+        <span class="objetivo-card-cta" aria-hidden="true">${goalCardCta(saving)}</span>
+      </button>
+    </li>`;
 }
 
 function renderObjetivo() {
   const { goals } = objetivoState;
   if (!goals.length) return `<p class="objetivo-empty">${t("objetivo.empty")}</p>`;
   const current = goalById(currentActiveGoalId(goals));
-  const others = goals.filter(g => g !== current);
-  const prev = objetivoState.prev && goalById(objetivoState.prev);
-  const toast = prev ? `
-    <div class="objetivo-toast">
-      <p>${t("objetivo.changedTo", { goal: goalName(current) })}</p>
-      <button type="button" class="btn-ghost btn-ghost--strong" data-action="undo">${t("objetivo.undo")}</button>
-    </div>` : "";
+  const others = gridOrder(goals, current).map(goalById);
   return `
-    ${toast}
     ${renderHero(current)}
     <section class="objetivo-others" aria-labelledby="objetivo-others-title">
       <div class="objetivo-others-head">
@@ -191,20 +184,91 @@ function filterGoalCards() {
   }
 }
 
-// Vuelve a pintar la vista y deja el foco en el control indicado (selector CSS) o en el que lo tenía
+// Vuelve a pintar la vista entera (al abrirla y al cambiar de idioma) sin mover la página: conserva scrollY y deja el foco
+// en el control indicado (selector CSS) o en el que lo tenía, siempre con preventScroll
 function paintObjetivo(focusSelector) {
   const container = document.getElementById("objetivo-content");
   const active = document.activeElement;
   const keep = !focusSelector && active && container.contains(active)
     ? (active.id ? `#${active.id}` : active.dataset.action ? `[data-action='${active.dataset.action}'][data-goal-id='${active.dataset.goalId || ""}']` : null) : null;
+  const y = window.scrollY;
   container.innerHTML = renderObjetivo();
   filterGoalCards();
+  if (window.scrollY !== y) window.scrollTo(0, y);
   const target = focusSelector || keep;
-  if (target) container.querySelector(target)?.focus({ preventScroll: !focusSelector });
+  if (target) container.querySelector(target)?.focus({ preventScroll: true });
 }
 
 function announceObjetivo(text) {
   document.getElementById("objetivo-live").textContent = text;
+}
+
+// Hace un cambio en la vista sin que la página salte: la rejilla de rutas queda en el mismo punto de la pantalla aunque
+// cambie el alto de lo de arriba (tarjeta del objetivo actual, aviso de error). El anclaje de scroll del navegador está
+// apagado en #objetivo-content (styles.css) para no compensar dos veces.
+function keepObjetivoInPlace(change) {
+  const anchor = document.querySelector("#objetivo-content .objetivo-grid");
+  const before = anchor?.getBoundingClientRect().top;
+  change();
+  if (!anchor?.isConnected) return;
+  const delta = anchor.getBoundingClientRect().top - before;
+  if (Math.abs(delta) >= 1) window.scrollBy(0, delta);
+}
+
+// Mientras se guarda: la tarjeta tocada dice "Guardando…" (aria-busy) y ninguna responde (aria-disabled). Solo cambian
+// atributos y el pie de las tarjetas: nada se vuelve a pintar.
+function syncObjetivoBusy() {
+  document.querySelectorAll("#objetivo-content [data-action='choose']").forEach(button => {
+    const saving = objetivoState.saving === button.dataset.goalId;
+    if (saving) button.setAttribute("aria-busy", "true"); else button.removeAttribute("aria-busy");
+    if (objetivoState.busy) button.setAttribute("aria-disabled", "true"); else button.removeAttribute("aria-disabled");
+    const cta = button.querySelector(".objetivo-card-cta");
+    if (cta) cta.innerHTML = goalCardCta(saving);
+  });
+}
+
+function showObjetivoError() {
+  const box = document.querySelector("#objetivo-content .objetivo-error");
+  if (!box) return;
+  box.hidden = !objetivoState.error;
+  box.textContent = objetivoState.error ? t("goal.error", { error: friendlyError(objetivoState.error) }) : "";
+}
+
+// Tras cambiar de "from" a "to": la tarjeta del objetivo actual pasa a ser la de "to" y, en el hueco de la tarjeta tocada,
+// entra "from" (la rejilla no se reordena bajo el puntero); el dato "en común" de las demás se recalcula. Si el foco estaba
+// en la tarjeta tocada, en la del objetivo actual o se perdió, queda en la tarjeta que ocupó el hueco.
+function swapObjetivo(fromId, toId) {
+  const container = document.getElementById("objetivo-content");
+  const current = goalById(toId);
+  const previous = goalById(fromId);
+  if (!container.querySelector(".objetivo-hero") || !current || !previous) { paintObjetivo(); return; }
+  keepObjetivoInPlace(() => {
+    const active = document.activeElement;
+    const slot = container.querySelector(`.objetivo-item[data-goal-id="${toId}"]`);
+    const hero = container.querySelector(".objetivo-hero");
+    const refocus = !active || active === document.body || Boolean(slot?.contains(active)) || hero.contains(active);
+    const order = gridOrder(objetivoState.goals, previous);
+    const at = order.indexOf(String(toId));
+    if (at >= 0) order[at] = String(fromId);
+    objetivoState.order = order;
+    hero.outerHTML = renderHero(current);
+    let card = null;
+    if (slot) {
+      const tpl = document.createElement("template");
+      tpl.innerHTML = renderGoalCard(previous, current, Math.max(0, at)).trim();
+      card = tpl.content.firstElementChild;
+      card.classList.add("is-swapped");
+      slot.replaceWith(card);
+    }
+    container.querySelectorAll(".objetivo-item[data-goal-id]").forEach(item => {
+      const goal = goalById(item.dataset.goalId);
+      const meta = item.querySelector(".objetivo-card-meta");
+      if (goal && meta) meta.textContent = goalMeta(goal, current);
+    });
+    filterGoalCards();
+    showObjetivoError();
+    if (refocus) (card?.querySelector("[data-action='choose']") || document.getElementById("objetivo-current-title"))?.focus({ preventScroll: true });
+  });
 }
 
 async function loadObjetivoData() {
@@ -225,7 +289,7 @@ async function openObjetivo() {
     container.innerHTML = renderApiError(err); // se reintenta la próxima vez que se abra la vista
     return;
   }
-  Object.assign(objetivoState, { pending: null, error: null });
+  objetivoState.error = null;
   paintObjetivo(objetivoState.focusOnOpen ? "#objetivo-current-title" : null);
   objetivoState.focusOnOpen = false;
 }
@@ -237,23 +301,42 @@ function openGoalSelection() {
   window.scrollTo(0, 0);
 }
 
-// Cambia el objetivo (confirmado o desde Deshacer). Si falla, sigue el anterior y el error queda sobre la lista.
+// Cambia el objetivo (al tocar una tarjeta o desde Deshacer) sin mover la página: solo se actualiza lo que cambia
+// (swapObjetivo). Si falla, sigue el anterior y el error queda sobre la lista. Al cambiar sale el aviso breve con
+// "Deshacer" (toast.js); deshacer se anuncia a los lectores de pantalla.
 async function switchGoal(goalId, { undo = false } = {}) {
   if (objetivoState.busy) return;
   const before = currentActiveGoalId(objetivoState.goals);
-  Object.assign(objetivoState, { busy: true, error: null });
-  paintObjetivo();
+  const target = String(goalId);
+  if (target === before) return;
+  Object.assign(objetivoState, { busy: true, saving: undo ? null : target, error: null });
+  syncObjetivoBusy();
+  let changed = false;
   try {
     await setActiveGoal(goalId); // dashboard.js: guarda en el backend y recalcula Mi Ruta
-    Object.assign(objetivoState, { prev: undo ? null : before, pending: null });
-    const goal = goalById(goalId);
-    announceObjetivo(t(undo ? "objetivo.undone" : "goal.changed", { goal: tGoalTitle(goal.title) }));
+    changed = true;
   } catch (err) {
     objetivoState.error = err;
   }
-  objetivoState.busy = false;
-  paintObjetivo(objetivoState.error ? null : "#objetivo-current-title");
-  if (!objetivoState.error) window.scrollTo({ top: 0 });
+  Object.assign(objetivoState, { busy: false, saving: null });
+  if (!changed) {
+    syncObjetivoBusy();
+    keepObjetivoInPlace(showObjetivoError);
+    return;
+  }
+  swapObjetivo(before, target);
+  const goal = goalById(target);
+  if (undo) {
+    announceObjetivo(t("objetivo.undone", { goal: tGoalTitle(goal.title) }));
+    return;
+  }
+  showToast({
+    owner: "objetivo",
+    text: t("objetivo.changedToast", { goal: tGoalTitle(goal.title) }),
+    onUndo: () => switchGoal(before, { undo: true }),
+    fallbackFocus: () => document.querySelector(`#objetivo-content .objetivo-item[data-goal-id="${before}"] [data-action='choose']`)
+      || document.getElementById("objetivo-current-title"),
+  });
 }
 
 function initObjetivo() {
@@ -266,7 +349,6 @@ function initObjetivo() {
   container.addEventListener("click", e => {
     const button = e.target.closest("[data-action]");
     if (!button || button.disabled) return;
-    const id = button.dataset.goalId;
     switch (button.dataset.action) {
       case "view-route":
         showView("dashboard");
@@ -274,40 +356,20 @@ function initObjetivo() {
         document.getElementById("goal-button").focus();
         break;
       case "choose":
-        objetivoState.pending = id;
-        paintObjetivo(`[data-action='confirm'][data-goal-id='${id}']`);
-        container.querySelector(`.objetivo-item[data-goal-id='${id}']`)?.scrollIntoView({ block: "nearest" });
-        break;
-      case "cancel":
-        objetivoState.pending = null;
-        paintObjetivo(`[data-action='choose'][data-goal-id='${id}']`);
-        break;
-      case "confirm":
-        switchGoal(id);
-        break;
-      case "undo":
-        if (objetivoState.prev) switchGoal(objetivoState.prev, { undo: true });
+        switchGoal(button.dataset.goalId);
         break;
     }
-  });
-  // Esc en la confirmación la cancela y devuelve el foco a la tarjeta
-  container.addEventListener("keydown", e => {
-    if (e.key !== "Escape" || !objetivoState.pending || objetivoState.busy || !e.target.closest(".objetivo-confirm")) return;
-    e.preventDefault();
-    const id = objetivoState.pending;
-    objetivoState.pending = null;
-    paintObjetivo(`[data-action='choose'][data-goal-id='${id}']`);
   });
 }
 
 // Cambio de usuario: la vista se vuelve a armar la próxima vez que se abra
 document.addEventListener("skillmap:user", () => {
-  Object.assign(objetivoState, { goals: null, catalog: [], readiness: new Map(), pending: null, prev: null,
-    busy: false, error: null, query: "", focusOnOpen: false });
+  Object.assign(objetivoState, { goals: null, catalog: [], readiness: new Map(), order: null, saving: null, busy: false,
+    error: null, query: "", focusOnOpen: false });
   document.getElementById("objetivo-content").innerHTML = "";
 });
 
-// Cambio de idioma: se vuelve a pintar conservando la búsqueda, la confirmación y el aviso
+// Cambio de idioma: se vuelve a pintar conservando la búsqueda y la posición (el aviso lo quita toast.js)
 document.addEventListener("skillmap:language", () => {
   if (objetivoState.goals) paintObjetivo();
 });

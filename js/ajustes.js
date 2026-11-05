@@ -1,8 +1,7 @@
 // Vista "Ajustes": Apariencia, Idioma, Ofertas de empleo y Seguridad (perfil.js). Usa loadSettings, setTheme,
 // setReduceMotion, setLanguage, getTheme y getReduceMotion (theme.js); fetchJobStats y las cachés de datos
 // (dashboard.js); resetPerfilSkills (perfil.js); apiFetch, apiError y friendlyError (session.js); escapeHtml (mapa.js);
-// t, tn, tError, getLanguage y formatNumber (i18n.js). La key propia de Gemini ya no se muestra aquí: el Analizador usa
-// la IA incluida y el endpoint /api/settings/gemini-key sigue en el backend sin cambios.
+// t, tn, tError, getLanguage y formatNumber (i18n.js).
 
 const ajustesState = {
   syncing: false,

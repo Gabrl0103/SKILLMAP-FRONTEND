@@ -1,9 +1,10 @@
 // Tarjeta "Tu semana" de Mi Ruta: plan de estudio de 3 habilidades para la semana (lunes a domingo, en la hora local
 // del equipo). Sale de las brechas del objetivo: primero las que ya están en Aprendiendo y, dentro, por demanda del
 // mercado. Cada una lleva horas sugeridas (planHours) y el selector Pendiente / Aprendiendo / Dominada (skill-status.js),
-// que guarda con PUT /api/skills/{id}/status. El avance sale solo del estado: no hay otra casilla que marcar. Una
-// habilidad que pasa a Dominada baja al final de la lista con su marca (es el avance de la semana) y entra la siguiente
-// brecha en su lugar, así siempre quedan PLAN_SIZE por hacer mientras haya brechas.
+// que guarda con PUT /api/skills/{id}/status. El avance sale solo del estado: no hay otra casilla que marcar. La lista se
+// muestra en el mismo orden que las paradas de la ruta (routeSkills en dashboard.js): una habilidad que pasa a Dominada
+// conserva su lugar, en menta con su marca (es el avance de la semana), y la siguiente brecha entra al plan en el lugar
+// que le toca en la ruta, así siempre quedan PLAN_SIZE por hacer mientras haya brechas.
 // El backend no guarda planes: el plan vive en localStorage por usuario y objetivo ("skillmap.plan.{userId}.{goalId}":
 // { week, ids }) y se rehace el primer día que se abre Mi Ruta en una semana nueva. Sin storage, dura hasta recargar
 // (planMemory). Las semanas (weekStart, weekKey) también las usa rachas.js.
@@ -86,7 +87,8 @@ function savePlan(key, plan) {
 
 // key: storage del plan; plan: { week, ids }; skills: habilidades del plan por id (con el estado al día); goal:
 // título del objetivo ya traducido; busy: id que se está guardando; error/errorId: último error y su habilidad
-const semana = { key: null, plan: null, skills: new Map(), goal: "", demands: [], busy: null, error: null, errorId: null };
+const semana = { key: null, plan: null, skills: new Map(), goal: "", demands: [], route: new Map(), busy: null, error: null,
+  errorId: null };
 
 // El plan guardado de esta semana o uno nuevo, completado con brechas nuevas si alguna quedó dominada. Las
 // habilidades que ya no existen salen del plan.
@@ -158,8 +160,9 @@ function renderSemanaBody() {
   if (!rows.length) {
     return `<div class="route-state">${routeDraw()}<p class="text-sm text-muted">${t("semana.empty", { goal: semana.goal })}</p></div>`;
   }
-  // Primero lo que queda por hacer; las dominadas, al final (sort es estable: dentro, el orden del plan)
-  const ordered = [...rows].sort((a, b) => (a.status === "MASTERED") - (b.status === "MASTERED"));
+  // Mismo orden que las paradas de la ruta (las dominadas conservan su lugar); lo que no está en la ruta, al final
+  const at = s => semana.route.get(s.id) ?? Infinity;
+  const ordered = [...rows].sort((a, b) => at(a) - at(b));
   const left = rows.filter(s => s.status !== "MASTERED");
   const mastered = rows.length - left.length;
   const hours = left.reduce((sum, s) => sum + planHours(s), 0);
@@ -176,10 +179,12 @@ function renderSemanaBody() {
 
 // Parte "Tu semana" de la tarjeta de brechas (renderBrechas en dashboard.js). gaps: brechas del objetivo; catalog:
 // /api/skills (trae también las del plan que ya quedaron dominadas); goalTitle: título del objetivo sin traducir;
-// demands: demandas de las habilidades del objetivo, para el nivel de cada fila (urgencyBadge)
-function renderSemanaCard(gaps, catalog, goalId, goalTitle, demands = []) {
+// demands: demandas de las habilidades del objetivo, para el nivel de cada fila (urgencyBadge); routeIds: ids de las
+// paradas de la ruta en orden (la lista sigue ese orden)
+function renderSemanaCard(gaps, catalog, goalId, goalTitle, demands = [], routeIds = gaps.map(s => s.id)) {
   prepareSemana(gaps, catalog, goalId, goalTitle);
   semana.demands = demands;
+  semana.route = new Map(routeIds.map((id, i) => [id, i]));
   return `<div id="semana-card" class="ruta-semana">${renderSemanaInner()}</div>`;
 }
 
@@ -222,10 +227,12 @@ function semanaFocus() {
 // ---------- Acciones ----------
 
 // El estado cambia al instante; si el backend falla vuelve al anterior con el error en la fila. Al guardar, Mi Ruta se
-// recarga sin skeleton (skillmap:progress con source "semana", dashboard.js) y el foco vuelve al selector.
-async function setSemanaStatus(id, status) {
+// recarga sin skeleton (skillmap:progress con source "semana", dashboard.js), el foco vuelve al selector y sale el aviso
+// breve con "Deshacer" (toast.js; undo: el cambio viene de ahí y no se ofrece deshacerlo otra vez).
+async function setSemanaStatus(id, status, { undo = false } = {}) {
   const skill = semana.skills.get(id);
   if (!skill || !semana.plan?.ids.includes(id) || semana.busy !== null || skill.status === status) return;
+  const previous = skill.status;
   semana.skills.set(id, { ...skill, status });
   Object.assign(semana, { busy: id, errorId: null });
   refreshSemana();
@@ -234,7 +241,18 @@ async function setSemanaStatus(id, status) {
     if (semana.busy !== id) return; // cambió el usuario o se recargó la vista mientras se guardaba
     semana.skills.set(id, { ...skill, ...saved });
     semana.busy = null;
-    document.getElementById("ruta-live").textContent = t("state.saved", { name: tSkill(saved.name), status: statusLabel(saved.status) });
+    if (undo) {
+      hideToast("semana");
+      document.getElementById("ruta-live").textContent = t("habilidades.undone", { name: tSkill(saved.name), status: statusLabel(saved.status) });
+    } else {
+      showToast({
+        owner: "semana",
+        text: t("toast.status", { name: tSkill(saved.name), status: statusLabel(saved.status) }),
+        onUndo: () => setSemanaStatus(id, previous, { undo: true }),
+        fallbackFocus: () => document.querySelector(`#semana-card [data-plan-row="${id}"] .status-picker [aria-checked='true']`)
+          || document.getElementById("brechas-title"),
+      });
+    }
     document.dispatchEvent(new CustomEvent("skillmap:progress", { detail: { skill: saved, source: "semana" } }));
   } catch (err) {
     if (semana.busy !== id) return;
@@ -253,7 +271,7 @@ function initSemana() {
 }
 
 document.addEventListener("skillmap:user", () => {
-  Object.assign(semana, { key: null, plan: null, skills: new Map(), busy: null, error: null, errorId: null });
+  Object.assign(semana, { key: null, plan: null, skills: new Map(), route: new Map(), busy: null, error: null, errorId: null });
   planMemory.clear();
 });
 
