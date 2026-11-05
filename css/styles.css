@@ -67,6 +67,14 @@
   /* Mapa Visual: puntos del fondo, anillo del nodo seleccionado y trazo de la ruta sugerida (mismo azul punteado que
      "Demanda" en Mi Ruta: punteado = aún no) */
   --map-dot:rgba(94,90,107,.16); --node-ring:var(--chip-azul-fg); --map-route:var(--chart-demand);
+  /* Fondo con patrón de las vistas (sección "Fondo con patrón"): en claro, estrellas de Cenit (BRAND_STAR_PATH, con el
+     norte arriba) de 9 y 6px en un paso de 64px; rosa→violeta muy suave y más vivas y grandes cerca del cursor. Alfas
+     tope: con la estrella iluminada bajo un glifo, --text-2-page sigue ≥4.7:1 y el texto grande ≥3.9:1 */
+  --pattern-shape:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M12 1Q14.2 10.8 20 13Q14.2 15.2 12 23Q9.8 15.2 4 13Q9.8 10.8 12 1Z' transform='translate(16 16) scale(.42) translate(-12 -13)'/%3E%3Cpath d='M12 1Q14.2 10.8 20 13Q14.2 15.2 12 23Q9.8 15.2 4 13Q9.8 10.8 12 1Z' transform='translate(48 48) scale(.28) translate(-12 -13)'/%3E%3C/svg%3E");
+  --pattern-glow-shape:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M12 1Q14.2 10.8 20 13Q14.2 15.2 12 23Q9.8 15.2 4 13Q9.8 10.8 12 1Z' transform='translate(16 16) scale(.58) translate(-12 -13)'/%3E%3Cpath d='M12 1Q14.2 10.8 20 13Q14.2 15.2 12 23Q9.8 15.2 4 13Q9.8 10.8 12 1Z' transform='translate(48 48) scale(.4) translate(-12 -13)'/%3E%3C/svg%3E");
+  --pattern-size:64px 64px;
+  --pattern-ink:linear-gradient(135deg,rgba(217,95,142,.14),rgba(124,92,230,.14));
+  --pattern-glow-ink:linear-gradient(135deg,rgba(217,95,142,.24),rgba(124,92,230,.24));
   /* Tooltips, tarjeta oscura de Perfil y otros controles */
   --tooltip-bg:#1F1F24; --tooltip-fg:#FFFFFF; --tooltip-muted:#CAC6CE;
   --stats-bg:#1F1D23; --stats-shadow:0 18px 36px rgba(31,29,35,.25); --stats-muted:#8E8A94;
@@ -117,6 +125,10 @@
   --ease-out:cubic-bezier(.16,1,.3,1); --dur-fast:150ms; --dur:200ms; --dur-slow:250ms;
   --focus-ring:2px solid var(--focus); /* separación: 3px en tarjetas y títulos, 2px en controles chicos */
   --header-h:79px; /* alto de la barra superior (12 + 54 + 12 + 1 de borde); el Mapa Visual lo descuenta */
+  /* Rejilla de puntos de la Introducción como máscara (el color lo pone quien la usa): .intro::before y el fondo oscuro
+     de las vistas. --pattern-radius: radio del halo que sigue al cursor (js/fondo.js lo lee del tamaño del halo) */
+  --dot-grid:radial-gradient(circle, #000 1.2px, transparent 1.7px); --dot-grid-size:36px 36px;
+  --pattern-radius:160px;
 
   /* Alias de v1: las reglas de las vistas los siguen usando y cambian solos con el tema */
   --ink:var(--text); --ink-2:var(--text-mid); --muted:var(--text-2); --muted-2:var(--text-2); --faint:var(--track);
@@ -156,6 +168,11 @@
   --nav-fg:var(--text-2); --nav-active-shadow:0 8px 20px rgba(109,40,217,.45);
   --toggle-on-bg:#2A2F55; --toggle-on-fg:var(--chip-violeta-fg); --toggle-on-shadow:0 4px 12px rgba(0,0,0,.35);
   --map-dot:rgba(255,255,255,.07); --node-ring:rgba(196,181,253,.85);
+  /* Fondo con patrón: la rejilla de puntos de la Introducción (mismos tokens y color); cerca del cursor los puntos crecen
+     y toman el rosa→violeta (tope .26: --text-2 sigue ≥4.4:1 en el peor píxel) */
+  --pattern-shape:var(--dot-grid); --pattern-size:var(--dot-grid-size); --pattern-ink:var(--map-dot);
+  --pattern-glow-shape:radial-gradient(circle, #000 2px, transparent 2.6px);
+  --pattern-glow-ink:linear-gradient(135deg,rgba(245,154,192,.26),rgba(167,139,250,.26));
   --tooltip-bg:#2A2F55; --tooltip-fg:#ECEEF8; --tooltip-muted:#B9BFD6;
   --stats-bg:#2A2F55; --stats-shadow:0 18px 44px rgba(0,0,0,.35); --stats-muted:#B7BCD2;
   --switch-off:#7D829A; --map-link:rgba(255,255,255,.12);
@@ -1821,9 +1838,9 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .intro { display:none; position:fixed; inset:0; z-index:50; flex-direction:column; padding:28px 40px 48px; overflow:auto; isolation:isolate;
   background:var(--bg-glow), var(--bg-base); background-color:var(--bg-solid); }
 :root[data-intro="open"] .intro { display:flex; }
-/* Fondo: rejilla de puntos fija detrás de todo el contenido */
-.intro::before { content:""; position:absolute; inset:0; z-index:-2; pointer-events:none;
-  background:radial-gradient(circle, var(--map-dot) 1.2px, transparent 1.7px) 0 0 / 36px 36px; }
+/* Fondo: rejilla de puntos fija detrás de todo el contenido (la misma máscara que el fondo oscuro de las vistas) */
+.intro::before { content:""; position:absolute; inset:0; z-index:-2; pointer-events:none; background:var(--map-dot);
+  -webkit-mask:var(--dot-grid) 0 0 / var(--dot-grid-size) repeat; mask:var(--dot-grid) 0 0 / var(--dot-grid-size) repeat; }
 
 .intro-top { display:flex; align-items:center; justify-content:space-between; gap:24px; }
 .intro-skip { display:inline-flex; align-items:center; gap:12px; height:44px; padding:0 8px 0 20px; border-radius:var(--radius-pill); cursor:pointer;
@@ -2000,6 +2017,32 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 @media (prefers-reduced-motion: reduce) { .acceso-modes button, .acceso-reveal, .acceso-rule, .acceso-rule-check { transition:none; } }
 :root[data-motion="reduced"] .acceso-modes button, :root[data-motion="reduced"] .acceso-reveal,
 :root[data-motion="reduced"] .acceso-rule, :root[data-motion="reduced"] .acceso-rule-check { transition:none; }
+
+/* ---------- Fondo con patrón (R4) ----------
+   Capa fija detrás de todas las vistas (.bg-pattern, primer hijo de <body>; la Introducción y Acceso la tapan con su
+   propio fondo). Dos piezas, las dos pintadas con el color del tema y recortadas por la máscara del patrón:
+   - .bg-pattern-base: el patrón quieto (claro: estrellas de Cenit; oscuro: los puntos de la Introducción).
+   - .bg-pattern-glow: un halo de 2 × --pattern-radius con máscara radial que sigue al cursor. Dentro va el mismo patrón,
+     más grande y más vivo, contra-desplazado para que quede alineado con la base. js/fondo.js solo cambia transform (el
+     halo y su contenido se mueven en sentidos opuestos): nada se repinta y el scroll no lo toca.
+   Sin cursor, con movimiento reducido o en alto contraste: solo la base (o nada). */
+.bg-pattern { position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden; contain:strict; }
+.bg-pattern-base, .bg-pattern-glow-in { position:absolute; left:0; top:0; width:100vw; height:100vh; }
+.bg-pattern-base { background:var(--pattern-ink);
+  -webkit-mask:var(--pattern-shape) 0 0 / var(--pattern-size) repeat; mask:var(--pattern-shape) 0 0 / var(--pattern-size) repeat; }
+/* Caída del halo en curva ease-out: pleno en el centro y se apaga suave hacia el borde */
+.bg-pattern-glow { position:absolute; left:0; top:0; width:calc(var(--pattern-radius) * 2); height:calc(var(--pattern-radius) * 2);
+  overflow:hidden; opacity:0; will-change:transform, opacity;
+  -webkit-mask:radial-gradient(closest-side, #000, rgba(0,0,0,.86) 22%, rgba(0,0,0,.55) 48%, rgba(0,0,0,.24) 72%, rgba(0,0,0,.06) 90%, transparent);
+  mask:radial-gradient(closest-side, #000, rgba(0,0,0,.86) 22%, rgba(0,0,0,.55) 48%, rgba(0,0,0,.24) 72%, rgba(0,0,0,.06) 90%, transparent);
+  transition:opacity calc(var(--dur-slow) * 2) var(--ease-out); }
+.bg-pattern.is-lit .bg-pattern-glow { opacity:1; transition-duration:var(--dur); }
+.bg-pattern-glow-in { will-change:transform; background:var(--pattern-glow-ink);
+  -webkit-mask:var(--pattern-glow-shape) 0 0 / var(--pattern-size) repeat; mask:var(--pattern-glow-shape) 0 0 / var(--pattern-size) repeat; }
+@media (prefers-reduced-motion: reduce) { .bg-pattern-glow { display:none; } }
+:root[data-motion="reduced"] .bg-pattern-glow { display:none; }
+@media (forced-colors: active) { .bg-pattern { display:none; } }
+@media print { .bg-pattern { display:none; } }
 
 /* ---------- Movimiento (ajustes R2, parte B) ----------
    Tokens --ease-out y --dur-fast / --dur / --dur-slow. Solo transform (translate, scale) y opacity; nada de layout. El anillo
