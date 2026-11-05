@@ -27,9 +27,12 @@
   --card-border:rgba(190,58,114,.10); --card-blur:none;
   --card-shadow:0 1px 2px rgba(190,58,114,.05), 0 18px 44px rgba(63,99,216,.08);
   /* Texto y líneas */
-  --text:#1F1F24; --text-2:#6B6776; --text-mid:#5E5A6B; --track:#EEE9F0; --divider:#F1E8EE;
-  /* Texto secundario directo sobre el fondo de página: los resplandores bajan el contraste de --text-2 en las esquinas */
-  --text-2-page:#56525F;
+  /* Texto secundario un poco más claro de lectura (ajustes R2): --text-2 ≥5.7:1 sobre --surface-2, --text-mid un paso
+     más oscuro que --text-2 */
+  --text:#1F1F24; --text-2:#625E6D; --text-mid:#555162; --track:#EEE9F0; --divider:#F1E8EE;
+  /* Texto secundario directo sobre el fondo de página: los resplandores bajan el contraste de --text-2 en las esquinas
+     (≥6.2:1 en el peor punto) */
+  --text-2-page:#524E5B;
   /* Punteado "aún no" (≥3:1 contra su relleno) y controles deshabilitados (exentos de contraste) */
   --line-dashed:#7D7888; --disabled-fg:#D2CCD0;
   /* Acción principal (botones, nav activo, tarjeta "Siguiente acción") */
@@ -82,14 +85,34 @@
   --intro-active-border:var(--pink); --intro-active-glow:0 14px 34px rgba(190,58,114,.18);
   --slide-progress:linear-gradient(90deg,var(--chart-from),var(--chart-to));
   --kbd-border:var(--tag-border); --kbd-fg:var(--text-2);
+  /* Acabados (ajustes R3, del diseño anterior al rediseño): vidrio para la barra, sus botones, menús, chips y avisos
+     (fondo translúcido, desenfoque, borde fino y sombra suave con un filo de luz arriba); brillo de las tarjetas (velo
+     claro arriba y filo de luz) y de los botones principales (reflejo y halo del gradiente de acción) */
+  --glass-bg:rgba(255,255,255,.66); --glass-bg-strong:rgba(255,255,255,.86); --glass-solid:#FFFFFF;
+  --glass-border:rgba(190,58,114,.14); --glass-blur:blur(16px) saturate(1.5);
+  --glass-shadow:0 10px 28px rgba(63,99,216,.12), inset 0 1px 0 rgba(255,255,255,.85);
+  --glass-shadow-sm:0 4px 12px rgba(190,58,114,.08), inset 0 1px 0 rgba(255,255,255,.85);
+  --chip-line:rgba(176,46,106,.16); --chip-line-blue:rgba(53,82,196,.16); --chip-line-mint:rgba(15,122,85,.18);
+  --card-sheen:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,0) 120px);
+  --card-edge:inset 0 1px 0 rgba(255,255,255,.9);
+  --btn-sheen:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,0) 60%);
+  --btn-edge:inset 0 1px 0 rgba(255,255,255,.28);
+  --action-glow:0 12px 24px var(--action-shadow-color); --action-glow-hover:0 16px 34px var(--action-shadow-color), 0 0 0 4px var(--pink-tint);
+  --card-glow-hover:0 18px 38px var(--action-shadow-color);
+  --mint-glow:0 0 0 6px var(--mint-soft);
 
   /* Comunes (iguales en los dos temas). Escala del rediseño visual: una sola fuente de radios, espacios y tipografía */
   --radius-card:24px; --radius-tile:20px; --radius-control:14px; --radius-pill:999px;
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px;
   --card-pad:32px; --grid-gap:24px; --content-max:1200px; --page-gutter:32px;
-  /* Tipografía (Plus Jakarta Sans): título de vista 48/800, título de tarjeta 22/800, nombre de fila 17/700,
-     texto 15–16, apoyo 13–14, rótulo 12/700 */
+  /* Tipografía: la de la Introducción (Plus Jakarta Sans local, assets/fonts): títulos grandes en 500 con el tracking
+     cerrado del título de la Intro (-.035em) y, en las vistas, con su degradado; títulos de tarjeta en 600; números
+     grandes ligeros (300, Light Numbers Rule); énfasis chico en 700. Tamaños de la escala del rediseño: vista 48, tarjeta
+     22, fila 17, texto 15–16, apoyo 13–14, rótulo 12 */
+  --font-sans:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --fs-display:48px; --fs-h2:22px; --fs-row:17px; --fs-body:15px; --fs-sm:14px; --fs-xs:13px; --fs-label:12px;
+  --fw-display:500; --ls-display:-.035em; --lh-display:1.1; --ls-heading:-.025em;
+  --fw-title:600; --ls-title:-.015em; --fw-num:300; --ls-num:-.03em; --fw-strong:700; --fw-nav:600;
   --hit:44px; /* alto mínimo de todo control */
   --ease-out:cubic-bezier(.16,1,.3,1); --dur-fast:150ms; --dur:200ms; --dur-slow:250ms;
   --focus-ring:2px solid var(--focus); /* separación: 3px en tarjetas y títulos, 2px en controles chicos */
@@ -110,7 +133,8 @@
   --surface:rgba(20,26,51,.78); --surface-solid:#141A33; --surface-2:rgba(255,255,255,.05);
   --card-border:rgba(255,255,255,.08); --card-blur:blur(12px);
   --card-shadow:0 1px 2px rgba(0,0,0,.40), 0 18px 44px rgba(0,0,0,.35);
-  --text:#ECEEF8; --text-2:#A9AFC6; --text-2-page:var(--text-2); --text-mid:#B9BFD6; --track:rgba(255,255,255,.08); --divider:rgba(255,255,255,.08);
+  /* Secundarios más luminosos (ajustes R2): --text-2 ≥7.9:1 en la superficie más clara (#222441) */
+  --text:#ECEEF8; --text-2:#B7BCD2; --text-2-page:var(--text-2); --text-mid:#C6CBDE; --track:rgba(255,255,255,.08); --divider:rgba(255,255,255,.08);
   --line-dashed:#7B8199; --disabled-fg:rgba(255,255,255,.22);
   --action-from:#6D28D9; --action-to:#3F63D8;
   --action:linear-gradient(135deg,var(--action-from),var(--action-to)); --action-shadow-color:rgba(109,40,217,.42);
@@ -133,15 +157,24 @@
   --toggle-on-bg:#2A2F55; --toggle-on-fg:var(--chip-violeta-fg); --toggle-on-shadow:0 4px 12px rgba(0,0,0,.35);
   --map-dot:rgba(255,255,255,.07); --node-ring:rgba(196,181,253,.85);
   --tooltip-bg:#2A2F55; --tooltip-fg:#ECEEF8; --tooltip-muted:#B9BFD6;
-  --stats-bg:#2A2F55; --stats-shadow:0 18px 44px rgba(0,0,0,.35); --stats-muted:#A9AFC6;
+  --stats-bg:#2A2F55; --stats-shadow:0 18px 44px rgba(0,0,0,.35); --stats-muted:#B7BCD2;
   --switch-off:#7D829A; --map-link:rgba(255,255,255,.12);
   --switch-knob-shadow:0 1px 3px rgba(0,0,0,.45);
   --intro-halo:rgba(109,40,217,.32);
   --intro-active-border:var(--chart-to); --intro-active-glow:0 0 0 1px rgba(167,139,250,.22), 0 16px 40px rgba(109,40,217,.35);
+  --glass-bg:rgba(20,26,51,.62); --glass-bg-strong:rgba(26,32,62,.86); --glass-solid:#141A33;
+  --glass-border:rgba(255,255,255,.12);
+  --glass-shadow:0 10px 28px rgba(0,0,0,.40), inset 0 1px 0 rgba(255,255,255,.07);
+  --glass-shadow-sm:0 4px 12px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.07);
+  --chip-line:rgba(245,154,192,.22); --chip-line-blue:rgba(157,187,255,.22); --chip-line-mint:rgba(126,232,196,.24);
+  --card-sheen:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,0) 120px);
+  --card-edge:inset 0 1px 0 rgba(255,255,255,.06);
+  --btn-sheen:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,0) 60%);
+  --btn-edge:inset 0 1px 0 rgba(255,255,255,.18);
 }
 /* Respaldo: nada debe desbordar en horizontal, pero si algo lo hace no aparece scroll lateral */
 html, body { overflow-x:hidden; overflow-x:clip; }
-body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif; color:var(--text);
+body { font-family:var(--font-sans); color:var(--text);
   background:var(--bg-glow), var(--bg-base); background-color:var(--bg-solid); background-attachment:fixed; }
 .card { background:var(--surface); border-radius:var(--radius-card); box-shadow:var(--card-shadow); backdrop-filter:var(--card-blur); } /* aviso de error de la API */
 /* Tarjeta base: Mi Ruta, Perfil y Analizador. Cada una conserva su padding */
@@ -149,9 +182,10 @@ body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
   box-shadow:var(--card-shadow); backdrop-filter:var(--card-blur); -webkit-backdrop-filter:var(--card-blur); }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 ::selection { background:var(--chip-rosa-bg); color:var(--text); }
-/* Títulos de página (h1 de las vistas): sólidos, 48/800, en el color de texto del tema (rediseño visual). El degradado
-   queda para la Introducción y Acceso */
-.objetivo-title, .goal-title { font-size:var(--fs-display); font-weight:800; line-height:1.15; letter-spacing:-.02em; color:var(--text); text-wrap:balance; }
+/* Títulos de página (h1 de las vistas): 48px con la tipografía del título de la Introducción (500, -.035em) y su degradado
+   (--title-grad, ≥4.5:1 en sus dos extremos en ambos temas). Sin background-clip queda el color sólido del tema */
+.objetivo-title, .goal-title { font-size:var(--fs-display); font-weight:var(--fw-display); line-height:var(--lh-display); letter-spacing:var(--ls-display);
+  color:var(--title-solid); text-wrap:balance; }
 .objetivo-subtitle { max-width:680px; margin-top:var(--space-3); font-size:18px; line-height:1.5; color:var(--text-2-page); text-wrap:pretty; }
 /* Encabezado de vista: título, bajada y, a veces, un resumen; 24px hasta el contenido */
 .view-header { display:flex; flex-direction:column; padding:var(--space-2) 0; margin-bottom:var(--space-6); }
@@ -160,7 +194,7 @@ body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
 /* background-clip:text solo pinta dentro de la caja, y con estos line-height y letter-spacing la tinta se sale de ella: se
    cortaban las colas de "y", "g" y "p" y el final de la última letra. El padding agranda la caja y el margen negativo lo
    compensa, así que el layout no se mueve. .16em cubre el caso más justo (.intro-title, line-height .98) */
-.mapa-panel-name, .intro-title { padding-right:.06em; padding-bottom:.16em; margin-right:-.06em; margin-bottom:-.16em; }
+.objetivo-title, .goal-title, .perfil-name, .mapa-panel-name, .intro-title { padding-right:.06em; padding-bottom:.16em; margin-right:-.06em; margin-bottom:-.16em; }
 
 /* Animaciones reducidas: cada bloque @media (prefers-reduced-motion) va seguido de sus mismas reglas bajo
    :root[data-motion="reduced"] ("Reducir animaciones" de Ajustes, js/theme.js), así las dos vías se tratan igual. */
@@ -168,14 +202,15 @@ body { font-family:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
    (display:none), así que la animación se repite cada vez que la vista vuelve a mostrarse. */
 @keyframes view-in { from { opacity:.35; transform:translateY(6px); } }
 @keyframes view-fade { from { opacity:.35; } }
-main > section:not(.hidden) { animation:view-in 200ms var(--ease-out) backwards; }
+main > section:not(.hidden) { animation:view-in var(--dur) var(--ease-out) backwards; }
 /* El mapa solo se funde: un desplazamiento chocaría con su propio zoom y arrastre */
 main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 
 /* Movimiento compartido por las vistas: entrada de tarjetas, fundido, llenado de barras y "no" lateral */
 @keyframes card-in { from { opacity:0; translate:0 12px; } } /* translate suelto: no choca con el transform del hover */
 @keyframes fade-in { from { opacity:0; } }
-@keyframes bar-fill { from { clip-path:inset(0 100% 0 0 round 9999px); } to { clip-path:inset(0 0 0 0 round 9999px); } }
+/* Barras: crecen desde la izquierda solo con escala (transform-origin en "Movimiento", al final) */
+@keyframes bar-fill { from { scale:0 1; } }
 @keyframes btn-nope { 25% { translate:-3px 0; } 50% { translate:3px 0; } 75% { translate:-2px 0; } }
 
 /* ---------- Gauge (Mi Ruta y Analizador) ---------- */
@@ -183,17 +218,18 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
    que toma --pct del markup; el span con el valor queda como respaldo sin CSS. Sin @property el contador muestra
    el valor final directamente. */
 @property --gauge-pct { syntax:"<integer>"; inherits:false; initial-value:0; }
-@keyframes gauge-fill-in { from { stroke-dashoffset:389.56; } } /* 2π·62: circunferencia del anillo */
+/* Parte de vacío: la circunferencia de cada anillo (--circ en el markup; 2π·62 = 389.56 la del Analizador) */
+@keyframes gauge-fill-in { from { stroke-dashoffset:var(--circ, 389.56); } }
 @keyframes gauge-count { from { --gauge-pct:0; } }
 .gauge-ring { position:relative; width:160px; height:160px; }
 .gauge-ring svg { width:100%; height:100%; }
 .gauge-ring stop:first-child { stop-color:var(--chart-from); }
 .gauge-ring stop:last-child { stop-color:var(--chart-to); }
 .gauge-track { stroke:var(--faint); }
-.gauge-fill { stroke-linecap:round; animation:gauge-fill-in 800ms var(--ease-out) 160ms backwards; }
+.gauge-fill { stroke-linecap:round; animation:gauge-fill-in calc(var(--dur-slow) * 3) var(--ease-out) 160ms backwards; }
 .gauge-value { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:2.6rem; font-weight:300;
   letter-spacing:-.03em; color:var(--ink); font-variant-numeric:tabular-nums;
-  --gauge-pct:var(--pct); counter-reset:gauge-pct var(--gauge-pct); animation:gauge-count 800ms var(--ease-out) 160ms backwards; }
+  --gauge-pct:var(--pct); counter-reset:gauge-pct var(--gauge-pct); animation:gauge-count calc(var(--dur-slow) * 3) var(--ease-out) 160ms backwards; }
 .gauge-value > span { display:none; }
 .gauge-value::before { content:counter(gauge-pct); }
 .gauge-value::after { content:"%"; color:var(--text-mid); font-size:1.2rem; margin:.7rem 0 0 .1rem; }
@@ -229,21 +265,22 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 :root[data-motion="reduced"] .brand-star { animation:none; transform:none !important; }
 .brand-text { display:flex; flex-direction:column; min-width:0; }
 .topbar-name { font-size:18px; font-weight:700; letter-spacing:-.01em; line-height:1.2; color:var(--text); }
-.topbar .topbar-name { font-size:20px; font-weight:800; }
+.topbar .topbar-name { font-size:20px; font-weight:var(--fw-strong); letter-spacing:-.01em; }
 .brand-slogan { font-size:12px; font-weight:500; line-height:1.4; color:var(--text-2-page); }
 .topbar-actions { justify-self:end; display:flex; align-items:center; gap:var(--space-2); }
 
-/* Nav: píldora con solo texto y un indicador que se desliza hasta el ítem activo (transform + width, js en mapa.js).
+/* Nav: píldora con solo texto y un indicador que se desliza hasta el ítem activo (solo transform: traslado y escala desde
+   el ancho anterior, js en mapa.js).
    El primer posicionado va sin transición (.is-ready la activa después) */
 .topnav { position:relative; display:flex; align-items:center; gap:var(--space-1); padding:var(--space-1); max-width:100%; border-radius:var(--radius-pill);
-  background:var(--nav-bg); border:1px solid var(--nav-border); box-shadow:var(--nav-shadow); backdrop-filter:var(--nav-blur); -webkit-backdrop-filter:var(--nav-blur); }
+  background:var(--nav-bg); border:1px solid var(--nav-border); box-shadow:var(--nav-shadow), var(--card-edge); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); }
 .topnav-indicator { position:absolute; top:var(--space-1); left:0; height:var(--hit); width:0; border-radius:var(--radius-pill); background:var(--action);
-  box-shadow:var(--nav-active-shadow); pointer-events:none; opacity:0; }
-.topnav.is-ready .topnav-indicator { opacity:1; transition:transform var(--dur) var(--ease-out), width var(--dur) var(--ease-out), opacity var(--dur-fast) ease; }
+  box-shadow:var(--nav-active-shadow), var(--btn-edge); background-image:var(--btn-sheen), var(--action); pointer-events:none; opacity:0; transform-origin:left center; }
+.topnav.is-ready .topnav-indicator { opacity:1; transition:transform var(--dur) var(--ease-out), opacity var(--dur-fast) ease; }
 /* Ajustes no está en el nav: sin ítem activo, el indicador se oculta */
 .topnav.is-ready:not(.has-active) .topnav-indicator { opacity:0; }
 .nav-item { position:relative; z-index:1; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; height:var(--hit); padding:0 18px;
-  border-radius:var(--radius-pill); font-size:var(--fs-sm); font-weight:700; white-space:nowrap; color:var(--nav-fg); cursor:pointer;
+  border-radius:var(--radius-pill); font-size:var(--fs-sm); font-weight:var(--fw-nav); white-space:nowrap; color:var(--nav-fg); cursor:pointer;
   transition:color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out); }
 .nav-item:not(.active):hover { color:var(--text); background:var(--surface-2); }
 .nav-item.active { color:var(--on-action); }
@@ -253,10 +290,11 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 
 /* Ajustes: abre su vista; activa, toma el gradiente de acción como el ítem activo del nav */
 .topbar-settings { display:inline-flex; align-items:center; justify-content:center; width:var(--hit); height:var(--hit); border-radius:var(--radius-pill);
-  background:var(--surface-solid); border:1px solid var(--card-border); color:var(--nav-fg); cursor:pointer;
+  background:var(--glass-bg); border:1px solid var(--glass-border); box-shadow:var(--glass-shadow-sm); color:var(--nav-fg); cursor:pointer;
+  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
   transition:color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out); }
-.topbar-settings:hover { color:var(--text); background:var(--surface-2); }
-.topbar-settings[aria-current="page"] { background:var(--surface-2); border-color:var(--pink-ink); color:var(--pink-ink); }
+.topbar-settings:hover { color:var(--text); background:var(--glass-bg-strong); }
+.topbar-settings[aria-current="page"] { background:var(--action); border-color:transparent; color:var(--on-action); box-shadow:var(--nav-active-shadow); }
 /* Tema: mismo botón redondo que Ajustes. Muestra a qué tema lleva: luna en claro, sol en oscuro */
 .topbar-theme .theme-icon-sun, .topbar-theme[aria-pressed="true"] .theme-icon-moon { display:none; }
 .topbar-theme[aria-pressed="true"] .theme-icon-sun { display:block; }
@@ -266,7 +304,7 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 .user-menu { position:relative; }
 .user-button { display:inline-flex; align-items:center; justify-content:center; width:var(--hit); height:var(--hit); border-radius:var(--radius-pill); cursor:pointer; }
 .user-avatar { flex-shrink:0; display:flex; align-items:center; justify-content:center; width:100%; height:100%; border-radius:var(--radius-pill);
-  background:var(--action); color:var(--on-action); font-size:16px; font-weight:800; transition:box-shadow var(--dur-fast) var(--ease-out); }
+  background:var(--action); color:var(--on-action); font-size:16px; font-weight:var(--fw-strong); transition:box-shadow var(--dur-fast) var(--ease-out); }
 .user-button:hover .user-avatar, .user-button[aria-expanded="true"] .user-avatar { box-shadow:var(--nav-active-shadow); }
 .user-button:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
 .user-popover { position:absolute; top:calc(100% + 12px); right:0; z-index:30; display:flex; flex-direction:column; gap:2px; width:max-content;
@@ -275,7 +313,7 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 .user-popover[hidden] { display:none; }
 .user-popover-head { display:flex; flex-direction:column; gap:2px; padding:var(--space-3) var(--space-4); margin-bottom:var(--space-1);
   border-bottom:1px solid var(--divider); }
-.user-popover-name { font-size:15px; font-weight:800; color:var(--text); overflow-wrap:anywhere; }
+.user-popover-name { font-size:15px; font-weight:var(--fw-strong); color:var(--text); overflow-wrap:anywhere; }
 .user-popover-email { font-size:var(--fs-xs); color:var(--text-2); overflow-wrap:anywhere; }
 .user-menu-item { display:flex; align-items:center; width:100%; min-height:var(--hit); padding:0 var(--space-4); border-radius:var(--radius-control);
   font-size:var(--fs-sm); font-weight:700; color:var(--text); text-align:left; cursor:pointer;
@@ -294,14 +332,32 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 
 /* ---------- Objetivo ---------- */
 /* Objetivo actual arriba (tarjeta de 40px de padding con su preparación a la derecha), otras rutas en una rejilla de 3
-   con la búsqueda, la comparación lado a lado y el aviso con "Deshacer" tras cambiar */
-#objetivo-content { display:flex; flex-direction:column; gap:var(--grid-gap); }
-.perfil-name { font-size:40px; font-weight:800; line-height:1.15; letter-spacing:-.02em; color:var(--text); }
+   con la búsqueda y, tras cambiar, el aviso flotante con "Deshacer" */
+#objetivo-content { display:flex; flex-direction:column; gap:var(--grid-gap); overflow-anchor:none; }
+.perfil-name { font-size:40px; font-weight:var(--fw-display); line-height:var(--lh-display); letter-spacing:var(--ls-display); color:var(--title-solid); }
 
-/* Aviso tras cambiar de objetivo: píldora con borde menta (el cambio quedó hecho) y "Deshacer" */
-.objetivo-toast { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3); padding:var(--space-3) var(--space-3) var(--space-3) var(--space-6);
-  border-radius:var(--radius-pill); background:var(--surface-solid); border:1px solid var(--mint-ink); animation:fade-in 240ms ease-out; }
-.objetivo-toast p { font-size:var(--fs-body); font-weight:600; color:var(--text); }
+/* Aviso breve con "Deshacer" (js/toast.js: cambio de objetivo y de estado en Habilidades y Mi Ruta): píldora de vidrio de
+   44px, ajustada a su texto, en la esquina inferior derecha; la región deja pasar el puntero. Marca menta = el cambio
+   quedó hecho. Entra subiendo con un fundido y sale bajando (.is-leaving); solo transform y opacity */
+@keyframes toast-in { from { opacity:0; transform:translateY(10px) scale(.97); } }
+@keyframes toast-out { to { opacity:0; transform:translateY(6px) scale(.97); } }
+.app-toast-region { position:fixed; right:var(--space-6); bottom:var(--space-6); z-index:40; display:flex; justify-content:flex-end;
+  max-width:min(420px, calc(100vw - 2 * var(--space-6))); pointer-events:none; }
+.app-toast { display:inline-flex; align-items:center; gap:var(--space-2); min-height:var(--hit); padding:6px 6px 6px 10px; border-radius:var(--radius-pill);
+  background:var(--glass-bg-strong); border:1px solid var(--glass-border); box-shadow:var(--glass-shadow);
+  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); pointer-events:auto;
+  animation:toast-in var(--dur-slow) var(--ease-out) backwards; }
+.app-toast:not(:has(.app-toast-undo)) { padding-right:var(--space-4); }
+.app-toast.is-leaving { animation:toast-out var(--dur) ease-in forwards; }
+.app-toast-mark { flex:none; display:flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%;
+  background:var(--mastered-bg); color:var(--mastered-fg); }
+.app-toast-text { min-width:0; font-size:var(--fs-sm); font-weight:600; line-height:1.35; color:var(--text); overflow-wrap:anywhere; }
+/* Deshacer: 32px a la vista, 44px de alto para el clic y el toque (::after llega a los bordes de la píldora) */
+.app-toast-undo { position:relative; flex:none; height:32px; padding:0 var(--space-3); border-radius:var(--radius-pill); font-size:var(--fs-xs); font-weight:var(--fw-strong);
+  color:var(--pink-ink); cursor:pointer; transition:background-color var(--dur-fast) ease; }
+.app-toast-undo::after { content:""; position:absolute; inset:-6px -2px; }
+.app-toast-undo:hover { background:var(--pink-tint); }
+.app-toast-undo:focus-visible { outline:var(--focus-ring); outline-offset:1px; }
 
 .objetivo-hero { display:flex; flex-wrap:wrap; justify-content:space-between; gap:var(--space-10); padding:var(--space-10); }
 .objetivo-hero-main { flex:1 1 420px; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:var(--space-6); }
@@ -309,7 +365,7 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 .objetivo-chip { padding:6px 12px; border-radius:var(--radius-pill); background:var(--chip-rosa-bg); color:var(--chip-rosa-fg);
   font-size:var(--fs-label); font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
 :root[data-theme="dark"] .objetivo-chip { background:var(--chip-violeta-bg); color:var(--chip-violeta-fg); }
-.objetivo-hero-title { font-size:36px; font-weight:800; line-height:1.2; letter-spacing:-.01em; color:var(--text); overflow-wrap:anywhere; border-radius:8px; }
+.objetivo-hero-title { font-size:36px; font-weight:var(--fw-display); line-height:1.2; letter-spacing:var(--ls-heading); color:var(--text); overflow-wrap:anywhere; border-radius:8px; }
 .objetivo-hero-title:focus { outline:none; }
 .objetivo-hero-title:focus-visible { outline:var(--focus-ring); outline-offset:4px; }
 .objetivo-hero-meta { font-size:16px; color:var(--text-2); }
@@ -318,11 +374,11 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 .objetivo-hero-score { flex:0 1 280px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--space-3); padding:var(--space-6);
   border-radius:var(--radius-tile); background:var(--surface-2); text-align:center; }
 .objetivo-hero-score-label { font-size:var(--fs-sm); font-weight:600; color:var(--text-2); }
-.objetivo-hero-pct { font-size:64px; font-weight:800; line-height:1; letter-spacing:-.02em; color:var(--text); font-variant-numeric:tabular-nums; }
+.objetivo-hero-pct { font-size:64px; font-weight:var(--fw-num); line-height:1; letter-spacing:var(--ls-num); color:var(--text); font-variant-numeric:tabular-nums; }
 .objetivo-hero-pct span { font-size:24px; color:var(--text-2); }
 .objetivo-hero-score-note { font-size:var(--fs-sm); color:var(--text-2); }
 .objetivo-bar { display:block; width:100%; height:8px; border-radius:var(--radius-pill); background:var(--track); overflow:hidden; }
-.objetivo-bar > span { display:block; height:100%; border-radius:inherit; background:var(--action); animation:bar-fill 600ms var(--ease-out) 160ms backwards; }
+.objetivo-bar > span { display:block; height:100%; border-radius:inherit; background:var(--action); animation:bar-fill calc(var(--dur-slow) * 2) var(--ease-out) 160ms backwards; }
 .objetivo-bar--thin { height:6px; }
 
 /* Otras rutas: título y bajada a la izquierda, búsqueda a la derecha */
@@ -354,40 +410,42 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
   text-align:left; color:inherit; font:inherit;
   transition:border-color var(--dur) ease, box-shadow var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
 .objetivo-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-3); }
-.objetivo-card-title { font-size:20px; font-weight:800; line-height:1.25; color:var(--ink); overflow-wrap:anywhere; }
-.objetivo-card-pct { flex:none; font-size:20px; font-weight:800; color:var(--pink-ink); font-variant-numeric:tabular-nums; }
+.objetivo-card-title { font-size:20px; font-weight:var(--fw-title); letter-spacing:var(--ls-title); line-height:1.25; color:var(--ink); overflow-wrap:anywhere; }
+.objetivo-card-pct { flex:none; font-size:20px; font-weight:var(--fw-title); color:var(--pink-ink); font-variant-numeric:tabular-nums; }
 .objetivo-card-meta { font-size:var(--fs-sm); line-height:1.5; color:var(--text-2); }
 /* Toda la tarjeta elige la ruta: "Elegir esta ruta →" siempre a la vista al pie; en hover y foco la tarjeta sube, el borde
    toma el rosa de acción y la flecha avanza */
 .objetivo-card--choose { cursor:pointer; }
-.objetivo-card-cta { display:inline-flex; align-items:center; gap:6px; margin-top:auto; padding-top:var(--space-2); font-size:var(--fs-sm); font-weight:800;
+.objetivo-card-cta { display:inline-flex; align-items:center; gap:6px; margin-top:auto; padding-top:var(--space-2); font-size:var(--fs-sm); font-weight:var(--fw-strong);
   color:var(--pink-ink); }
 .objetivo-card-cta svg { transition:translate var(--dur-fast) var(--ease-out); }
 .objetivo-card--choose:hover, .objetivo-card--choose:focus-visible { border-color:var(--pink-line-hover); transform:translateY(-2px);
-  box-shadow:0 1px 2px var(--card-border), 0 18px 38px var(--action-shadow-color); }
+  box-shadow:0 1px 2px var(--card-border), var(--card-glow-hover), var(--card-edge); }
 .objetivo-card--choose:hover .objetivo-card-cta svg, .objetivo-card--choose:focus-visible .objetivo-card-cta svg { translate:3px 0; }
 .objetivo-card--choose:active { transform:translateY(0) scale(.99); transition-duration:.08s; }
 .objetivo-card--choose:focus { outline:none; }
 .objetivo-card--choose:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
-.objetivo-card.is-pending { border-color:var(--pink-ink); }
-.objetivo-card-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); }
-.objetivo-confirm { display:flex; flex-direction:column; gap:var(--space-3); margin-top:auto; padding:var(--space-4); border-radius:16px; background:var(--surface-2);
-  font-size:var(--fs-sm); line-height:1.5; color:var(--text); }
-/* Contorno fuerte: la acción de una tarjeta (Sí, cambiar, Deshacer) sin competir con el botón principal */
-.btn-ghost--strong { border-color:var(--text-2); font-weight:800; }
+/* Guardando: la tarjeta tocada dice "Guardando…"; mientras, ninguna sube ni responde */
+.objetivo-card--choose[aria-busy="true"] { cursor:progress; border-color:var(--pink-line-hover); }
+.objetivo-card--choose[aria-disabled="true"]:not([aria-busy="true"]) { cursor:default; }
+.objetivo-card--choose[aria-disabled="true"]:hover, .objetivo-card--choose[aria-disabled="true"]:active { transform:none; }
+/* Contorno fuerte: la acción de una tarjeta o de un aviso (Deshacer, Editar perfil) sin competir con el botón principal */
+.btn-ghost--strong { border-color:var(--text-2); font-weight:var(--fw-strong); }
 .btn-ghost[aria-busy="true"] { cursor:progress; }
 /* "Otro objetivo": la misma tarjeta, todavía no disponible (borde punteado = aún no), sin hover ni foco */
 .objetivo-card--otro { border:1px dashed var(--line-dashed); box-shadow:none; cursor:not-allowed; }
 
 /* Entrada: las tarjetas en orden */
-.objetivo-grid > .objetivo-item { animation:card-in 420ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 12) * 45ms + 40ms); }
+.objetivo-grid > .objetivo-item { animation:card-in var(--dur-slow) var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 12) * 45ms + 40ms); }
+/* Tras elegir: la ruta anterior entra en el hueco de la tocada con un fundido, sin desplazarse */
+.objetivo-grid > .objetivo-item.is-swapped { animation:fade-in var(--dur-slow) var(--ease-out); animation-delay:0s; }
 @media (prefers-reduced-motion: reduce) {
-  .objetivo-grid > .objetivo-item, .objetivo-toast, .objetivo-bar > span { animation:none; }
+  .objetivo-grid > .objetivo-item, .app-toast, .app-toast.is-leaving, .objetivo-bar > span { animation:none; }
   .objetivo-card--choose:hover, .objetivo-card--choose:focus-visible, .objetivo-card--choose:active { transform:none; }
   .objetivo-card-cta svg { transition:none; translate:none !important; }
 }
-:root[data-motion="reduced"] .objetivo-grid > .objetivo-item, :root[data-motion="reduced"] .objetivo-toast,
-:root[data-motion="reduced"] .objetivo-bar > span { animation:none; }
+:root[data-motion="reduced"] .objetivo-grid > .objetivo-item,
+:root[data-motion="reduced"] .app-toast, :root[data-motion="reduced"] .app-toast.is-leaving, :root[data-motion="reduced"] .objetivo-bar > span { animation:none; }
 :root[data-motion="reduced"] .objetivo-card--choose:hover, :root[data-motion="reduced"] .objetivo-card--choose:focus-visible,
 :root[data-motion="reduced"] .objetivo-card--choose:active { transform:none; }
 :root[data-motion="reduced"] .objetivo-card-cta svg { transition:none; translate:none !important; }
@@ -530,7 +588,7 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 .perfil-achievement--locked .perfil-achievement-state { color:var(--text-2); }
 
 /* CV (Exportar CV): en pantalla, una tarjeta con los tokens del tema; al imprimir, papel blanco (ver @media print) */
-.perfil-cv-wrap { max-width:52rem; margin-inline:auto; animation:card-in 420ms var(--ease-out) backwards; }
+.perfil-cv-wrap { max-width:52rem; margin-inline:auto; animation:card-in var(--dur-slow) var(--ease-out) backwards; }
 .perfil-cv-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem 1rem; margin-bottom:1.5rem; }
 .perfil-cv-toolbar .btn-pill { padding:.8rem 1.4rem; font-size:.85rem; }
 .perfil-cv-toolbar .perfil-hint { flex-basis:100%; margin-top:0; }
@@ -584,7 +642,7 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 /* Perfil: entrada. Tarjetas en orden de lectura (cabecera, habilidades, estadísticas, proyectos, enlaces, logros y
    seguridad) y las barras de estadísticas se llenan al aparecer su tarjeta. translate suelto para no chocar con
    transform. renderPerfil continúa estas animaciones al repintar con los datos de la API. */
-#perfil-content > .perfil-header, #perfil-content > #perfil-skills, .perfil-col > *, #perfil-content > .perfil-security { animation:card-in 420ms var(--ease-out) backwards; }
+#perfil-content > .perfil-header, #perfil-content > #perfil-skills, .perfil-col > *, #perfil-content > .perfil-security { animation:card-in var(--dur-slow) var(--ease-out) backwards; }
 #perfil-content > #perfil-skills { animation-delay:60ms; }
 #perfil-content > .perfil-security { animation-delay:310ms; }
 .perfil-col:nth-child(1) > :nth-child(1) { animation-delay:60ms; }
@@ -592,7 +650,7 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 .perfil-col:nth-child(1) > :nth-child(2) { animation-delay:160ms; }
 .perfil-col:nth-child(2) > :nth-child(2) { animation-delay:210ms; }
 .perfil-col:nth-child(1) > :nth-child(3) { animation-delay:260ms; }
-.perfil-stat-bar span { animation:bar-fill 700ms var(--ease-out) 280ms backwards; }
+.perfil-stat-bar span { animation:bar-fill calc(var(--dur-slow) * 2) var(--ease-out) 280ms backwards; }
 .perfil-stat + .perfil-stat .perfil-stat-bar span { animation-delay:360ms; }
 
 /* Menos movimiento: sin entrada, llenado ni elevación. Quedan color, borde y sombra. */
@@ -604,10 +662,10 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 /* Perfil · rediseño visual: tarjetas con la escala común (32px de padding, título 22/800), cabecera con avatar redondo y
    acciones secundarias, dos columnas (ancha + 360px) y las estadísticas en una tarjeta clara como las demás */
 .perfil-card { padding:var(--card-pad); }
-.perfil-card-title { font-size:var(--fs-h2); font-weight:800; line-height:1.25; }
+.perfil-card-title { font-size:var(--fs-h2); font-weight:var(--fw-title); line-height:1.25; letter-spacing:var(--ls-title); }
 .perfil-header { gap:var(--space-6) var(--space-8); padding:var(--card-pad); margin-bottom:var(--grid-gap); }
 .perfil-photo { width:88px; height:88px; }
-.perfil-photo-initials { border-radius:50%; font-size:32px; font-weight:800; }
+.perfil-photo-initials { border-radius:50%; font-size:32px; font-weight:var(--fw-title); }
 .perfil-headline { margin-top:var(--space-1); font-size:16px; color:var(--text-2); }
 .perfil-headline--empty { font-size:var(--fs-body); color:var(--text-2); }
 .perfil-links { margin-top:var(--space-3); }
@@ -627,9 +685,9 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 /* Estadísticas: superficie clara del tema, barras sobre la pista */
 .perfil-stats { padding:var(--card-pad); background:var(--surface); color:var(--text); border:1px solid var(--card-border); box-shadow:var(--card-shadow);
   backdrop-filter:var(--card-blur); -webkit-backdrop-filter:var(--card-blur); }
-.perfil-stats-title { margin-bottom:var(--space-6); font-size:var(--fs-h2); font-weight:800; }
+.perfil-stats-title { margin-bottom:var(--space-6); font-size:var(--fs-h2); font-weight:var(--fw-title); letter-spacing:var(--ls-title); }
 .perfil-stat-head { font-size:var(--fs-sm); color:var(--text-2); }
-.perfil-stat-head strong { color:var(--text); font-weight:800; }
+.perfil-stat-head strong { color:var(--text); font-weight:var(--fw-strong); }
 .perfil-stat-bar { height:8px; background:var(--track); }
 .perfil-stats-action { border-color:var(--card-border); color:var(--text); font-size:var(--fs-sm); font-weight:700; }
 .perfil-stats-action:hover { background:var(--surface-2); border-color:var(--pink-line-hover); }
@@ -643,23 +701,20 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 #habilidades-title:focus-visible { outline:var(--focus-ring); outline-offset:4px; }
 
 /* Aviso con "Deshacer": queda pegado bajo la barra superior mientras se recorre la lista */
-.hab-toast { position:sticky; top:calc(var(--header-h) + var(--space-3)); z-index:12; }
-.hab-toast:not(:empty) { margin-bottom:var(--grid-gap); }
-.hab-toast-box { box-shadow:0 12px 32px rgba(16,16,20,.12); }
 
 /* Resumen de la vista: "3 de 20 habilidades dominadas", barra y leyenda; a la derecha, el objetivo */
 .hab-summary-wrap { min-height:64px; margin-bottom:var(--grid-gap); } /* reserva el alto mientras carga */
 .hab-overview { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-8); }
 .hab-overview-main { flex:1 1 480px; min-width:0; display:flex; flex-direction:column; gap:var(--space-4); }
 .hab-overview-title { display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--space-3); }
-.hab-overview-title strong { font-size:44px; font-weight:800; line-height:1; letter-spacing:-.02em; color:var(--text); font-variant-numeric:tabular-nums; }
+.hab-overview-title strong { font-size:44px; font-weight:var(--fw-num); line-height:1; letter-spacing:var(--ls-num); color:var(--text); font-variant-numeric:tabular-nums; }
 .hab-overview-title span { font-size:18px; font-weight:700; color:var(--text-2); }
 .hab-goal { flex:0 1 320px; display:flex; flex-direction:column; align-items:flex-start; gap:var(--space-2); padding:var(--space-6); border-radius:var(--radius-tile);
   background:var(--surface-2); }
 .hab-goal-label { font-size:var(--fs-label); font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-2); }
-.hab-goal-name { font-size:20px; font-weight:800; color:var(--text); }
+.hab-goal-name { font-size:20px; font-weight:var(--fw-title); letter-spacing:var(--ls-title); color:var(--text); }
 .hab-goal-count { font-size:var(--fs-sm); color:var(--text-2); }
-.hab-goal-count strong { color:var(--text); font-weight:800; }
+.hab-goal-count strong { color:var(--text); font-weight:var(--fw-strong); }
 .hab-goal-link { display:inline-flex; align-items:center; gap:6px; min-height:var(--hit); font-size:var(--fs-sm); font-weight:700; color:var(--pink-ink); cursor:pointer;
   text-underline-offset:3px; border-radius:8px; }
 .hab-goal-link:hover { text-decoration:underline; }
@@ -669,7 +724,7 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
    la barra de proporciones: menta y rosa→violeta sobre la pista; lo que queda vacío es lo pendiente */
 .hab-summary { display:flex; flex-wrap:wrap; align-items:center; gap:8px 24px; font-size:var(--fs-sm); font-weight:600; color:var(--text-2); }
 .hab-summary-item { display:inline-flex; align-items:center; gap:8px; white-space:nowrap; }
-.hab-summary-item strong { font-size:16px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; }
+.hab-summary-item strong { font-size:16px; font-weight:var(--fw-strong); color:var(--text); font-variant-numeric:tabular-nums; }
 .hab-dot { content:""; flex:none; width:10px; height:10px; border-radius:9999px; }
 .hab-dot--pending { border:1.5px dashed var(--line-dashed); }
 .hab-dot--progress { background:var(--progress-bg); }
@@ -714,7 +769,7 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 
 /* Entrada: solo al pintar con datos nuevos (.is-new); los repintados por filtro o estado no la repiten */
 .hab-body.is-new { animation:fade-in 320ms ease-out backwards; }
-.hab-summary-wrap.is-new .hab-bar { animation:bar-fill 700ms var(--ease-out) 200ms backwards; }
+.hab-summary-wrap.is-new .hab-bar { animation:bar-fill calc(var(--dur-slow) * 2) var(--ease-out) 200ms backwards; }
 @media (prefers-reduced-motion: reduce) {
   .hab-body.is-new, .hab-summary-wrap.is-new .hab-bar { animation:none; }
   .hab-filters button { transition:none; }
@@ -780,12 +835,27 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 .analizador-chip--mastered:hover { border-color:var(--mint-line-hover); }
 .analizador-chip--progress:hover, .analizador-chip--missing:hover { border-color:var(--pink-line-hover); }
 
-/* Antes del primer análisis */
-.analizador-empty { display:flex; align-items:flex-start; gap:1rem; padding:1.75rem 1.9rem; }
-.analizador-empty .analizador-label-icon { flex-shrink:0; }
-.analizador-empty-title { font-size:.95rem; font-weight:700; color:var(--ink); }
-.analizador-empty-text { max-width:38rem; margin-top:.3rem; font-size:.8rem; line-height:1.6; color:var(--muted); }
-.analizador-empty .route-draw { margin-top:16px; }
+/* Antes del primer análisis: el dibujo (oferta → anillo vacío) a la izquierda y la invitación a la derecha */
+.analizador-empty { display:flex; align-items:center; gap:var(--space-8); padding:var(--card-pad); }
+.analizador-empty-art { flex:none; overflow:visible; }
+.analizador-empty-copy { min-width:0; display:flex; flex-direction:column; gap:var(--space-2); }
+.analizador-empty-title { font-size:var(--fs-row); font-weight:var(--fw-title); color:var(--ink); }
+.analizador-empty-text { max-width:52ch; font-size:var(--fs-body); line-height:1.6; color:var(--text-2); text-wrap:pretty; }
+/* Piezas del dibujo: la oferta es real (borde sólido); lo que aún no hay va punteado (regla "punteado = aún no") */
+.aem-doc { fill:var(--surface-solid); stroke:var(--tag-border); stroke-width:1.5; }
+.aem-line { fill:var(--track); }
+.aem-line--title { fill:var(--text-2); opacity:.45; }
+.aem-chip { fill:none; stroke:var(--line-dashed); stroke-width:1.5; stroke-dasharray:3 3; }
+.aem-route { fill:none; stroke:var(--line-dashed); stroke-width:2; stroke-dasharray:4 4; }
+.aem-dot { fill:var(--pink); }
+.aem-ring { fill:none; stroke:var(--line-dashed); stroke-width:3; stroke-dasharray:5 6; }
+.aem-pct { fill:var(--text-2); font-size:20px; font-weight:var(--fw-num); }
+/* Entrada por partes, en orden de lectura: la oferta, sus habilidades, el tramo y el anillo vacío */
+@keyframes aem-in { from { opacity:0; transform:translateY(6px); } }
+@keyframes aem-pop { from { opacity:0; transform:scale(.85); } }
+.aem-part { transform-box:fill-box; transform-origin:center; animation:aem-in var(--dur-slow) var(--ease-out) backwards;
+  animation-delay:calc(var(--i, 0) * 70ms + 120ms); }
+.aem-pop { animation-name:aem-pop; }
 
 /* Error de la API: mismo aviso de borde rosa punteado que Mi Ruta, con "Reintentar" a la derecha */
 .analizador-error { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem 1.5rem; padding:1.5rem;
@@ -805,7 +875,7 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
    translate/scale sueltos: no chocan con el hover. */
 @keyframes analizador-chip-in { from { opacity:0; scale:.9; } }
 #analizador-result > .analizador-empty, #analizador-result > .analizador-error, .analizador-grid:not(.analizador-skeleton) > * {
-  animation:card-in 420ms var(--ease-out) backwards; }
+  animation:card-in var(--dur-slow) var(--ease-out) backwards; }
 .analizador-grid > :nth-child(1) { animation-delay:60ms; }
 .analizador-grid > :nth-child(2) { animation-delay:120ms; }
 .analizador-chip { animation:analizador-chip-in 320ms var(--ease-out) backwards; --chip-base:220ms;
@@ -825,11 +895,11 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 
 /* Menos movimiento: sin entrada, varita ni "no" (el pulso del skeleton se apaga en la sección de Mi Ruta). Quedan los cambios de color. */
 @media (prefers-reduced-motion: reduce) {
-  #analizador-result > .analizador-empty, #analizador-result > .analizador-error, .analizador-grid > *, .analizador-chip, #analizador-submit[aria-busy="true"] svg, #analizador-submit[aria-busy="true"] svg path + path,
+  #analizador-result > .analizador-empty, #analizador-result > .analizador-error, .analizador-grid > *, .analizador-chip, .aem-part, #analizador-submit[aria-busy="true"] svg, #analizador-submit[aria-busy="true"] svg path + path,
   .analizador-warning:not([hidden]) svg, .analizador-wake { animation:none; }
   .analizador-chip:hover { transform:none; }
 }
-:root[data-motion="reduced"] #analizador-result > .analizador-empty, :root[data-motion="reduced"] #analizador-result > .analizador-error, :root[data-motion="reduced"] .analizador-grid > *, :root[data-motion="reduced"] .analizador-chip, :root[data-motion="reduced"] #analizador-submit[aria-busy="true"] svg, :root[data-motion="reduced"] #analizador-submit[aria-busy="true"] svg path + path, :root[data-motion="reduced"] .analizador-warning:not([hidden]) svg, :root[data-motion="reduced"] .analizador-wake { animation:none; }
+:root[data-motion="reduced"] #analizador-result > .analizador-empty, :root[data-motion="reduced"] .aem-part, :root[data-motion="reduced"] #analizador-result > .analizador-error, :root[data-motion="reduced"] .analizador-grid > *, :root[data-motion="reduced"] .analizador-chip, :root[data-motion="reduced"] #analizador-submit[aria-busy="true"] svg, :root[data-motion="reduced"] #analizador-submit[aria-busy="true"] svg path + path, :root[data-motion="reduced"] .analizador-warning:not([hidden]) svg, :root[data-motion="reduced"] .analizador-wake { animation:none; }
 :root[data-motion="reduced"] .analizador-chip:hover { transform:none; }
 
 /* Aviso sobre el resultado: oferta repetida (caché) o análisis abierto desde el historial, recalculado con el progreso
@@ -895,7 +965,7 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .analizador-history-error .analizador-retry { padding:8px 24px; font-size:.85rem; }
 .analizador-history-refresh-error { margin-bottom:16px; font-size:.8rem; font-weight:600; color:var(--pink-ink); }
 /* Entradas: el aviso y la oferta entran como el resto del resultado */
-#analizador-result > .analizador-notice, #analizador-result > .analizador-offer { animation:card-in 420ms var(--ease-out) backwards; }
+#analizador-result > .analizador-notice, #analizador-result > .analizador-offer { animation:card-in var(--dur-slow) var(--ease-out) backwards; }
 #analizador-result > .analizador-offer { animation-delay:180ms; }
 @media (prefers-reduced-motion: reduce) {
   #analizador-result > .analizador-notice, #analizador-result > .analizador-offer { animation:none; }
@@ -909,13 +979,12 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .analizador-layout { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:var(--grid-gap); align-items:start; }
 .analizador-main { min-width:0; }
 .analizador-card { padding:var(--card-pad); }
-.analizador-label { font-size:var(--fs-h2); font-weight:800; }
-.analizador-card-title { font-size:var(--fs-h2); font-weight:800; }
+.analizador-label { font-size:var(--fs-h2); font-weight:var(--fw-title); letter-spacing:var(--ls-title); }
+.analizador-card-title { font-size:var(--fs-h2); font-weight:var(--fw-title); letter-spacing:var(--ls-title); }
 #analizador-result { margin-top:var(--grid-gap); }
 #analizador-result:empty { margin-top:0; }
 .analizador-history { margin-top:0; padding:var(--card-pad); }
 .analizador-count { font-size:var(--fs-xs); }
-.analizador-empty-text { font-size:var(--fs-body); color:var(--text-2); }
 
 /* ---------- Mi Ruta ---------- */
 .ruta-eyebrow { display:block; width:fit-content; padding:4px 10px; border-radius:9999px; background:var(--chip-eyebrow-bg); color:var(--chip-eyebrow-fg);
@@ -939,20 +1008,19 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 /* Objetivo: el título va sólido, 48/800 (el degradado queda para Objetivo y Perfil) y al lado "Cambiar objetivo", que
    abre una lista simple (role=listbox) */
 .goal-picker { position:relative; display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-4); max-width:100%; }
-#view-dashboard .goal-title { min-width:0; overflow-wrap:anywhere; font-size:var(--fs-display); font-weight:800; line-height:1.15; letter-spacing:-.02em;
-  background:none; color:var(--text); -webkit-text-fill-color:currentColor; }
+#view-dashboard .goal-title { min-width:0; overflow-wrap:anywhere; font-size:var(--fs-display); font-weight:var(--fw-display); line-height:var(--lh-display); letter-spacing:var(--ls-display);
+  color:var(--title-solid); }
 .goal-chevron { flex-shrink:0; color:var(--text-2); transition:transform var(--dur) var(--ease-out); }
 .goal-button[aria-expanded="true"] .goal-chevron { transform:rotate(180deg); }
 /* Lista: superficie sólida del tema, legible en claro y oscuro */
 .goal-list { position:absolute; top:calc(100% + 8px); left:0; z-index:15; min-width:min(20rem, calc(100vw - 32px)); max-height:min(22rem, 60vh); overflow-y:auto;
   padding:var(--space-2); border-radius:var(--radius-tile); background:var(--surface-solid); border:1px solid var(--card-border); box-shadow:0 16px 40px rgba(16,16,20,.16); }
 .goal-list[hidden] { display:none; }
-.goal-list:not([hidden]) { animation:fade-in var(--dur-fast) ease-out; }
 .goal-list:focus { outline:none; }
 .goal-option { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:var(--hit); padding:10px 14px; border-radius:var(--radius-control);
   font-size:15px; font-weight:600; color:var(--text); cursor:pointer; }
 .goal-option svg { flex-shrink:0; color:var(--pink-ink); visibility:hidden; }
-.goal-option[aria-selected="true"] { font-weight:800; }
+.goal-option[aria-selected="true"] { font-weight:var(--fw-strong); }
 .goal-option[aria-selected="true"] svg { visibility:visible; }
 .goal-option:hover, .goal-option.is-active { background:var(--surface-2); }
 /* Opción activa con teclado: anillo del tema (aria-activedescendant, el foco real queda en la lista) */
@@ -963,7 +1031,7 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 /* Demanda del mercado en el encabezado: rótulo y nivel, sin caja; la comparación está en la tarjeta Mercado laboral */
 .market-demand { display:flex; flex-direction:column; align-items:flex-end; gap:var(--space-1); text-align:right; }
 .market-demand-label { font-size:var(--fs-sm); font-weight:600; color:var(--text-2-page); }
-.market-demand-value { display:flex; align-items:center; justify-content:flex-end; gap:var(--space-2); font-size:24px; font-weight:800; letter-spacing:-.01em; cursor:help; }
+.market-demand-value { display:flex; align-items:center; justify-content:flex-end; gap:var(--space-2); font-size:24px; font-weight:var(--fw-title); letter-spacing:-.01em; cursor:help; }
 .market-demand-value--high { color:var(--mint-ink); }
 .market-demand-value--mid { color:var(--pink-ink); }
 .market-demand-value--low { color:var(--chip-azul-fg); }
@@ -978,7 +1046,7 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .ruta-card:focus { outline:none; }
 .ruta-card:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
 .ruta-card-header { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:var(--space-2) var(--space-4); margin-bottom:var(--space-6); }
-.ruta-card-title { font-size:var(--fs-h2); font-weight:800; line-height:1.25; color:var(--ink); letter-spacing:-.01em; }
+.ruta-card-title { font-size:var(--fs-h2); font-weight:var(--fw-title); line-height:1.25; color:var(--ink); letter-spacing:var(--ls-title); }
 .ruta-card-hint { font-size:var(--fs-sm); color:var(--text-2); }
 
 .sample-tag { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:9999px; border:1px dashed var(--tag-border); background:transparent;
@@ -987,11 +1055,11 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 
 /* Botón principal: uno por vista, gradiente de acción, 48px */
 .btn-pill { display:inline-flex; align-items:center; justify-content:center; gap:var(--space-2); min-height:48px; padding:0 28px; white-space:nowrap; border-radius:var(--radius-pill);
-  background:var(--action); color:#fff; font-size:15px; font-weight:800; box-shadow:0 12px 24px var(--action-shadow-color);
+  background:var(--btn-sheen), var(--action); color:#fff; font-size:15px; font-weight:var(--fw-strong); box-shadow:var(--action-glow), var(--btn-edge);
   transition:transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), filter var(--dur-fast) ease; }
-.btn-pill:hover { transform:translateY(-1px); box-shadow:0 16px 30px var(--action-shadow-color); filter:brightness(1.06); }
+.btn-pill:hover { transform:translateY(-1px); box-shadow:var(--action-glow-hover), var(--btn-edge); filter:brightness(1.06); }
 /* Al presionar: el botón baja y la sombra se acorta, respuesta inmediata al clic */
-.btn-pill:active { transform:translateY(0) scale(.98); box-shadow:0 6px 14px var(--action-shadow-color); transition-duration:.06s; }
+.btn-pill:active { transform:translateY(0) scale(.98); box-shadow:0 6px 14px var(--action-shadow-color), var(--btn-edge); transition-duration:.06s; }
 .btn-pill:disabled:active, .btn-pill[aria-disabled="true"]:active { transform:none; }
 .btn-pill:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
 .btn-pill--light { background:#fff; color:var(--on-action-ink); box-shadow:0 8px 18px rgba(20,10,40,.22); }
@@ -1005,12 +1073,12 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .ruta-gauge { display:flex; flex-direction:column; gap:var(--space-8); }
 .prep-top { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-8); }
 .ruta-gauge-ring.gauge-ring { width:168px; height:168px; flex:none; }
-.ruta-gauge .gauge-value { font-size:44px; font-weight:800; letter-spacing:-.02em; }
+.ruta-gauge .gauge-value { font-size:44px; font-weight:var(--fw-num); letter-spacing:var(--ls-num); }
 .ruta-gauge .gauge-value::after { font-size:20px; margin:.5rem 0 0 .1rem; color:var(--text-2); }
 .prep-copy { flex:1 1 280px; min-width:0; display:flex; flex-direction:column; gap:var(--space-2); }
 .ruta-gauge-text { font-size:17px; line-height:1.5; color:var(--text-2); text-wrap:pretty; }
 .prep-count { font-size:var(--fs-body); color:var(--text-2); font-variant-numeric:tabular-nums; }
-.prep-count strong { font-weight:800; color:var(--text); }
+.prep-count strong { font-weight:var(--fw-strong); color:var(--text); }
 /* Ruta del objetivo (como el riel de Brechas): una parada por brecha y el destino al final, en una fila. Cada tramo
    punteado va del punto de una parada al de la siguiente (::after) y se traza al entrar */
 .prep-route { display:grid; grid-template-columns:repeat(var(--stops), minmax(0,1fr)); gap:var(--space-2); --route-step:var(--space-2); }
@@ -1026,18 +1094,35 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .prep-stop--progress .prep-dot { background:var(--progress-bg); box-shadow:0 0 0 6px var(--pink-tint); }
 .prep-stop--progress .prep-dot::after { content:""; width:12px; height:12px; border-radius:50%; background:var(--progress-fg); }
 .prep-stop--pending .prep-dot { background:var(--surface-solid); border:2px dashed var(--line-dashed); }
-.prep-stop--mastered .prep-dot { background:var(--mastered-bg); }
+.prep-stop--mastered .prep-dot { background:var(--mastered-bg); color:var(--mastered-fg); box-shadow:var(--mint-glow); }
+.prep-stop--mastered .prep-stop-state { color:var(--mint-ink); }
+/* Tramo recorrido: entre dos paradas dominadas la línea es menta y continua */
+.prep-stop--mastered:has(+ .prep-stop--mastered)::after { background:var(--mint); }
+/* "+N": paradas ocultas cuando la ruta es larga; punteado = aún no se muestra */
+.prep-stop--more .prep-dot { border:2px dashed var(--line-dashed); background:var(--surface-2); font-size:var(--fs-xs); font-weight:var(--fw-strong);
+  color:var(--text-mid); font-variant-numeric:tabular-nums; }
+.prep-stop--more .prep-stop-name { color:var(--text-2); font-weight:600; }
+/* Ruta completa con muchas paradas: cada una conserva un ancho legible y la fila se desplaza en horizontal */
+.prep-route.is-expanded { grid-template-columns:repeat(var(--stops), minmax(112px,1fr)); overflow-x:auto; padding-bottom:var(--space-2); }
 /* Destino: diana con el gradiente de acción, como el final del riel */
 .prep-stop--dest .prep-dot { position:relative; background:var(--surface-solid); border:2px solid var(--pink); }
 .prep-stop--dest .prep-dot::after { content:""; position:absolute; inset:7px; border-radius:50%; background:var(--action); }
-.prep-stop-name { max-width:100%; font-size:var(--fs-body); font-weight:700; line-height:1.3; color:var(--text); overflow-wrap:anywhere; }
+.prep-stop-name { max-width:100%; font-size:var(--fs-body); font-weight:var(--fw-title); line-height:1.3; color:var(--text); overflow-wrap:break-word; hyphens:auto; }
 .prep-stop-state { font-size:var(--fs-xs); font-weight:600; color:var(--text-2); }
 .prep-stop--progress .prep-stop-state { color:var(--pink-ink); }
 .prep-stop--dest .prep-stop-name { color:var(--text-2); }
-/* Preparación a todo el ancho: anillo y texto a la izquierda, la ruta a la derecha */
-.ruta-row--single > .ruta-gauge { flex-direction:row; flex-wrap:wrap; align-items:center; gap:var(--space-8) var(--space-10); }
-.ruta-row--single > .ruta-gauge .prep-top { flex:0 1 460px; flex-wrap:nowrap; }
-.ruta-row--single > .ruta-gauge .prep-route { flex:1 1 560px; }
+/* Preparación a todo el ancho: el anillo grande a la izquierda ocupa las dos filas; a su derecha el título, el mensaje y
+   el resumen arriba y, debajo, la ruta con aire, separada por un divisor */
+.ruta-row--single > .ruta-gauge { display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-areas:"ring copy" "ring route";
+  align-items:center; gap:var(--space-6) var(--space-10); padding:var(--space-10); }
+.ruta-row--single > .ruta-gauge .prep-top { display:contents; }
+.ruta-row--single > .ruta-gauge .ruta-gauge-ring { grid-area:ring; width:200px; height:200px; }
+.ruta-row--single > .ruta-gauge .gauge-value { font-size:52px; }
+.ruta-row--single > .ruta-gauge .prep-copy { grid-area:copy; align-self:end; }
+.ruta-row--single > .ruta-gauge .prep-route { grid-area:route; align-self:start; padding-top:var(--space-6); border-top:1px solid var(--divider); }
+/* Sin brechas (llegaste) o cargando: solo anillo y texto, centrados */
+.ruta-row--single > .ruta-gauge:not(:has(.prep-route)) { grid-template-areas:"ring copy"; }
+.ruta-row--single > .ruta-gauge:not(:has(.prep-route)) .prep-copy { align-self:center; }
 /* Siguiente giro al final, a todo el ancho: el texto a la izquierda y la acción a la derecha */
 .ruta-row--single > .ruta-action { flex-direction:row; flex-wrap:wrap; align-items:center; gap:var(--space-6) var(--space-10); }
 .ruta-row--single > .ruta-action .ruta-action-copy { flex:1 1 520px; max-width:72ch; }
@@ -1051,7 +1136,7 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .ruta-action-head { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2); }
 .ruta-action-eyebrow { display:inline-block; padding:6px 12px; border-radius:var(--radius-pill); background:rgba(255,255,255,.18);
   font-size:var(--fs-label); font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
-.ruta-action-title { font-size:28px; font-weight:800; line-height:1.2; letter-spacing:-.01em; overflow-wrap:anywhere; text-wrap:balance; }
+.ruta-action-title { font-size:28px; font-weight:var(--fw-display); line-height:1.2; letter-spacing:var(--ls-heading); overflow-wrap:anywhere; text-wrap:balance; }
 .ruta-action-text { font-size:16px; line-height:1.5; opacity:.95; text-wrap:pretty; }
 .ruta-action .btn-pill { align-self:flex-start; }
 
@@ -1062,8 +1147,9 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .ruta-brechas { container-type:inline-size; }
 .semana-intro { margin:calc(-1 * var(--space-2)) 0 var(--space-2); font-size:var(--fs-body); line-height:1.5; color:var(--text-2); text-wrap:pretty; }
 .semana-list > li + li { border-top:1px solid var(--divider); }
+/* 24px arriba y abajo por fila y más separación entre nombre, etiqueta, barra, horas y selector */
 .semana-row { display:grid; grid-template-columns:24px minmax(0,1fr) auto auto; grid-template-areas:"mark skill hours status";
-  align-items:center; gap:var(--space-2) var(--space-4); padding:var(--space-4) 0; }
+  align-items:center; gap:var(--space-3) var(--space-5); padding:var(--space-6) 0; }
 /* Marca del estado al inicio de la fila (Dos voces): punteado = pendiente, rosa→violeta = aprendiendo, menta con marca =
    dominada. Es decorativa: el selector dice el estado */
 .semana-mark { grid-area:mark; display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; }
@@ -1072,10 +1158,10 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .semana-mark--mastered { background:var(--mastered-bg); color:var(--mastered-fg); }
 .semana-row.is-done .semana-name { color:var(--text-2); }
 .semana-hours--done { color:var(--mint-ink); font-weight:700; }
-.semana-skill { grid-area:skill; min-width:0; display:flex; flex-direction:column; gap:var(--space-2); }
-.semana-name-line { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; }
+.semana-skill { grid-area:skill; min-width:0; display:flex; flex-direction:column; gap:var(--space-3); }
+.semana-name-line { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2) var(--space-3); }
 .semana-demand { display:flex; align-items:center; gap:var(--space-3); min-width:0; }
-.semana-demand .gap-bar { flex:0 0 120px; height:6px; }
+.semana-demand .gap-bar { flex:0 0 104px; height:6px; }
 .semana-meta { min-width:0; font-size:var(--fs-xs); line-height:1.4; color:var(--text-2); font-variant-numeric:tabular-nums; }
 .semana-hours { grid-area:hours; font-size:var(--fs-sm); font-weight:600; color:var(--text-2); white-space:nowrap; font-variant-numeric:tabular-nums; }
 .semana-status { grid-area:status; min-width:0; }
@@ -1153,7 +1239,7 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .trend-line { fill:none; stroke:var(--pink); stroke-width:3; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:1; }
 .trend-dot { fill:var(--chart-dot-fill); stroke:var(--chart-dot-stroke); stroke-width:3; }
 .trend-dot--last { fill:var(--pink); stroke:var(--surface-solid); stroke-width:4; }
-.trend-last-label { font-size:14px; font-weight:800; fill:var(--ink); font-variant-numeric:tabular-nums; }
+.trend-last-label { font-size:14px; font-weight:var(--fw-strong); fill:var(--ink); font-variant-numeric:tabular-nums; }
 /* Cambio total del periodo: menta si subió (logro), neutro si no */
 .trend-delta { display:inline-flex; align-items:center; height:28px; padding:0 10px; border-radius:var(--radius-pill); font-size:var(--fs-xs); font-weight:700;
   font-variant-numeric:tabular-nums; white-space:nowrap; }
@@ -1176,7 +1262,7 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 :root[data-motion="reduced"] .trend-last-label { animation:none; }
 
 /* Mi Ruta: entrada. Las tarjetas suben fila por fila; se repite al recargar datos o al volver a la vista */
-.ruta-grid:not(.ruta-skeleton) > .ruta-row > * { animation:card-in 420ms var(--ease-out) backwards; }
+.ruta-grid:not(.ruta-skeleton) > .ruta-row > * { animation:card-in var(--dur-slow) var(--ease-out) backwards; }
 .ruta-grid:not(.ruta-skeleton) > .ruta-row > :nth-child(2) { animation-delay:60ms; }
 .ruta-grid:not(.ruta-skeleton) > .ruta-row:nth-child(2) > * { animation-delay:120ms; }
 .ruta-grid:not(.ruta-skeleton) > .ruta-row:nth-child(2) > :nth-child(2) { animation-delay:180ms; }
@@ -1185,7 +1271,7 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
    entrada, conteos ni barras que se vuelven a llenar */
 .ruta-grid.is-quiet *, .ruta-grid.is-quiet *::before, .ruta-grid.is-quiet *::after { animation:none !important; }
 /* Barras: se llenan al aparecer; las paradas de la ruta entran en orden */
-.gap-bar span, .market-bar-fill { animation:bar-fill 600ms var(--ease-out) 200ms backwards; }
+.gap-bar span, .market-bar-fill { animation:bar-fill calc(var(--dur-slow) * 2) var(--ease-out) 200ms backwards; }
 .prep-dot { animation:route-stop-in 320ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 8) * 60ms + 200ms); }
 @keyframes route-segment-x { from { scale:0 1; } }
 .prep-stop:not(:last-child)::after { animation:route-segment-x 360ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 8) * 60ms + 280ms); }
@@ -1200,7 +1286,7 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
   background:var(--surface-2); transition:border-color var(--dur) ease, transform var(--dur) var(--ease-out); }
 .offer-item:hover { border-color:var(--pink-line-hover); transform:translateY(-1px); }
 .offer-top { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-3); }
-.offer-pct { flex:none; font-size:var(--fs-xs); font-weight:800; line-height:1.6; color:var(--mint-ink); font-variant-numeric:tabular-nums; }
+.offer-pct { flex:none; font-size:var(--fs-xs); font-weight:var(--fw-strong); line-height:1.6; color:var(--mint-ink); font-variant-numeric:tabular-nums; }
 .offer-heading { min-width:0; font-size:var(--fs-row); font-weight:700; line-height:1.3; color:var(--ink); }
 .offer-title { display:inline; border-radius:8px; color:var(--ink); overflow-wrap:anywhere; text-decoration:none; }
 a.offer-title:hover { color:var(--link); text-decoration:underline; text-underline-offset:3px; }
@@ -1224,7 +1310,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
   border-radius:16px; border:1px dashed var(--pink); }
 .ofertas-error .ofertas-retry { min-height:var(--hit); padding:0 var(--space-6); font-size:var(--fs-sm); }
 @keyframes offer-in { from { opacity:0; transform:translateY(8px); } }
-.offer-item[data-enter] { animation:offer-in 320ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 9) * 40ms); }
+.offer-item[data-enter] { animation:offer-in var(--dur-slow) var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 9) * 40ms); }
 @media (prefers-reduced-motion: reduce) { .offer-item, .offer-item[data-enter] { animation:none; transition:none; } .offer-item:hover { transform:none; } }
 :root[data-motion="reduced"] .offer-item, :root[data-motion="reduced"] .offer-item[data-enter] { animation:none; transition:none; }
 :root[data-motion="reduced"] .offer-item:hover { transform:none; }
@@ -1235,7 +1321,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .ruta-ritmo { display:flex; flex-direction:column; gap:var(--space-5); }
 .ritmo-label { font-size:var(--fs-sm); font-weight:600; line-height:1.4; color:var(--text-2); }
 .ritmo-big { font-size:var(--fs-body); font-weight:600; color:var(--text-2); font-variant-numeric:tabular-nums; }
-.ritmo-big strong { margin-right:2px; font-size:28px; font-weight:800; line-height:1.1; letter-spacing:-.01em; color:var(--text); }
+.ritmo-big strong { margin-right:2px; font-size:28px; font-weight:var(--fw-num); line-height:1.1; letter-spacing:var(--ls-num); color:var(--text); }
 .ritmo-section { display:flex; flex-direction:column; gap:var(--space-3); padding-top:var(--space-5); border-top:1px solid var(--divider); }
 .ritmo-week { display:flex; flex-direction:column; gap:var(--space-3); }
 .ritmo-week-head { display:flex; align-items:baseline; justify-content:space-between; gap:var(--space-3); }
@@ -1257,7 +1343,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .ritmo-step:hover:not([aria-disabled="true"]) { background:var(--surface-2); border-color:var(--pink-line-hover); }
 .ritmo-step[aria-disabled="true"] { color:var(--disabled-fg); cursor:not-allowed; }
 .ritmo-step:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
-.ritmo-goal-value strong { display:inline-block; min-width:24px; text-align:center; font-size:20px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; }
+.ritmo-goal-value strong { display:inline-block; min-width:24px; text-align:center; font-size:20px; font-weight:var(--fw-title); color:var(--text); font-variant-numeric:tabular-nums; }
 .ritmo-streaks { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--space-4); }
 .ritmo-streak { display:flex; flex-direction:column; gap:var(--space-1); }
 .ritmo-streak-note { font-size:var(--fs-xs); line-height:1.5; color:var(--text-2); text-wrap:pretty; }
@@ -1273,7 +1359,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .ritmo-legend-before::before { background:var(--mint-line-hover); }
 .ritmo-legend-month::before { background:var(--mastered-bg); }
 /* Entrada: los tramos se revelan de izquierda a derecha con la tarjeta */
-.ritmo-segments, .ritmo-month-bar { animation:bar-fill 600ms var(--ease-out) 260ms backwards; }
+.ritmo-segments, .ritmo-month-bar { animation:bar-fill calc(var(--dur-slow) * 2) var(--ease-out) 260ms backwards; }
 @media (prefers-reduced-motion: reduce) {
   .ritmo-segments, .ritmo-month-bar { animation:none; }
   .ritmo-step { transition:none; }
@@ -1610,7 +1696,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .gap-context svg { transition:translate var(--dur-fast) var(--ease-out); }
 .gap-context:hover svg { translate:3px 0; }
 /* Entrada: tarjetas en orden de lectura, igual que Mi Ruta */
-.skill-grid > .skill-col > * { animation:card-in 420ms var(--ease-out) backwards; }
+.skill-grid > .skill-col > * { animation:card-in var(--dur-slow) var(--ease-out) backwards; }
 .skill-grid > .skill-col:nth-child(2) > * { animation-delay:60ms; }
 @media (prefers-reduced-motion: reduce) {
   .skill-grid > .skill-col > *, .skill-faq-answer:not([hidden]) { animation:none; }
@@ -1709,7 +1795,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 }
 :root[data-motion="reduced"] .ajustes-theme, :root[data-motion="reduced"] .ajustes-switch::after { transition:none; }
 
-/* Ajustes · rediseño visual: dos columnas (Apariencia + Idioma | Ofertas de empleo + Inteligencia artificial) y
+/* Ajustes · rediseño visual: dos columnas (Apariencia + Idioma | Ofertas de empleo) y
    Seguridad a todo el ancho al final. Títulos de tarjeta 22/800 y números grandes en 800 como el resto de la app */
 .ajustes-header { gap:0; margin-bottom:var(--space-6); }
 .ajustes-languages { margin-top:0; }
@@ -1718,11 +1804,11 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .ajustes-col { display:flex; flex-direction:column; gap:var(--grid-gap); min-width:0; }
 .ajustes-col .ajustes-jobs { grid-column:auto; }
 .ajustes-card { padding:var(--card-pad); }
-.ajustes-card-title { font-size:var(--fs-h2); font-weight:800; }
+.ajustes-card-title { font-size:var(--fs-h2); font-weight:var(--fw-title); letter-spacing:var(--ls-title); }
 .ajustes-jobs-body { flex-direction:column; align-items:stretch; gap:var(--space-6); }
 .ajustes-jobs-stats { flex-wrap:wrap; gap:var(--space-4) var(--space-8); }
 .ajustes-jobs-action { width:auto; padding-top:var(--space-6); border-top:1px solid var(--divider); }
-.ajustes-total-num { font-size:48px; font-weight:800; letter-spacing:-.02em; }
+.ajustes-total-num { font-size:48px; font-weight:var(--fw-num); letter-spacing:var(--ls-num); }
 .ajustes-grid + .route-divider { margin-top:var(--space-8); }
 
 /* ---------- Introducción ---------- */
@@ -1914,3 +2000,109 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 @media (prefers-reduced-motion: reduce) { .acceso-modes button, .acceso-reveal, .acceso-rule, .acceso-rule-check { transition:none; } }
 :root[data-motion="reduced"] .acceso-modes button, :root[data-motion="reduced"] .acceso-reveal,
 :root[data-motion="reduced"] .acceso-rule, :root[data-motion="reduced"] .acceso-rule-check { transition:none; }
+
+/* ---------- Movimiento (ajustes R2, parte B) ----------
+   Tokens --ease-out y --dur-fast / --dur / --dur-slow. Solo transform (translate, scale) y opacity; nada de layout. El anillo
+   y las líneas de la tendencia siguen con stroke-dashoffset, la única forma de trazar un SVG. Todo se apaga con
+   prefers-reduced-motion y con "Reducir animaciones" (bloque final). */
+/* Barras de progreso: crecen desde su borde izquierdo */
+.objetivo-bar > span, .perfil-stat-bar span, .hab-bar, .gap-bar span, .market-bar-fill, .ritmo-segments, .ritmo-month-bar { transform-origin:left center; }
+.hab-summary-bar { overflow:hidden; }
+
+/* Ajustes: las tarjetas entran en orden al abrir la vista (su HTML es fijo: la animación corre cada vez que se muestra) */
+#view-ajustes .ajustes-col > *, #view-ajustes .ajustes-security > * { animation:card-in var(--dur-slow) var(--ease-out) backwards; }
+#view-ajustes .ajustes-col:nth-child(2) > :first-child { animation-delay:50ms; }
+#view-ajustes .ajustes-col:nth-child(1) > :nth-child(2) { animation-delay:100ms; }
+#view-ajustes .ajustes-security > * { animation-delay:150ms; }
+
+/* Menús (cuenta y "Cambiar objetivo"): bajan un poco y crecen desde su esquina */
+@keyframes menu-in { from { opacity:0; transform:translateY(-4px) scale(.97); } }
+.user-popover:not([hidden]) { transform-origin:top right; animation:menu-in var(--dur) var(--ease-out); }
+.goal-list:not([hidden]) { transform-origin:top left; animation:menu-in var(--dur) var(--ease-out); }
+
+/* Cambio de estado de una habilidad: la opción elegida "late" una vez (también en la recarga silenciosa de Mi Ruta) */
+@keyframes state-pop { 0% { transform:scale(.9); opacity:.6; } 60% { transform:scale(1.04); opacity:1; } }
+.status-option.is-just-set, .ruta-grid.is-quiet .status-option.is-just-set { animation:state-pop var(--dur-slow) var(--ease-out) !important; }
+
+/* Pulsación y hover: los botones redondos, con contorno, el nav y las opciones de estado responden al tocar */
+.btn-ghost, .topbar-settings, .user-button, .nav-item, .status-option, .prep-stop-btn, .mapa-tip-close {
+  transition-property:color, background-color, border-color, box-shadow, transform; transition-duration:var(--dur-fast); transition-timing-function:var(--ease-out); }
+.btn-ghost:hover:not(:disabled) { transform:translateY(-1px); }
+.topbar-settings:hover, .user-button:hover { transform:translateY(-1px); }
+.btn-ghost:active:not(:disabled), .topbar-settings:active, .user-button:active, .nav-item:active, .status-option:active:not([aria-checked="true"]),
+.prep-stop-btn:active, .mapa-tip-close:active { transform:scale(.96); transition-duration:60ms; }
+/* Filas de las listas (Habilidades y Tu semana): un velo suave al pasar el puntero, con opacidad sobre un ::before */
+.hab-row, .semana-row { position:relative; isolation:isolate; }
+.hab-row::before, .semana-row::before { content:""; position:absolute; inset:0 calc(-1 * var(--space-3)); z-index:-1; border-radius:var(--radius-control);
+  background:var(--surface-2); opacity:0; transition:opacity var(--dur) var(--ease-out); pointer-events:none; }
+.hab-row:hover::before, .semana-row:hover::before, .hab-row:focus-within::before, .semana-row:focus-within::before { opacity:1; }
+
+/* Apagado general: con movimiento reducido no queda ninguna animación ni transición (el fundido corto del cambio de
+   vista, definido arriba, se conserva para no perder el aviso de que algo cambió) */
+@media (prefers-reduced-motion: reduce) {
+  *:not(main > section), *::before, *::after { animation-duration:1ms !important; animation-delay:0s !important; animation-iteration-count:1 !important;
+    transition-duration:0s !important; transition-delay:0s !important; }
+  .btn-ghost:hover, .topbar-settings:hover, .user-button:hover, .btn-ghost:active, .topbar-settings:active, .user-button:active, .nav-item:active,
+  .status-option:active, .prep-stop-btn:active, .mapa-tip-close:active, .status-option.is-just-set { transform:none !important; }
+  .status-option.is-just-set { animation:none !important; }
+}
+:root[data-motion="reduced"] *:not(main > section), :root[data-motion="reduced"] *::before, :root[data-motion="reduced"] *::after {
+  animation-duration:1ms !important; animation-delay:0s !important; animation-iteration-count:1 !important; transition-duration:0s !important; transition-delay:0s !important; }
+:root[data-motion="reduced"] .btn-ghost:hover, :root[data-motion="reduced"] .topbar-settings:hover, :root[data-motion="reduced"] .user-button:hover,
+:root[data-motion="reduced"] .btn-ghost:active, :root[data-motion="reduced"] .topbar-settings:active, :root[data-motion="reduced"] .user-button:active,
+:root[data-motion="reduced"] .nav-item:active, :root[data-motion="reduced"] .status-option:active, :root[data-motion="reduced"] .prep-stop-btn:active,
+:root[data-motion="reduced"] .mapa-tip-close:active, :root[data-motion="reduced"] .status-option.is-just-set { transform:none !important; }
+:root[data-motion="reduced"] .status-option.is-just-set { animation:none !important; }
+/* El respaldo de la Introducción (muestra la app si la comprobación tarda más de 3 s) no es movimiento: conserva su espera */
+@media (prefers-reduced-motion: reduce) { :root[data-intro="checking"] .topbar, :root[data-intro="checking"] .app-main { animation-delay:3s !important; } }
+:root[data-motion="reduced"][data-intro="checking"] .topbar, :root[data-motion="reduced"][data-intro="checking"] .app-main { animation-delay:3s !important; }
+
+/* ---------- Acabados (ajustes R3) ----------
+   Recuperados del diseño anterior al rediseño, sin tocar la disposición: todo sale de los tokens --glass-*, --card-sheen,
+   --card-edge, --btn-sheen, --btn-edge y --*-glow de :root, así las 7 vistas quedan iguales en claro y oscuro. */
+/* Tarjetas: velo claro arriba y filo de luz en el borde superior, sobre la sombra teñida de siempre */
+.ruta-card, .perfil-card, .analizador-card, .objetivo-card, .mapa-panel, .intro-slide {
+  background-image:var(--card-sheen); box-shadow:var(--card-shadow), var(--card-edge); }
+.mapa-card { box-shadow:var(--card-shadow), var(--card-edge); } /* su fondo de puntos se queda */
+.objetivo-card--otro { background-image:none; box-shadow:none; }
+/* Menús y filtros: vidrio */
+.user-popover, .goal-list { background:var(--glass-bg-strong); border-color:var(--glass-border); box-shadow:0 16px 40px rgba(16,16,20,.16), var(--card-edge);
+  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); }
+.hab-filters { background:var(--glass-bg); border:1px solid var(--glass-border); box-shadow:var(--glass-shadow-sm);
+  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); }
+.objetivo-search { background:var(--glass-bg); border-color:var(--glass-border); box-shadow:var(--glass-shadow-sm);
+  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); }
+/* Chips y badges: borde fino de su color, filo de luz y vidrio; los de nivel de demanda vuelven a mayúsculas espaciadas */
+.gap-badge, .objetivo-chip, .hab-on-goal, .hab-cat, .mapa-chip, .ruta-eyebrow:not(.ruta-eyebrow--plain), .intro-chips li {
+  backdrop-filter:blur(8px) saturate(1.4); -webkit-backdrop-filter:blur(8px) saturate(1.4); }
+.gap-badge { padding:4px 10px; border:1px solid transparent; font-size:11px; letter-spacing:.06em; text-transform:uppercase; box-shadow:var(--card-edge); }
+.gap-badge--hot, .objetivo-chip, .hab-on-goal { border:1px solid var(--chip-line); }
+.gap-badge--mid { border-color:var(--chip-line-blue); }
+.gap-badge--neutral, .hab-cat { border:1px solid var(--glass-border); }
+:root[data-theme="dark"] .objetivo-chip { border-color:rgba(196,181,253,.24); }
+/* Botones principales y de estado: reflejo arriba y halo del gradiente */
+.btn-pill.btn-pill--outline, .btn-pill.perfil-btn-outline, .btn-pill.perfil-btn-danger { background-image:none; }
+.btn-pill--light { background-image:none; box-shadow:0 8px 18px rgba(20,10,40,.22), inset 0 1px 0 #fff; }
+.status-option--progress[aria-checked="true"] { background-image:var(--btn-sheen), var(--progress-bg); }
+.status-option--mastered[aria-checked="true"] { background-image:var(--btn-sheen), var(--mastered-bg); }
+.user-avatar { background-image:var(--btn-sheen), var(--action); box-shadow:var(--btn-edge); }
+.ruta-action { background-image:var(--btn-sheen), var(--action); box-shadow:var(--action-card-shadow), var(--btn-edge); }
+/* Títulos de vista (h1) y nombre de Perfil: el degradado del título de la Introducción (--title-grad, ≥4.5:1 en sus
+   dos extremos en ambos temas). Va al final para ganar a las reglas de cada vista; sin background-clip queda el color
+   sólido del tema (--title-solid) y en alto contraste, el del sistema */
+@supports ((-webkit-background-clip:text) or (background-clip:text)) {
+  .objetivo-title, .goal-title, #view-dashboard .goal-title, .perfil-name {
+    background:var(--title-grad); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; }
+}
+@media (forced-colors: active) {
+  .objetivo-title, .goal-title, #view-dashboard .goal-title, .perfil-name { background:none; color:CanvasText; -webkit-text-fill-color:CanvasText; }
+}
+/* Anillo de preparación: brillo suave del trazo */
+.gauge-fill { filter:drop-shadow(0 3px 8px var(--action-shadow-color)); }
+/* Sin backdrop-filter (o con transparencia reducida): superficies sólidas, mismo borde y misma sombra */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  :root, :root[data-theme="dark"] { --glass-bg:var(--glass-solid); --glass-bg-strong:var(--glass-solid); --nav-bg:var(--glass-solid); --header-bg:var(--bg-solid); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root, :root[data-theme="dark"] { --glass-bg:var(--glass-solid); --glass-bg-strong:var(--glass-solid); --nav-bg:var(--glass-solid); --header-bg:var(--bg-solid); }
+}

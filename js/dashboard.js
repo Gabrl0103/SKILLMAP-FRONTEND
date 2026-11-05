@@ -113,36 +113,115 @@ function renderMarketCard(goalSkills, catalog, goalTitle) {
     </article>`;
 }
 
-// Ruta del objetivo (como el riel de Brechas antes del rediseño): una parada por brecha, en el orden de la API (por
-// demanda), con su punto de estado (punteado = pendiente, rosa→violeta = aprendiendo) y el nombre, que abre el contexto de
-// la habilidad; al final, el destino (el objetivo, ya dicho en el h1: va oculto a lectores). Entrada: los puntos aparecen
-// en orden (--i) y cada tramo se traza hacia la parada siguiente.
-function renderRouteStops(gaps, goalTitle) {
-  if (!gaps.length) return "";
-  const items = gaps.map((s, i) => {
+// Paradas de la ruta: todas las habilidades del objetivo, también las dominadas, en el orden de la API (por demanda). Las
+// dominadas no vienen en r.gaps: se intercalan donde les toca por su demanda (con la misma demanda, después de las
+// brechas). Sin las habilidades del objetivo (goalSkills vacío), solo las brechas. Es el orden de "Tu semana" también.
+function routeSkills(r, goalSkills) {
+  const gapIds = new Set(r.gaps.map(s => s.id));
+  const done = goalSkills.filter(s => !gapIds.has(s.id))
+    .sort((a, b) => b.demandPercentage - a.demandPercentage || a.name.localeCompare(b.name));
+  const stops = [];
+  let j = 0;
+  for (const gap of r.gaps) {
+    while (j < done.length && done[j].demandPercentage > gap.demandPercentage) stops.push(done[j++]);
+    stops.push(gap);
+  }
+  return stops.concat(done.slice(j));
+}
+
+// Con más de ROUTE_MAX_STOPS paradas la ruta se ve por tramos: ROUTE_SHOWN paradas, las dominadas más recientes (hasta
+// ROUTE_RECENT) y las siguientes pendientes, en su orden; cada tramo oculto queda como un "+N" en su lugar, que despliega
+// la ruta entera. Así la fila no pasa de unas 8 columnas y los nombres caben.
+const ROUTE_MAX_STOPS = 7;
+const ROUTE_SHOWN = 5;
+const ROUTE_RECENT = 2;
+let routeExpanded = false; // "+N" pulsado: la ruta completa hasta cambiar de objetivo o de usuario
+
+function routeWindow(stops) {
+  if (routeExpanded || stops.length <= ROUTE_MAX_STOPS) return stops.map(() => true);
+  const isDone = s => s.status === "MASTERED";
+  const done = stops.map((s, i) => i).filter(i => isDone(stops[i]))
+    .sort((a, b) => String(stops[b].statusUpdatedAt || "").localeCompare(String(stops[a].statusUpdatedAt || "")));
+  const pending = stops.map((s, i) => i).filter(i => !isDone(stops[i]));
+  let recent = Math.min(ROUTE_RECENT, done.length);
+  const next = Math.min(pending.length, ROUTE_SHOWN - recent);
+  recent = Math.min(done.length, ROUTE_SHOWN - next);
+  const shown = new Set([...done.slice(0, recent), ...pending.slice(0, next)]);
+  return stops.map((s, i) => shown.has(i));
+}
+
+const ROUTE_CHECK = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>`;
+
+// "+N": un tramo oculto de la ruta, en su lugar. Dice cuántas paradas guarda y de qué tipo; al tocarlo se ve la ruta entera
+function renderRouteMore(hidden, i) {
+  const done = hidden.filter(s => s.status === "MASTERED").length;
+  const parts = [done ? tn("ruta.route.moreDone", done) : "", hidden.length - done ? tn("ruta.route.morePending", hidden.length - done) : ""]
+    .filter(Boolean).join(" · ");
+  return `
+      <li class="prep-stop prep-stop--more" style="--i:${i};">
+        <button type="button" class="prep-stop-btn" data-action="show-route" title="${escapeHtml(parts)}"
+          aria-label="${escapeHtml(t("ruta.route.moreAria", { n: hidden.length, detail: parts }))}">
+          <span class="prep-dot" aria-hidden="true">+${hidden.length}</span>
+          <span class="prep-stop-name" aria-hidden="true">${tn("ruta.route.more", hidden.length)}</span>
+          <span class="prep-stop-state" aria-hidden="true">${t("ruta.route.showAll")}</span>
+        </button>
+      </li>`;
+}
+
+// Ruta del objetivo (como el riel de Brechas antes del rediseño): una parada por habilidad del objetivo, en el orden de
+// routeSkills, con su punto de estado (punteado = pendiente, rosa→violeta = aprendiendo, menta con ✓ = dominada: la
+// parada se queda en el camino) y el nombre, que abre el contexto de la habilidad; al final, el destino (el objetivo, ya
+// dicho en el h1: va oculto a lectores). Entrada: los puntos aparecen en orden (--i) y cada tramo se traza hacia la
+// parada siguiente.
+function renderRouteStops(stops, goalTitle) {
+  if (!stops.length) return "";
+  const shown = routeWindow(stops);
+  const items = [];
+  let hidden = [];
+  const flush = () => { if (hidden.length) { items.push(renderRouteMore(hidden, items.length)); hidden = []; } };
+  stops.forEach((s, i) => {
+    if (!shown[i]) { hidden.push(s); return; }
+    flush();
     const state = SKILL_STATE_CLASS[s.status] || "pending";
     const name = tSkill(s.name);
-    return `
-      <li class="prep-stop prep-stop--${state}" style="--i:${i};">
+    items.push(`
+      <li class="prep-stop prep-stop--${state}" style="--i:${items.length};">
         <button type="button" class="prep-stop-btn" data-context="${s.id}"
           aria-label="${escapeHtml(`${t("skill.contextFor", { name })} · ${statusLabel(s.status)}`)}">
-          <span class="prep-dot" aria-hidden="true"></span>
+          <span class="prep-dot" aria-hidden="true">${state === "mastered" ? ROUTE_CHECK : ""}</span>
           <span class="prep-stop-name">${escapeHtml(name)}</span>
           <span class="prep-stop-state" aria-hidden="true">${statusLabel(s.status)}</span>
         </button>
-      </li>`;
-  }).join("");
+      </li>`);
+  });
+  flush();
   const dest = `
-      <li class="prep-stop prep-stop--dest" style="--i:${gaps.length};" aria-hidden="true">
+      <li class="prep-stop prep-stop--dest" style="--i:${items.length};" aria-hidden="true">
         <span class="prep-dot"></span>
         <span class="prep-stop-name">${escapeHtml(tGoalTitle(goalTitle))}</span>
         <span class="prep-stop-state">${t("ruta.route.dest")}</span>
       </li>`;
-  return `<ol class="prep-route" aria-label="${escapeHtml(t("ruta.route.aria"))}" style="--stops:${gaps.length + 1};">${items}${dest}</ol>`;
+  return `<ol class="prep-route" aria-label="${escapeHtml(t("ruta.route.aria"))}" style="--stops:${items.length + 1};">${items.join("")}${dest}</ol>`;
 }
 
-// Preparación: anillo con el %, qué falta para llegar y la ruta del objetivo parada por parada
-function renderGauge(r) {
+// "+N": la ruta entera en el mismo lugar, sin repetir la entrada; el foco pasa a la primera parada que estaba oculta
+let routeStops = { stops: [], goalTitle: "", goalId: null };
+
+function expandRoute(button) {
+  const route = button.closest(".prep-route");
+  if (!route) return;
+  const before = new Set([...route.querySelectorAll("[data-context]")].map(el => Number(el.dataset.context)));
+  routeExpanded = true;
+  route.outerHTML = renderRouteStops(routeStops.stops, routeStops.goalTitle);
+  const fresh = document.querySelector("#app-content .prep-route");
+  fresh.classList.add("is-expanded");
+  const target = [...fresh.querySelectorAll("[data-context]")].find(el => !before.has(Number(el.dataset.context)));
+  (target || fresh.querySelector("[data-context]"))?.focus({ preventScroll: true });
+}
+
+// Preparación (hero a todo el ancho): anillo grande con el %, el mensaje GPS, "X de N paradas dominadas" y, debajo del
+// texto, la ruta del objetivo parada por parada (stops: routeSkills)
+function renderGauge(r, stops = r.gaps) {
   const radius = 72;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (r.readinessPercentage / 100) * circumference;
@@ -165,7 +244,7 @@ function renderGauge(r) {
             <defs><linearGradient id="gauge-grad-ruta" x1="0" y1="0" x2="1" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs>
             <circle cx="84" cy="84" r="${radius}" fill="none" stroke-width="14" class="gauge-track"/>
             <circle cx="84" cy="84" r="${radius}" fill="none" stroke-width="14" class="gauge-fill" stroke="url(#gauge-grad-ruta)"
-              transform="rotate(-90 84 84)" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
+              transform="rotate(-90 84 84)" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" style="--circ:${circumference};"/>
           </svg>
           <p class="gauge-value" aria-hidden="true" style="--pct:${Math.round(r.readinessPercentage)};"><span>${r.readinessPercentage}%</span></p>
         </div>
@@ -175,7 +254,7 @@ function renderGauge(r) {
           ${count}
         </div>
       </div>
-      ${renderRouteStops(r.gaps, r.goalTitle)}
+      ${renderRouteStops(stops, r.goalTitle)}
     </article>`;
 }
 
@@ -196,13 +275,14 @@ function renderGapRow(s, demands, i) {
     </li>`;
 }
 
-// "Tu semana · brechas prioritarias": el plan de la semana (plan-semanal.js, con su casilla de avance, horas y estado) y,
-// plegadas detrás de "Ver más (n)", las demás brechas del objetivo. reference: habilidades del objetivo contra las que se
-// calculan los niveles de demanda. Al pie, de cuántas ofertas sale la demanda o el aviso de datos de ejemplo.
-function renderBrechas(r, reference, jobStats, catalog, goalId) {
+// "Tu semana · Brechas prioritarias": el plan de la semana (plan-semanal.js, con horas y estado) y, plegadas detrás de
+// "Ver más (n)", las demás brechas del objetivo; las dos listas siguen el orden de las paradas de la ruta (stops). reference:
+// habilidades del objetivo contra las que se calculan los niveles de demanda. Al pie, de cuántas ofertas sale la demanda o
+// el aviso de datos de ejemplo.
+function renderBrechas(r, reference, jobStats, catalog, goalId, stops = r.gaps) {
   const gaps = r.gaps;
   const demands = reference.map(s => s.demandPercentage);
-  const semana = renderSemanaCard(gaps, catalog, goalId, r.goalTitle, demands);
+  const semana = renderSemanaCard(gaps, catalog, goalId, r.goalTitle, demands, stops.map(s => s.id));
   const planIds = new Set(semanaPlanIds());
   const rest = gaps.filter(s => !planIds.has(s.id));
   const statsText = jobStatsText(jobStats);
@@ -736,6 +816,9 @@ async function loadDashboard(goalId, { quiet = false } = {}) {
     const reference = demand.goalSkills.length ? demand.goalSkills : r.gaps;
     renderMarketDemand(demand.goalSkills, demand.catalog);
     const goal = escapeHtml(tGoalTitle(r.goalTitle));
+    const stops = routeSkills(r, demand.goalSkills);
+    if (String(goalId) !== routeStops.goalId) routeExpanded = false; // otro objetivo: la ruta vuelve a verse por tramos
+    routeStops = { stops, goalTitle: r.goalTitle, goalId: String(goalId) };
     // Filas de dos columnas (ancha + angosta); si falta la angosta, la ancha ocupa toda la fila
     const row = (...cards) => {
       const shown = cards.filter(Boolean);
@@ -743,8 +826,8 @@ async function loadDashboard(goalId, { quiet = false } = {}) {
     };
     container.innerHTML = `
       <div class="ruta-grid${silent ? " is-quiet" : ""}">
-        ${row(renderGauge(r))}
-        ${row(renderBrechas(r, reference, jobStats, demand.catalog, goalId), renderRitmoCard(demand.catalog, demand.goalSkills, r))}
+        ${row(renderGauge(r, stops))}
+        ${row(renderBrechas(r, reference, jobStats, demand.catalog, goalId, stops), renderRitmoCard(demand.catalog, demand.goalSkills, r))}
         ${row(renderTrend(history), renderMarketCard(demand.goalSkills, demand.catalog, r.goalTitle))}
         ${row(renderOffersCard(goal))}
         ${row(renderNextAction(r.gaps[0], r.goalTitle))}
@@ -769,8 +852,9 @@ function initRuta() {
     const context = e.target.closest("[data-context]");
     if (context) gapScope = context.closest(".prep-route") ? ".prep-route" : "#brechas-card";
     if (context) { openSkillDetail(Number(context.dataset.context), context); return; } // skill-detalle.js
-    const action = e.target.closest("[data-action]")?.dataset.action;
-    if (action === "show-gaps") showAllGaps();
+    const actionEl = e.target.closest("[data-action]");
+    if (actionEl?.dataset.action === "show-gaps") showAllGaps();
+    if (actionEl?.dataset.action === "show-route") expandRoute(actionEl);
   });
 }
 
@@ -812,6 +896,8 @@ document.addEventListener("skillmap:user", () => {
   rutaStale = false;
   gapFocus = null;
   activeGoalId = null;
+  routeExpanded = false;
+  routeStops = { stops: [], goalTitle: "", goalId: null };
   closeGoalList({ focusButton: false });
   goalPicker.list().innerHTML = "";
   goalPicker.button().disabled = true;

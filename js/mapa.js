@@ -767,6 +767,7 @@ function dismissMapaTip() {
 // El primer posicionado no se anima; con animaciones reducidas el CSS quita la transición y salta directo.
 // En Ajustes (fuera del nav) ningún ítem está activo y el indicador se oculta.
 let navTrailFrom = null; // último ítem activo y su centro, de donde sale la estela al cambiar de sección
+let navIndicatorBox = null; // posición y ancho actuales del indicador (para animarlo solo con transform)
 
 function positionNavIndicator() {
   const nav = document.querySelector(".topnav");
@@ -776,9 +777,19 @@ function positionNavIndicator() {
   nav.classList.toggle("has-active", Boolean(active));
   if (!active) return;
   const indicator = nav.querySelector(".topnav-indicator");
-  indicator.style.width = `${active.offsetWidth}px`;
-  indicator.style.transform = `translateX(${active.offsetLeft}px)`;
-  const center = active.offsetLeft + active.offsetWidth / 2;
+  const x = active.offsetLeft, w = active.offsetWidth;
+  // Solo se anima transform (FLIP): el ancho nuevo se pone de una vez y una escala lo hace partir del ancho anterior
+  const prev = navIndicatorBox;
+  indicator.style.width = `${w}px`;
+  if (prev && prev.w !== w && nav.classList.contains("is-ready") && !prefersReducedMotion()) {
+    indicator.style.transition = "none";
+    indicator.style.transform = `translateX(${prev.x}px) scaleX(${prev.w / w})`;
+    void indicator.offsetWidth;
+    indicator.style.transition = "";
+  }
+  indicator.style.transform = `translateX(${x}px)`;
+  navIndicatorBox = { x, w };
+  const center = x + w / 2;
   if (!nav.classList.contains("is-ready")) {
     void indicator.offsetWidth; // fija la posición inicial antes de activar la transición
     nav.classList.add("is-ready");

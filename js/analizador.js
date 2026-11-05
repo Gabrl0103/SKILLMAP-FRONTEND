@@ -178,22 +178,53 @@ function engineLabel(engine) {
 
 // ---------- Estados: vacío, cargando y error ----------
 
-// Antes del primer análisis: una sola tarjeta que explica qué aparecerá aquí. stale: había un resultado, pero el
+// Antes del primer análisis: una sola tarjeta con un dibujo de lo que pasará (la oferta, sus habilidades aún por
+// detectar y el anillo de compatibilidad vacío) y una invitación a pegar una oferta. stale: había un resultado, pero el
 // progreso cambió desde entonces (habilidad marcada en el Mapa) y su porcentaje ya no vale.
 function renderAnalyzerEmpty({ stale = false } = {}) {
   const title = t(stale ? "analyzer.stale.title" : "analyzer.empty.title");
   const text = t(stale ? "analyzer.stale.text" : "analyzer.empty.text");
   return `
     <div class="analizador-card analizador-empty">
-      <span class="analizador-label-icon" aria-hidden="true">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/><path d="M8 12v-1.5M10.5 12V8.5M13 12v-2.5"/></svg>
-      </span>
-      <div>
+      ${analyzerEmptyArt()}
+      <div class="analizador-empty-copy">
         <p class="analizador-empty-title">${title}</p>
         <p class="analizador-empty-text">${text}</p>
-        ${routeDraw()}
       </div>
     </div>`;
+}
+
+// Dibujo del estado vacío (decorativo): a la izquierda la oferta, con renglones y dos habilidades punteadas (aún sin
+// detectar); un tramo punteado con su punto de control la lleva al anillo vacío de la derecha, con más chips punteados
+// debajo. Solo tokens del tema (claro/oscuro); entra por partes con transform y opacity (styles.css, .aem-*).
+function analyzerEmptyArt() {
+  return `
+      <svg class="analizador-empty-art" width="232" height="153" viewBox="0 0 200 132" aria-hidden="true" focusable="false">
+        <g class="aem-part" style="--i:0;">
+          <rect class="aem-doc" x="2" y="6" width="96" height="120" rx="14"/>
+          <rect class="aem-line aem-line--title" x="16" y="22" width="48" height="8" rx="4"/>
+          <rect class="aem-line" x="16" y="40" width="68" height="6" rx="3"/>
+          <rect class="aem-line" x="16" y="52" width="58" height="6" rx="3"/>
+          <rect class="aem-line" x="16" y="64" width="64" height="6" rx="3"/>
+        </g>
+        <g class="aem-part aem-pop" style="--i:1;">
+          <rect class="aem-chip" x="16" y="84" width="34" height="16" rx="8"/>
+          <rect class="aem-chip" x="54" y="84" width="30" height="16" rx="8"/>
+          <rect class="aem-chip" x="16" y="104" width="26" height="12" rx="6"/>
+        </g>
+        <g class="aem-part" style="--i:2;">
+          <path class="aem-route" d="M106 60H126"/>
+          <circle class="aem-dot" cx="132" cy="60" r="4"/>
+        </g>
+        <g class="aem-part aem-pop" style="--i:3;">
+          <circle class="aem-ring" cx="168" cy="60" r="26"/>
+          <text class="aem-pct" x="168" y="67" text-anchor="middle">%</text>
+        </g>
+        <g class="aem-part aem-pop" style="--i:4;">
+          <rect class="aem-chip" x="140" y="100" width="26" height="14" rx="7"/>
+          <rect class="aem-chip" x="170" y="100" width="26" height="14" rx="7"/>
+        </g>
+      </svg>`;
 }
 
 // Skeleton: misma grilla y tarjetas que el resultado, para que no salte el layout. El texto solo lo leen los lectores

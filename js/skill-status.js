@@ -8,12 +8,18 @@
 const SKILL_STATES = ["PENDING", "IN_PROGRESS", "MASTERED"];
 const SKILL_STATE_CLASS = { MASTERED: "mastered", IN_PROGRESS: "progress", PENDING: "pending" };
 
+// Último estado elegido: la opción nueva entra con un pequeño "pop" (.is-just-set, styles.css) en los repintados de los
+// siguientes segundos, venga de la vista que venga (la vista vuelve a pintar el selector al guardar)
+let statusPulse = null;
+const STATUS_PULSE_MS = 3000;
+
 // busy: guardando (las opciones siguen enfocables, pero no se elige otra hasta que termine); menu: variante menú
 function renderStatusPicker(skill, busy, { menu = false } = {}) {
   const current = SKILL_STATES.includes(skill.status) ? skill.status : "PENDING";
+  const pulse = statusPulse && statusPulse.id === Number(skill.id) && statusPulse.status === current && Date.now() < statusPulse.until;
   const options = SKILL_STATES.map(status => {
     const checked = status === current;
-    return `<button type="button" role="${menu ? "menuitemradio" : "radio"}" class="status-option status-option--${SKILL_STATE_CLASS[status]}"
+    return `<button type="button" role="${menu ? "menuitemradio" : "radio"}" class="status-option status-option--${SKILL_STATE_CLASS[status]}${checked && pulse ? " is-just-set" : ""}"
       aria-checked="${checked}" tabindex="${checked ? 0 : -1}" data-status="${status}">${statusLabel(status)}</button>`;
   }).join("");
   return `<div class="status-picker" role="${menu ? "menu" : "radiogroup"}" data-status-picker="${skill.id}"
@@ -22,7 +28,11 @@ function renderStatusPicker(skill, busy, { menu = false } = {}) {
 
 // Clic, Espacio o Enter en una opción, o flechas / Inicio / Fin dentro del grupo: onPick(id, estado). Un listener por
 // contenedor, porque el selector se vuelve a pintar con cada cambio.
-function bindStatusPicker(container, onPick) {
+function bindStatusPicker(container, pick) {
+  const onPick = (id, status) => {
+    statusPulse = { id, status, until: Date.now() + STATUS_PULSE_MS };
+    pick(id, status);
+  };
   container.addEventListener("click", e => {
     const option = e.target.closest(".status-picker [data-status]");
     if (option) onPick(Number(option.parentElement.dataset.statusPicker), option.dataset.status);

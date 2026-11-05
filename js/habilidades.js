@@ -6,13 +6,14 @@
 // Cada fila: el estado como punto, el nombre (abre el contexto y preguntas frecuentes, skill-detalle.js), la categoría, si
 // está en tu ruta, la demanda (barra y %) y el selector Pendiente / Aprendiendo / Dominada (skill-status.js), el mismo de
 // Mi Ruta. El cambio se ve al instante, se guarda con PUT y avisa a Mapa, Mi Ruta y Perfil (skillmap:progress con source
-// "habilidades"); si el backend falla vuelve al estado anterior con el error en la fila. Al guardar, un aviso ofrece
-// "Deshacer" (vuelve al estado anterior con otro PUT). Se repinta conservando el foco.
+// "habilidades"); si el backend falla vuelve al estado anterior con el error en la fila. Al guardar, el aviso breve de
+// toast.js ofrece "Deshacer" (vuelve al estado anterior con otro PUT). Se repinta conservando el foco.
 // renderSkillSummary también lo usa el resumen "Mis habilidades" de Perfil (perfil.js).
 // Usa fetchSkills, fetchGoals, getActiveGoalId, savedGoalId, renderApiError y sampleDemandNote (dashboard.js),
 // groupByCategory, escapeHtml y showView (mapa.js), renderStatusPicker, bindStatusPicker, focusStatusPicker,
 // saveSkillStatus, SKILL_STATES y SKILL_STATE_CLASS (skill-status.js), skillDetail y openSkillDetail (skill-detalle.js),
-// routeDraw (route-motif.js), prefersReducedMotion (theme.js), friendlyError (session.js) y t, tn, statusLabel, tSkill,
+// routeDraw (route-motif.js), prefersReducedMotion (theme.js), showToast y hideToast (toast.js), friendlyError
+// (session.js) y t, tn, statusLabel, tSkill,
 // tCategory y tGoalTitle (i18n.js).
 
 const HAB_FILTER_KEY = "skillmap.habilidades.filter";
@@ -154,16 +155,15 @@ function renderHabShowing(skills) {
   return t("habilidades.showing", { n: habVisible(skills).length, total: skills.length });
 }
 
-// Aviso tras guardar un cambio, con "Deshacer"
-function renderHabToast() {
-  const toast = document.getElementById("hab-toast");
-  const skill = hab.undo && hab.skills?.skills?.find(s => s.id === hab.undo.id);
-  if (!skill) { toast.innerHTML = ""; return; }
-  toast.innerHTML = `
-    <div class="objetivo-toast hab-toast-box">
-      <p>${escapeHtml(t("state.saved", { name: tSkill(skill.name), status: statusLabel(habSkillStatus(skill)) }))}</p>
-      <button type="button" class="btn-ghost btn-ghost--strong" data-action="undo"${hab.saving !== null ? " disabled" : ""}>${t("objetivo.undo")}</button>
-    </div>`;
+// Aviso breve tras guardar un cambio, con "Deshacer" (toast.js). Si al deshacer otra fila se está guardando, espera.
+function showHabToast(skill) {
+  showToast({
+    owner: "habilidades",
+    text: t("toast.status", { name: tSkill(skill.name), status: statusLabel(habSkillStatus(skill)) }),
+    onUndo: () => { if (hab.undo && hab.saving === null) setHabSkillStatus(hab.undo.id, hab.undo.status, { undo: true }); },
+    fallbackFocus: () => document.querySelector(`#habilidades-content [data-skill-row="${skill.id}"] .status-picker [aria-checked='true']`)
+      || document.getElementById("habilidades-title"),
+  });
 }
 
 // Vista completa: cargando, error o resumen + lista. La lista entra escalonada solo aquí (.is-new); los repintados de
@@ -194,7 +194,6 @@ function paintHabilidades({ keepFocus = false } = {}) {
         ${note}
       </section>`;
   }
-  renderHabToast();
   if (focus) focusHab(focus);
 }
 
@@ -211,7 +210,6 @@ function refreshHabList(focus = habFocus()) {
   document.getElementById("hab-showing").textContent = renderHabShowing(skills);
   body.classList.remove("is-new");
   body.innerHTML = renderHabBody(skills);
-  renderHabToast();
   if (focus) focusHab(focus);
 }
 
@@ -221,7 +219,6 @@ function focusHab(focus) {
     document.querySelector(`#hab-filters [data-skill-filter="${focus.filter}"]`)?.focus({ preventScroll: true });
     return;
   }
-  if (focus.undo) { document.querySelector("#hab-toast [data-action='undo']")?.focus({ preventScroll: true }); return; }
   const row = document.querySelector(`#habilidades-content [data-skill-row="${focus.id}"]`);
   if (!row) document.getElementById("habilidades-title")?.focus({ preventScroll: true });
   else if (focus.kind === "picker") focusStatusPicker(row);
@@ -230,7 +227,6 @@ function focusHab(focus) {
 
 function habFocus() {
   const active = document.activeElement;
-  if (active?.closest("#hab-toast")) return { undo: true };
   if (!active?.closest("#habilidades-content")) return null;
   if (active.dataset.skillFilter) return { filter: active.dataset.skillFilter };
   const row = active.closest("[data-skill-row]");
@@ -269,7 +265,8 @@ async function setHabSkillStatus(id, status, { undo = false } = {}) {
     const saved = replaceHabSkill(id, updated);
     hab.saving = null;
     hab.undo = undo ? null : { id, status: previous.status };
-    announceHab(t(undo ? "habilidades.undone" : "state.saved", { name: tSkill(saved.name), status: statusLabel(saved.status) }));
+    if (undo) announceHab(t("habilidades.undone", { name: tSkill(saved.name), status: statusLabel(saved.status) }));
+    else showHabToast(saved); // el aviso (role="status") lo leen los lectores de pantalla
     // Mapa actualiza el nodo, Mi Ruta y el Analizador descartan sus datos y Perfil recalcula estadísticas y logros
     document.dispatchEvent(new CustomEvent("skillmap:progress", { detail: { skill: saved, source: "habilidades" } }));
   } catch (err) {
@@ -331,10 +328,6 @@ function initHabilidades() {
       return;
     }
     const action = e.target.closest("[data-action]");
-    if (action?.dataset.action === "undo" && hab.undo && !action.disabled) {
-      setHabSkillStatus(hab.undo.id, hab.undo.status, { undo: true });
-      return;
-    }
     if (action?.dataset.action === "view-route") {
       showView("dashboard");
       window.scrollTo(0, 0);
@@ -355,8 +348,9 @@ document.addEventListener("skillmap:progress", e => {
   if (e.detail?.source === "habilidades") return;
   hab.request++;
   hab.undo = null;
+  hideToast("habilidades");
   const skill = e.detail?.skill;
-  if (!skill || !hab.skills?.skills?.some(s => s.id === skill.id)) { renderHabToast(); return; }
+  if (!skill || !hab.skills?.skills?.some(s => s.id === skill.id)) return;
   replaceHabSkill(skill.id, skill);
   if (skillDetail.from === "habilidades") hab.keep.add(skill.id);
   refreshHabList(null);
@@ -367,7 +361,6 @@ document.addEventListener("skillmap:user", () => {
   Object.assign(hab, { skills: null, goal: null, saving: null, error: null, errorId: null, undo: null });
   hab.keep.clear();
   document.getElementById("hab-summary").innerHTML = "";
-  document.getElementById("hab-toast").innerHTML = "";
   document.getElementById("habilidades-content").replaceChildren();
 });
 

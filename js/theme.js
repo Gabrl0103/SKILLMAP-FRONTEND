@@ -111,21 +111,16 @@ function setLanguage(language) {
   return saveSettings({ language });
 }
 
-// Botón de tema de la barra superior ("Modo oscuro", presionado en oscuro) y botones de opción si los hubiera
+// Botón de tema de la barra superior ("Modo oscuro", presionado en oscuro). Ajustes > Apariencia lee el mismo estado
+// (getTheme) y los dos cambian el tema con setTheme: no hay otra lógica de tema.
 function syncThemeSwitch() {
-  const theme = getTheme();
-  document.querySelectorAll("[data-theme-option]").forEach(button => {
-    button.setAttribute("aria-pressed", String(button.dataset.themeOption === theme));
-  });
+  const dark = getTheme() === "dark";
   document.querySelectorAll("[data-theme-toggle]").forEach(button => {
-    button.setAttribute("aria-pressed", String(theme === "dark"));
+    button.setAttribute("aria-pressed", String(dark));
   });
 }
 
-document.querySelectorAll("[data-theme-option]").forEach(button => {
-  button.addEventListener("click", () => setTheme(button.dataset.themeOption).catch(() => { /* sin backend: solo esta sesión */ }));
-});
-// Alterna al instante; setTheme guarda la copia local y la preferencia en el backend, como el tema de Ajustes
+// Alterna al instante; setTheme guarda la copia local (la recuerda antes del login) y la preferencia en el backend
 document.querySelectorAll("[data-theme-toggle]").forEach(button => {
   button.addEventListener("click", () => setTheme(getTheme() === "dark" ? "light" : "dark").catch(() => { /* sin backend: solo esta sesión */ }));
 });

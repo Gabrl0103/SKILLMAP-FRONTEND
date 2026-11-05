@@ -24,13 +24,18 @@ colors:
   map-canvas: "#FBEFF3"
   white: "#FFFFFF"
   carbon: "#1F1D23"
+  text-2: "#625E6D"
+  text-mid: "#555162"
+  text-2-page: "#524E5B"
+  text-2-dark: "#B7BCD2"
+  text-mid-dark: "#C6CBDE"
 typography:
   display:
     fontFamily: "Plus Jakarta Sans, ui-sans-serif, system-ui, -apple-system, sans-serif"
     fontSize: "3rem"
-    fontWeight: 800
-    lineHeight: 1.15
-    letterSpacing: "-0.02em"
+    fontWeight: 500
+    lineHeight: 1.1
+    letterSpacing: "-0.035em"
   headline:
     fontFamily: "Plus Jakarta Sans, ui-sans-serif, system-ui, -apple-system, sans-serif"
     fontSize: "1.75rem"
@@ -45,9 +50,9 @@ typography:
     fontFeature: "tnum"
   title:
     fontFamily: "Plus Jakarta Sans, ui-sans-serif, system-ui, -apple-system, sans-serif"
-    fontSize: "1.05rem"
+    fontSize: "1.375rem"
     fontWeight: 600
-    letterSpacing: "-0.01em"
+    letterSpacing: "-0.015em"
   body:
     fontFamily: "Plus Jakarta Sans, ui-sans-serif, system-ui, -apple-system, sans-serif"
     fontSize: "0.85rem"
@@ -233,13 +238,18 @@ La aplicación es solo de escritorio (ancho de diseño 1440px). Barra superior p
 Fuente única de tokens en `:root` de `css/styles.css` (iguales en los dos temas):
 - **Espacios:** `--space-1…10` (4, 8, 12, 16, 20, 24, 32, 40px), `--card-pad` 32px, `--grid-gap` 24px, `--content-max` 1200px, `--page-gutter` 32px.
 - **Radios:** `--radius-card` 24px (tarjetas), `--radius-tile` 20px (fichas internas, menús), `--radius-control` 14px (opciones de menú), `--radius-pill` (botones, chips).
-- **Tipografía:** `--fs-display` 48/800 (título de cada vista, sólido, sin degradado), `--fs-h2` 22/800 (título de tarjeta), `--fs-row` 17/700 (nombre de habilidad u oferta), `--fs-body` 15, `--fs-sm` 14, `--fs-xs` 13, `--fs-label` 12/700. Los números grandes van en 800.
-- **Controles:** `--hit` 44px de alto mínimo. Un solo botón con el gradiente de acción por vista (`.btn-pill`); el resto es `.btn-ghost` (contorno fino, 14/700) o `.btn-ghost--strong` para la acción de una tarjeta (Sí, cambiar, Deshacer).
+- **Tipografía (ajustes R3):** la de la Introducción en toda la app, con la escala del rediseño. Plus Jakarta Sans local (`assets/fonts`, `@font-face` al inicio de styles.css, sin internet), en `--font-sans`. Pesos por papel: `--fw-display` 500 con `--ls-display` -.035em (título de vista 48px, nombre de Perfil 40px; con el degradado `--title-grad` del título de la Intro), `--ls-heading` -.025em para títulos grandes de tarjeta (36 y 28px, en 500); `--fw-title` 600 con `--ls-title` -.015em (título de tarjeta 22, de ruta 20, nombre de parada); `--fw-num` 300 con `--ls-num` -.03em para números grandes (Light Numbers Rule: anillo, %, totales, rachas); `--fw-strong` 700 para énfasis chico, botones y CTA; `--fw-nav` 600 en el nav. Tamaños sin cambio: `--fs-display` 48, `--fs-h2` 22, `--fs-row` 17, `--fs-body` 15, `--fs-sm` 14, `--fs-xs` 13, `--fs-label` 12.
+- **Acabados (ajustes R3, del diseño anterior):** vidrio (`--glass-bg`, `--glass-bg-strong`, `--glass-border`, `--glass-blur`, `--glass-shadow(-sm)`) en el nav, los botones redondos de la barra, menús, filtros de Habilidades, búsqueda de Objetivo, chips y avisos; sin `backdrop-filter` o con transparencia reducida pasan a sólidos (`--glass-solid`). Tarjetas con velo claro arriba (`--card-sheen`) y filo de luz (`--card-edge`); botones de acción, opción de estado elegida, avatar y Siguiente giro con reflejo (`--btn-sheen`, `--btn-edge`) y halo (`--action-glow`, `--action-glow-hover`); tarjetas de Objetivo con `--card-glow-hover`; Ajustes activo en la barra con el gradiente de acción; badges de demanda en mayúsculas espaciadas (11px, .06em) con borde fino de su color (`--chip-line*`); parada dominada con halo menta (`--mint-glow`); trazo del anillo con brillo suave.
+- **Controles:** `--hit` 44px de alto mínimo. Un solo botón con el gradiente de acción por vista (`.btn-pill`); el resto es `.btn-ghost` (contorno fino, 14/700) o `.btn-ghost--strong` para la acción de una tarjeta o de un aviso (Deshacer, Editar perfil).
+- **Texto secundario:** `--text-2` (#625E6D claro, #B7BCD2 oscuro) para descripciones, porcentajes y apoyo; `--text-mid` un paso más fuerte (#555162 / #C6CBDE); `--text-2-page` (#524E5B) directo sobre el fondo de página. Mínimos medidos: 5.7:1 en claro sobre `--surface-2` y 7.9:1 en oscuro sobre la superficie más clara.
 - **Grillas:** filas de una columna ancha y una de 360px (Mi Ruta, Perfil, Analizador); Objetivo y Ofertas para ti en rejillas de 3; Ajustes en dos columnas iguales (Apariencia e Idioma | Ofertas de empleo) con Seguridad a todo el ancho.
-- **Mi Ruta:** la preparación va sola en la primera fila, a todo el ancho: anillo y texto a la izquierda y, a la derecha, la ruta del objetivo como el antiguo riel de Brechas (una parada por brecha en el orden de demanda, punto de estado, nombre que abre el detalle de la habilidad y el destino con la diana al final; los puntos entran en orden y cada tramo punteado se traza hacia la siguiente parada). Siguiente giro cierra la vista, a todo el ancho, con el texto a la izquierda y "Ver cómo empezar" a la derecha.
-- **Objetivo:** toda la tarjeta de una ruta es el botón para elegirla ("Elegir esta ruta →" siempre a la vista al pie; en hover y foco sube y el borde toma el rosa). Elegir pide confirmación en la tarjeta (Esc la cancela) y el aviso con Deshacer queda arriba. "Otro objetivo" usa la misma tarjeta con borde punteado y "Próximamente" donde va el %, y ocupa las columnas que sobran en su fila para que la rejilla no deje huecos. La búsqueda usa la superficie, el borde y la tipografía de las tarjetas.
+- **Mi Ruta:** la preparación va sola en la primera fila, a todo el ancho y sin otra tarjeta al lado: el anillo grande (200px) a la izquierda ocupa dos filas; a su derecha, el título, el mensaje GPS y "X de N paradas dominadas" y, debajo, tras un divisor, la ruta del objetivo como el antiguo riel de Brechas (una parada por habilidad del objetivo en el orden de demanda, también las dominadas, que se quedan en su lugar en menta con ✓; punto de estado, nombre que abre el detalle de la habilidad y el destino con la diana al final; los puntos entran en orden, cada tramo punteado se traza hacia la siguiente parada y entre dos dominadas el tramo es menta continuo). Con más de 7 paradas se ve una ventana de 5 (las 2 dominadas más recientes y las siguientes pendientes, en su orden) y cada tramo oculto queda como un "+N" punteado en su lugar, que despliega la ruta entera. Siguiente giro cierra la vista, a todo el ancho, con el texto a la izquierda y "Ver cómo empezar" a la derecha.
+- **Objetivo:** toda la tarjeta de una ruta es el botón para elegirla ("Elegir esta ruta →" siempre a la vista al pie; en hover y foco sube y el borde toma el rosa). Un toque elige la ruta al instante (la tarjeta dice "Guardando…" mientras tanto) y sale el aviso "Nuevo destino: X" con Deshacer. La página no se mueve: solo cambian la tarjeta del objetivo actual, la tarjeta tocada (en su hueco entra la ruta anterior, con un fundido) y el "en común" de las demás; la rejilla se mantiene en el mismo punto de la pantalla. "Otro objetivo" usa la misma tarjeta con borde punteado y "Próximamente" donde va el %, y ocupa las columnas que sobran en su fila para que la rejilla no deje huecos. La búsqueda usa la superficie, el borde y la tipografía de las tarjetas.
 - **Encabezado de vista** (`.view-header`): título y bajada de 18px; sin rótulo encima salvo "Objetivo actual" en Mi Ruta.
-- **Avisos con Deshacer:** píldora con borde menta (el cambio quedó hecho) y "Deshacer" a la derecha: tras cambiar de objetivo (Objetivo) y tras cambiar un estado (Habilidades, pegada bajo la barra superior).
+- **Avisos con Deshacer** (`js/toast.js`, uno para toda la app): píldora chica de vidrio de 44px, ajustada al texto, en la esquina inferior derecha, con marca menta (el cambio quedó hecho), texto corto ("Nuevo destino: X", "React: Dominada") y "Deshacer" en texto rosa (32px a la vista, 44px de área). Sale tras cambiar de objetivo (Objetivo) y tras cambiar un estado (Habilidades y Tu semana en Mi Ruta). `role="status"`, primer hijo de `<main>` (Mayús+Tab desde la vista llega a Deshacer); se va sola a los 3 s, espera mientras el puntero o el foco están encima y Esc la cierra. Entra subiendo con un fundido y sale bajando (transform y opacity).
+- **Tu semana · Brechas prioritarias:** la lista sigue el orden de las paradas de la ruta; una habilidad que pasa a Dominada conserva su lugar (en menta, con "Esta semana") y la siguiente brecha entra al plan en el lugar que le toca. Filas con 24px arriba y abajo; 12px entre el nombre con su etiqueta y la barra, y 20px entre columnas (habilidad, horas y selector).
+- **Analizador sin análisis:** tarjeta con un dibujo SVG de tokens (la oferta con renglones y habilidades punteadas, un tramo con su punto de control y el anillo vacío con chips punteados) que entra por partes, y la invitación "Pega una oferta para empezar".
+- **Movimiento:** solo transform y opacity con `--ease-out` y `--dur-fast` / `--dur` / `--dur-slow`: cada vista entra con un fundido corto, las tarjetas suben escalonadas, las barras crecen desde la izquierda (`scale`), el indicador del nav se desliza y se estira con transform, los menús bajan desde su esquina, la opción de estado elegida late una vez, botones y círculos de la barra suben 1px en hover y se encogen al pulsar, y las filas de Habilidades y Tu semana toman un velo suave en hover. El anillo y la tendencia se trazan con `stroke-dashoffset`. Con `prefers-reduced-motion` o "Reducir animaciones" no queda ninguna animación ni transición (salvo el fundido de 120ms del cambio de vista).
 
 ## Elevation & Depth
 
@@ -296,7 +306,7 @@ Suaves y táctiles: todo lo que se toca responde al hover y al clic sin brusqued
 - **Sidebar:** blanco y fijo. Ítems de 0.9rem en 600 y gris, con radio de 1.1rem. En hover, Bruma Rosa con texto rosa; el activo va en Rosa Ruta con texto blanco y halo de acción. Por debajo de 640px quedan solo los íconos.
 
 ### Gauge
-Anillo de 160px con trazo de 18 sobre pista Niebla, en Rosa Ruta. Al aparecer, el anillo se llena y el número cuenta desde 0 a la par (800ms). Es el mismo componente en Mi Ruta y en el Analizador.
+Anillo de 160px con trazo de 18 sobre pista Niebla, en Rosa Ruta. Al aparecer, el anillo se llena desde vacío y el número cuenta desde 0 a la par (3 × `--dur-slow`, 750ms). Es el mismo componente en Mi Ruta (200px) y en el Analizador (160px).
 
 ### Historial del Analizador
 Tarjeta blanca bajo el resultado, con medidas en múltiplos de 8px. Cada análisis es una fila (borde Línea de Tarjeta, radio 16px) con el % de entonces en una pastilla rosa, el título, la fecha y quién lo analizó (Gemini, IA en la nube o Caché), y una papelera a la derecha. Al abrir uno, el resultado se recalcula con el progreso actual y lo encabeza un aviso azul informativo ("Resultado recalculado con tu progreso actual"); la fila abierta queda en Tinte Rosa con borde rosa. Borrar uno o "Borrar historial" se confirma en el lugar (fondo rosa claro, "Sí, borrar" con contorno y "Cancelar"), porque no se puede deshacer. Vacío con el Motivo de Ruta; carga con la línea en bucle; error con borde rosa punteado y "Reintentar".
