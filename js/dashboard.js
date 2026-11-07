@@ -113,20 +113,16 @@ function renderMarketCard(goalSkills, catalog, goalTitle) {
     </article>`;
 }
 
-// Paradas de la ruta: todas las habilidades del objetivo, también las dominadas, en el orden de la API (por demanda). Las
-// dominadas no vienen en r.gaps: se intercalan donde les toca por su demanda (con la misma demanda, después de las
-// brechas). Sin las habilidades del objetivo (goalSkills vacío), solo las brechas. Es el orden de "Tu semana" también.
+// Paradas de la ruta: todas las habilidades del objetivo, también las dominadas, por demanda. Las dominadas no vienen en
+// r.gaps: se intercalan donde les toca por su demanda. Con la misma demanda decide el orden de la ruta (goalSkills), no el
+// estado: una habilidad no salta de lugar al marcarla Dominada. Sin las habilidades del objetivo (goalSkills vacío), solo
+// las brechas. Es el orden de "Tu semana" también.
 function routeSkills(r, goalSkills) {
   const gapIds = new Set(r.gaps.map(s => s.id));
-  const done = goalSkills.filter(s => !gapIds.has(s.id))
-    .sort((a, b) => b.demandPercentage - a.demandPercentage || a.name.localeCompare(b.name));
-  const stops = [];
-  let j = 0;
-  for (const gap of r.gaps) {
-    while (j < done.length && done[j].demandPercentage > gap.demandPercentage) stops.push(done[j++]);
-    stops.push(gap);
-  }
-  return stops.concat(done.slice(j));
+  const done = goalSkills.filter(s => !gapIds.has(s.id));
+  const order = new Map(goalSkills.map((s, i) => [s.id, i]));
+  const rank = s => order.get(s.id) ?? goalSkills.length;
+  return [...r.gaps, ...done].sort((a, b) => b.demandPercentage - a.demandPercentage || rank(a) - rank(b));
 }
 
 // Con más de ROUTE_MAX_STOPS paradas la ruta se ve por tramos: ROUTE_SHOWN paradas, las dominadas más recientes (hasta
