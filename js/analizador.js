@@ -4,9 +4,11 @@
 
 // ---------- API ----------
 
-const ANALYZER_MAX_CHARS = 8000;   // mismo tope que el backend (JobAnalyzerServiceImpl.MAX_DESCRIPTION_LENGTH)
-// Sin key propia el backend usa el servicio de IA en la nube: conexión 10 s + lectura 90 s (Render tarda en despertar).
-const ANALYZER_TIMEOUT_MS = 110000;
+const ANALYZER_MIN_CHARS = 80;     // sin espacios al principio y al final; con menos el botón queda deshabilitado
+const ANALYZER_MAX_CHARS = 6000;   // por debajo del tope del backend (JobAnalyzerServiceImpl.MAX_DESCRIPTION_LENGTH, 8000)
+// Sin key propia el backend usa el servicio de IA en la nube (hasta 90 s si Render despierta). El cliente no espera
+// tanto: a los 40 s corta y muestra el error con "Reintentar" (el backend puede terminar y guardarlo en el historial).
+const ANALYZER_TIMEOUT_MS = 40000;
 const ANALYZER_WAKE_NOTICE_MS = 5000; // pasado esto se avisa de que el servicio puede estar despertando
 const HISTORY_MAX = 100;              // el backend guarda como mucho 100 análisis por usuario
 const HISTORY_PAGE = 20;              // los que se ven de entrada; "Mostrar más" suma otros tantos
@@ -277,6 +279,7 @@ function renderAnalyzerError(err, titleKey = "analyzer.error.title") {
 let analyzerRequest = 0;    // evita que un análisis viejo pise al más reciente (también al abrir uno del historial)
 let analyzerShown = false;  // hay un resultado a la vista (lo que el cambio de progreso deja viejo)
 let analyzerStale = false;  // el progreso cambió después de ese resultado
+let analyzerBusy = false;   // hay un análisis en curso (el botón también se deshabilita con un texto corto)
 // Lo que muestra el área de resultado, para volver a pintarlo al cambiar de idioma: "empty" ({ stale }), "result" (la
 // respuesta), "history" (un análisis guardado), "error" (el Error) u "historyError" ({ err, id }). Durante un análisis vale
 // null: el skeleton se reemplaza al terminar.
@@ -298,7 +301,8 @@ function showAnalyzerResult(kind, data) {
 // Mientras analiza el botón queda deshabilitado (conserva su rosa) y el texto avisa de la espera.
 function setAnalyzing(isAnalyzing) {
   const button = document.getElementById("analizador-submit");
-  button.disabled = isAnalyzing;
+  analyzerBusy = isAnalyzing;
+  button.disabled = isAnalyzing || missingChars() > 0;
   button.querySelector("[data-label]").textContent = t(isAnalyzing ? "analyzer.analyzing" : "analyzer.submit");
   button.setAttribute("aria-busy", String(isAnalyzing));
 }
@@ -307,12 +311,22 @@ function showEmptyWarning(show) {
   document.getElementById("analizador-warning").hidden = !show;
 }
 
-// "1234 / 8.000" ("8,000" en inglés). Al llegar al tope el contador se pone rosa y se avisa una vez al lector de pantalla.
+// Caracteres que faltan para el mínimo (0 si ya llega)
+function missingChars() {
+  return Math.max(0, ANALYZER_MIN_CHARS - document.getElementById("analizador-text").value.trim().length);
+}
+
+// "Faltan 23 caracteres" por debajo del mínimo (con el botón deshabilitado); si no, "1234 / 6.000" ("6,000" en inglés).
+// Al llegar al tope el contador se pone rosa y se avisa una vez al lector de pantalla.
 function updateCounter() {
   const length = document.getElementById("analizador-text").value.length;
+  const missing = missingChars();
   const atLimit = length >= ANALYZER_MAX_CHARS;
   const counter = document.getElementById("analizador-count");
-  counter.textContent = `${formatNumber(length)} / ${formatNumber(ANALYZER_MAX_CHARS)}`;
+  counter.textContent = missing
+    ? tn("analyzer.minChars", missing)
+    : `${formatNumber(length)} / ${formatNumber(ANALYZER_MAX_CHARS)}`;
+  document.getElementById("analizador-submit").disabled = analyzerBusy || missing > 0;
   counter.classList.toggle("analizador-count--limit", atLimit);
   const live = document.getElementById("analizador-count-live");
   const message = atLimit ? t("analyzer.limit", { max: formatNumber(ANALYZER_MAX_CHARS) }) : "";
@@ -329,7 +343,7 @@ async function runAnalysis() {
     textarea.focus();
     return;
   }
-  if (button.disabled) return;
+  if (analyzerBusy || missingChars()) return;
   showEmptyWarning(false);
   const requestId = ++analyzerRequest;
   const hadFocus = document.activeElement === button || result.contains(document.activeElement);
@@ -616,7 +630,7 @@ function prefillAnalyzer(text, title) {
   textarea.value = text.slice(0, ANALYZER_MAX_CHARS);
   updateCounter();
   showEmptyWarning(false);
-  if (!document.getElementById("analizador-submit").disabled) {
+  if (!analyzerBusy) {
     analyzerRequest++; // una apertura del historial en vuelo ya no pisa el aviso
     analyzerShown = false;
     analyzerStale = false;
@@ -663,7 +677,7 @@ document.addEventListener("skillmap:user", () => {
 
 // Cambio de idioma: botón, contador, historial y lo que esté a la vista (un análisis en curso se pinta al terminar)
 document.addEventListener("skillmap:language", () => {
-  setAnalyzing(document.getElementById("analizador-submit").disabled);
+  setAnalyzing(analyzerBusy);
   updateCounter();
   renderHistory();
   if (analyzerView) showAnalyzerResult(analyzerView.kind, analyzerView.data);
