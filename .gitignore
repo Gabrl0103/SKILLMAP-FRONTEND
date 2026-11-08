@@ -1,7 +1,33 @@
+# --- Generados (este repo no tiene build, pero por si acaso) ---
+dist/
+out/
+node_modules/
 
+# --- Logs y temporales ---
+*.log
+logs/
+*.tmp
+*.zip
+
+# --- Variables de entorno ---
+.env
+.env.*
+
+# --- IDE (no hay configuración compartida) ---
+.idea/
+*.iml
+.vscode/
+
+# --- Sistema operativo ---
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- Archivos locales de asistentes de IA y de Impeccable (no forman parte del proyecto) ---
+SKILL.md
 .agents/
 .claude/
 skills-lock.json
 .impeccable/design.json
-
 .impeccable/critique/
+.impeccable/live/
