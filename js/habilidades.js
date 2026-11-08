@@ -52,15 +52,17 @@ function habCounts(skills) {
 // "4 dominadas · 3 aprendiendo · 13 pendientes", cada uno con el círculo de su estado (menta, rosa→violeta, punteado).
 // bar: debajo, la barra de proporciones (menta y rosa→violeta sólidos; lo pendiente, la pista vacía). La barra es
 // decorativa: la leyenda ya dice los números.
-function renderSkillSummary(skills, { bar = false } = {}) {
+// motion: prefijo de las claves de motion.js (los números y la barra van del valor anterior al nuevo); sin él, quietos
+function renderSkillSummary(skills, { bar = false, motion = "" } = {}) {
   const counts = habCounts(skills);
+  const mark = (kind, key, value) => (motion ? ` data-motion="${kind}:${motion}-${key}"${value == null ? "" : ` data-value="${value}"`}` : "");
   const items = HAB_SUMMARY.map(status => `
     <li class="hab-summary-item">
       <span class="hab-dot hab-dot--${SKILL_STATE_CLASS[status]}" aria-hidden="true"></span>
-      <strong>${counts[status]}</strong> ${tn(`habilidades.summary.${status}`, counts[status])}
+      <strong${mark("count", status)}>${counts[status]}</strong> ${tn(`habilidades.summary.${status}`, counts[status])}
     </li>`).join("");
   const segments = bar && skills.length ? ["MASTERED", "IN_PROGRESS"].filter(status => counts[status]).map(status =>
-    `<span class="hab-bar hab-bar--${SKILL_STATE_CLASS[status]}" style="flex-basis:${(counts[status] / skills.length) * 100}%"></span>`).join("") : "";
+    `<span class="hab-bar hab-bar--${SKILL_STATE_CLASS[status]}" style="flex-basis:${(counts[status] / skills.length) * 100}%"${mark("bar", `bar-${status}`, (counts[status] / skills.length) * 100)}></span>`).join("") : "";
   return `
     ${bar && skills.length ? `<div class="hab-summary-bar" aria-hidden="true">${segments}</div>` : ""}
     <ul class="hab-summary" aria-label="${t("habilidades.summary.label")}">${items}</ul>`;
@@ -76,7 +78,7 @@ function renderHabOverview(skills) {
     <div class="hab-goal">
       <span class="hab-goal-label">${t("habilidades.goal.label")}</span>
       <span class="hab-goal-name">${escapeHtml(tGoalTitle(goal.title))}</span>
-      <span class="hab-goal-count">${t("habilidades.goal.count", { n: `<strong>${goalDone}</strong>`, total: `<strong>${goalSkills.length}</strong>` })}</span>
+      <span class="hab-goal-count">${t("habilidades.goal.count", { n: `<strong data-motion="count:hab-goal-done">${goalDone}</strong>`, total: `<strong>${goalSkills.length}</strong>` })}</span>
       <button type="button" class="hab-goal-link" data-action="view-route">${t("objetivo.viewRoute")}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button>
@@ -84,9 +86,9 @@ function renderHabOverview(skills) {
   return `
     <section class="ruta-card hab-overview" aria-labelledby="hab-overview-title">
       <div class="hab-overview-main">
-        <h2 id="hab-overview-title" class="hab-overview-title"><strong>${counts.MASTERED}</strong>
+        <h2 id="hab-overview-title" class="hab-overview-title"><strong data-motion="count:hab-overview">${counts.MASTERED}</strong>
           <span>${t("habilidades.overview", { total: skills.length })}</span></h2>
-        ${renderSkillSummary(skills, { bar: true })}
+        ${renderSkillSummary(skills, { bar: true, motion: "hab" })}
       </div>
       ${side}
     </section>`;
@@ -182,6 +184,7 @@ function paintHabilidades({ keepFocus = false } = {}) {
   } else {
     const { skills } = hab.skills;
     summary.innerHTML = skills.length ? renderHabOverview(skills) : "";
+    settleMotion(summary); // motion.js
     // La demanda se marca como ejemplo mientras alguna habilidad la tenga sembrada (demandIsSample)
     const note = skills.length ? sampleDemandNote("hab-sample-note", skills) : "";
     content.innerHTML = `
@@ -206,6 +209,7 @@ function refreshHabList(focus = habFocus()) {
   const summary = document.getElementById("hab-summary");
   summary.classList.remove("is-new");
   summary.innerHTML = skills.length ? renderHabOverview(skills) : "";
+  settleMotion(summary); // motion.js: números y barra desde el valor anterior
   document.getElementById("hab-filters").innerHTML = renderHabFilters(skills);
   document.getElementById("hab-showing").textContent = renderHabShowing(skills);
   body.classList.remove("is-new");

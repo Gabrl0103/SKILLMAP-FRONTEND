@@ -111,6 +111,9 @@
 
   /* Comunes (iguales en los dos temas). Escala del rediseño visual: una sola fuente de radios, espacios y tipografía */
   --radius-card:24px; --radius-tile:20px; --radius-control:14px; --radius-pill:999px;
+  /* Hover y foco de controles sin borde propio (nodos de la ruta, filas, ítems de menú, botones de ícono): el mismo velo,
+     el mismo radio y el mismo margen alrededor del contenido en los cuatro lados */
+  --hover-bg:var(--surface-2); --hover-radius:var(--radius-control); --hover-pad:var(--space-2);
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px;
   --card-pad:32px; --grid-gap:24px; --content-max:1200px; --page-gutter:32px;
   /* Tipografía: la de la Introducción (Plus Jakarta Sans local, assets/fonts): títulos grandes en 500 con el tracking
@@ -239,7 +242,9 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 @keyframes gauge-fill-in { from { stroke-dashoffset:var(--circ, 389.56); } }
 @keyframes gauge-count { from { --gauge-pct:0; } }
 .gauge-ring { position:relative; width:160px; height:160px; }
-.gauge-ring svg { width:100%; height:100%; }
+/* overflow visible: el brillo del trazo (drop-shadow, en "Acabados") se recortaba en el borde del SVG y se veía un
+   cuadro alrededor del anillo */
+.gauge-ring svg { width:100%; height:100%; overflow:visible; }
 .gauge-ring stop:first-child { stop-color:var(--chart-from); }
 .gauge-ring stop:last-child { stop-color:var(--chart-to); }
 .gauge-track { stroke:var(--faint); }
@@ -250,6 +255,9 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 .gauge-value > span { display:none; }
 .gauge-value::before { content:counter(gauge-pct); }
 .gauge-value::after { content:"%"; color:var(--text-mid); font-size:1.2rem; margin:.7rem 0 0 .1rem; }
+/* Al repintar con un valor anterior (motion.js, .is-update) no se repite el llenado desde 0: el trazo y el número van
+   del valor anterior al nuevo con requestAnimationFrame */
+.gauge-ring.is-update .gauge-fill, .gauge-ring.is-update .gauge-value { animation:none; }
 @media (prefers-reduced-motion: reduce) { .gauge-fill, .gauge-value { animation:none; } }
 :root[data-motion="reduced"] .gauge-fill, :root[data-motion="reduced"] .gauge-value { animation:none; }
 
@@ -299,7 +307,7 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 .nav-item { position:relative; z-index:1; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; height:var(--hit); padding:0 18px;
   border-radius:var(--radius-pill); font-size:var(--fs-sm); font-weight:var(--fw-nav); white-space:nowrap; color:var(--nav-fg); cursor:pointer;
   transition:color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out); }
-.nav-item:not(.active):hover { color:var(--text); background:var(--surface-2); }
+.nav-item:not(.active):hover { color:var(--text); background:var(--hover-bg); }
 .nav-item.active { color:var(--on-action); }
 /* Sin JS el indicador no se ve: el activo lleva su propio fondo hasta que el indicador está listo */
 .topnav:not(.is-ready) .nav-item.active { background:var(--action); }
@@ -335,7 +343,7 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 .user-menu-item { display:flex; align-items:center; width:100%; min-height:var(--hit); padding:0 var(--space-4); border-radius:var(--radius-control);
   font-size:var(--fs-sm); font-weight:700; color:var(--text); text-align:left; cursor:pointer;
   transition:background-color var(--dur-fast) ease, color var(--dur-fast) ease; }
-.user-menu-item:hover, .user-menu-item:focus-visible { background:var(--surface-2); }
+.user-menu-item:hover, .user-menu-item:focus-visible { background:var(--hover-bg); }
 .user-menu-item:focus-visible { outline:var(--focus-ring); outline-offset:-2px; }
 .user-logout:disabled { cursor:progress; }
 
@@ -455,6 +463,12 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 /* Entrada: las tarjetas en orden */
 .objetivo-grid > .objetivo-item { animation:card-in var(--dur-slow) var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 12) * 45ms + 40ms); }
 /* Tras elegir: la ruta anterior entra en el hueco de la tocada con un fundido, sin desplazarse */
+/* Cambio de objetivo: el contenido de la tarjeta del objetivo actual entra con un fundido corto y escalonado (la tarjeta
+   no se mueve); el % y la barra van desde el valor anterior (motion.js) */
+@keyframes swap-in { from { opacity:0; translate:0 4px; } }
+.objetivo-hero.is-swapping .objetivo-hero-main > *, .objetivo-hero.is-swapping .objetivo-hero-score { animation:swap-in 300ms var(--ease-out) backwards; }
+.objetivo-hero.is-swapping .objetivo-hero-main > :nth-child(2) { animation-delay:40ms; }
+.objetivo-hero.is-swapping .objetivo-hero-main > :nth-child(3), .objetivo-hero.is-swapping .objetivo-hero-score { animation-delay:80ms; }
 .objetivo-grid > .objetivo-item.is-swapped { animation:fade-in var(--dur-slow) var(--ease-out); animation-delay:0s; }
 @media (prefers-reduced-motion: reduce) {
   .objetivo-grid > .objetivo-item, .app-toast, .app-toast.is-leaving, .objetivo-bar > span { animation:none; }
@@ -556,9 +570,9 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 .perfil-item-meta { margin-top:.2rem; font-size:.75rem; color:var(--text-2); overflow-wrap:anywhere; }
 .perfil-item-desc { margin-top:.3rem; font-size:.8rem; line-height:1.55; color:var(--muted); overflow-wrap:anywhere; white-space:pre-line; }
 .perfil-item-actions { display:flex; gap:.25rem; flex-shrink:0; }
-.perfil-icon-btn { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:.8rem; color:var(--text-2);
+.perfil-icon-btn { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:var(--hover-radius); color:var(--text-2);
   transition:background-color var(--dur-fast) ease, color var(--dur-fast) ease; }
-.perfil-icon-btn:hover { background:var(--surface-2); color:var(--text); }
+.perfil-icon-btn:hover { background:var(--hover-bg); color:var(--text); }
 .perfil-icon-btn[data-action="delete-item"]:hover { background:var(--pink-tint); color:var(--pink-ink); }
 .perfil-item-form { margin-top:0; max-width:none; }
 .perfil-textarea { height:auto; min-height:6rem; padding:12px 16px; line-height:1.5; resize:vertical; }
@@ -647,6 +661,7 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
   :root[data-cv] .perfil-cv { padding:0; border:0; border-radius:0; background:#fff; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none;
     color:#1F1F24; font-size:10.5pt; line-height:1.45; }
   :root[data-cv] .perfil-cv-name { font-size:22pt; }
+  :root[data-cv] .perfil-cv :focus { outline:none; } /* el foco del nombre (al abrir el CV) no sale en el papel */
   :root[data-cv] .perfil-cv-headline { font-size:12pt; color:#3F3F46; }
   :root[data-cv] .perfil-cv-contact, :root[data-cv] .perfil-cv-muted, :root[data-cv] .perfil-cv-footer, :root[data-cv] .perfil-cv-brand { color:#55515E; }
   :root[data-cv] .perfil-cv-header { border-color:#1F1F24; }
@@ -1039,7 +1054,7 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .goal-option svg { flex-shrink:0; color:var(--pink-ink); visibility:hidden; }
 .goal-option[aria-selected="true"] { font-weight:var(--fw-strong); }
 .goal-option[aria-selected="true"] svg { visibility:visible; }
-.goal-option:hover, .goal-option.is-active { background:var(--surface-2); }
+.goal-option:hover, .goal-option.is-active { background:var(--hover-bg); }
 /* Opción activa con teclado: anillo del tema (aria-activedescendant, el foco real queda en la lista) */
 .goal-list:focus-visible .goal-option.is-active { outline:var(--focus-ring); outline-offset:-2px; }
 @media (prefers-reduced-motion: reduce) { .goal-chevron { transition:none; } .goal-list:not([hidden]) { animation:none; } }
@@ -1102,9 +1117,13 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 .prep-stop { position:relative; min-width:0; display:flex; justify-content:center; text-align:center; }
 .prep-stop:not(:last-child)::after { content:""; position:absolute; top:23px; left:calc(50% + 24px); width:calc(100% - 48px + var(--route-step)); height:2px;
   background:var(--route-dash-x); transform-origin:left; pointer-events:none; }
-.prep-stop-btn, .prep-stop--dest { display:flex; flex-direction:column; align-items:center; gap:10px; min-width:0; max-width:100%; padding:4px 8px 8px; border-radius:16px; }
-.prep-stop-btn { color:inherit; cursor:pointer; transition:background-color var(--dur-fast) ease; }
-.prep-stop-btn:hover { background:var(--surface-2); }
+.prep-stop-btn, .prep-stop--dest { display:flex; flex-direction:column; align-items:center; gap:10px; min-width:0; max-width:100%; padding:4px 8px 8px; border-radius:var(--hover-radius); }
+/* Hover: el velo va en un ::before que sobresale lo justo para dejar --hover-pad libre alrededor del punto (con su halo
+   de 6px) y del texto en los cuatro lados; el padding del botón no cambia, así el punto sigue sobre la línea punteada */
+.prep-stop-btn { position:relative; isolation:isolate; color:inherit; cursor:pointer; }
+.prep-stop-btn::before { content:""; position:absolute; z-index:-1; inset:calc(-6px - var(--hover-pad) + 4px) calc(var(--hover-pad) - 8px - 2px) calc(var(--hover-pad) - 8px);
+  border-radius:var(--hover-radius); background:var(--hover-bg); opacity:0; transition:opacity var(--dur-fast) var(--ease-out); pointer-events:none; }
+.prep-stop-btn:hover::before { opacity:1; }
 .prep-stop-btn:hover .prep-stop-name { color:var(--pink-ink); text-decoration:underline; text-underline-offset:3px; }
 .prep-stop-btn:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
 .prep-dot { display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; flex:none; }
@@ -1287,6 +1306,14 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
 /* Recarga silenciosa (cambio de estado desde "Tu semana", loadDashboard con quiet): los datos nuevos aparecen sin
    entrada, conteos ni barras que se vuelven a llenar */
 .ruta-grid.is-quiet *, .ruta-grid.is-quiet *::before, .ruta-grid.is-quiet *::after { animation:none !important; }
+/* Cambio de objetivo (loadDashboard con swap): lo anterior se atenúa mientras llegan los datos, sin skeleton; lo nuevo
+   entra con un fundido corto, sin desplazamiento, escalonado 40ms por tarjeta */
+.ruta-grid.is-leaving { opacity:.45; transition:opacity var(--dur) var(--ease-out); pointer-events:none; }
+.ruta-grid.is-swap > .ruta-row > * { animation:fade-in 300ms var(--ease-out) backwards; }
+.ruta-grid.is-swap > .ruta-row > :nth-child(2) { animation-delay:40ms; }
+.ruta-grid.is-swap > .ruta-row:nth-child(2) > * { animation-delay:80ms; }
+.ruta-grid.is-swap > .ruta-row:nth-child(2) > :nth-child(2) { animation-delay:120ms; }
+.ruta-grid.is-swap > .ruta-row:nth-child(n+3) > * { animation-delay:160ms; }
 /* Barras: se llenan al aparecer; las paradas de la ruta entran en orden */
 .gap-bar span, .market-bar-fill { animation:bar-fill calc(var(--dur-slow) * 2) var(--ease-out) 200ms backwards; }
 .prep-dot { animation:route-stop-in 320ms var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 8) * 60ms + 200ms); }
@@ -1562,7 +1589,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 @media (max-width:639px) { .mapa-legend { left:12px; bottom:12px; max-width:calc(100% - 24px); gap:6px 16px; padding:8px 14px; font-size:12px; } }
 .mapa-legend span { display:flex; align-items:center; gap:8px; padding:4px 8px; margin:-4px -8px; border-radius:9999px; white-space:nowrap;
   transition:background-color .15s ease; }
-.mapa-legend span:hover { background:var(--surface-2); }
+.mapa-legend span:hover { background:var(--hover-bg); }
 .mapa-links, .mapa-cluster-label { transition:opacity .2s ease; }
 .mapa-viewport:has(.mapa-legend span:hover > .mapa-dot--mastered) .mapa-node:not(.mapa-node--mastered),
 .mapa-viewport:has(.mapa-legend span:hover > .mapa-dot--progress) .mapa-node:not(.mapa-node--progress),
@@ -1586,7 +1613,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .mapa-tip-dot { flex:none; width:8px; height:8px; border-radius:9999px; background:var(--map-route); }
 .mapa-tip-text { flex:1; min-width:0; }
 .mapa-tip-close { flex:none; display:flex; align-items:center; justify-content:center; width:var(--hit); height:var(--hit); border-radius:9999px; color:var(--text-mid); }
-.mapa-tip-close:hover { background:var(--surface-2); color:var(--text); }
+.mapa-tip-close:hover { background:var(--hover-bg); color:var(--text); }
 .mapa-tip-close:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
 
 /* Panel de detalle de la habilidad seleccionada */
@@ -1738,7 +1765,6 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .ajustes-status:empty { display:none; }
 .ajustes-status[data-tone="error"], .ajustes-sync-result[data-tone="error"] { color:var(--pink-ink); }
 .ajustes-status[data-tone="ok"] { color:var(--mint-ink); }
-.ajustes-footer { margin-top:16px; font-size:14px; color:var(--text-2-page); }
 .ajustes-grid + .route-divider { margin-top:40px; } /* divisor sobre el pie */
 
 /* Tema: radios nativos ocultos dentro de cada tarjeta (flechas del teclado incluidas); la elegida, con borde rosa */
@@ -2049,7 +2075,8 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
    y las líneas de la tendencia siguen con stroke-dashoffset, la única forma de trazar un SVG. Todo se apaga con
    prefers-reduced-motion y con "Reducir animaciones" (bloque final). */
 /* Barras de progreso: crecen desde su borde izquierdo */
-.objetivo-bar > span, .perfil-stat-bar span, .hab-bar, .gap-bar span, .market-bar-fill, .ritmo-segments, .ritmo-month-bar { transform-origin:left center; }
+.objetivo-bar > span, .perfil-stat-bar span, .hab-bar, .gap-bar span, .market-bar-fill, .ritmo-segments, .ritmo-month-bar,
+.ritmo-seg, .ritmo-month-seg { transform-origin:left center; }
 .hab-summary-bar { overflow:hidden; }
 
 /* Ajustes: las tarjetas entran en orden al abrir la vista (su HTML es fijo: la animación corre cada vez que se muestra) */
@@ -2076,8 +2103,8 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .prep-stop-btn:active, .mapa-tip-close:active { transform:scale(.96); transition-duration:60ms; }
 /* Filas de las listas (Habilidades y Tu semana): un velo suave al pasar el puntero, con opacidad sobre un ::before */
 .hab-row, .semana-row { position:relative; isolation:isolate; }
-.hab-row::before, .semana-row::before { content:""; position:absolute; inset:0 calc(-1 * var(--space-3)); z-index:-1; border-radius:var(--radius-control);
-  background:var(--surface-2); opacity:0; transition:opacity var(--dur) var(--ease-out); pointer-events:none; }
+.hab-row::before, .semana-row::before { content:""; position:absolute; inset:0 calc(-1 * var(--space-3)); z-index:-1; border-radius:var(--hover-radius);
+  background:var(--hover-bg); opacity:0; transition:opacity var(--dur) var(--ease-out); pointer-events:none; }
 .hab-row:hover::before, .semana-row:hover::before, .hab-row:focus-within::before, .semana-row:focus-within::before { opacity:1; }
 
 /* Apagado general: con movimiento reducido no queda ninguna animación ni transición (el fundido corto del cambio de

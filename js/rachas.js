@@ -122,7 +122,7 @@ function renderRitmoGoal(goal) {
         <button type="button" class="ritmo-step"${at(RITMO_GOAL.min, -1)} aria-label="${t("ritmo.goal.less")}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
         </button>
-        <span class="ritmo-goal-value"><strong>${goal}</strong><span class="sr-only"> ${tn("ritmo.goal.unit", goal)}</span></span>
+        <span class="ritmo-goal-value"><strong data-motion="count:ritmo-goal">${goal}</strong><span class="sr-only"> ${tn("ritmo.goal.unit", goal)}</span></span>
         <button type="button" class="ritmo-step"${at(RITMO_GOAL.max, 1)} aria-label="${t("ritmo.goal.more")}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         </button>
@@ -143,14 +143,17 @@ function ritmoWeekNote(goal, count, advances) {
 function renderRitmoWeek(goal, count, advances) {
   const shown = Math.min(count, goal);
   const kinds = [...Array(advances.mastered).fill("mastered"), ...Array(advances.learning).fill("progress")];
-  const segments = Array.from({ length: goal }, (_, i) => `<span class="ritmo-seg ritmo-seg--${kinds[i] || "pending"}"></span>`).join("");
+  const segments = Array.from({ length: goal }, (_, i) => {
+    const kind = kinds[i] || "pending";
+    return `<span class="ritmo-seg ritmo-seg--${kind}" data-motion="fill:ritmo-seg-${i}" data-value="${kind}"></span>`;
+  }).join("");
   const left = goal - count;
   const note = ritmoWeekNote(goal, count, advances);
   return `
     <div class="ritmo-week">
       <p class="ritmo-week-head">
         <span class="ritmo-label">${t("ritmo.week.label")}</span>
-        <span class="ritmo-big"><strong>${shown}</strong> ${t("ritmo.week.of", { goal })}</span>
+        <span class="ritmo-big"><strong data-motion="count:ritmo-week">${shown}</strong> ${t("ritmo.week.of", { goal })}</span>
         <span class="sr-only">${t("ritmo.week", { n: shown, goal })}</span>
       </p>
       <div class="ritmo-segments" aria-hidden="true">${segments}</div>
@@ -163,17 +166,17 @@ function renderRitmoStreaks(data, metNow) {
   const current = currentStreak(data);
   const best = Math.max(data.best, bestStreak(data), current);
   data.best = best;
-  const stat = (label, n) => `
+  const stat = (label, n, key) => `
     <div class="ritmo-streak">
       <dt class="ritmo-label">${label}</dt>
-      <dd class="ritmo-big"><strong>${n}</strong> ${tn("ritmo.weeksUnit", n)}</dd>
+      <dd class="ritmo-big"><strong data-motion="count:${key}">${n}</strong> ${tn("ritmo.weeksUnit", n)}</dd>
     </div>`;
   let note = "";
   if (!best) note = t("ritmo.streak.none");
   else if (!metNow) note = t("ritmo.streak.keep", { weeks: tn("ritmo.weeks", current + 1) });
   return `
     <div class="ritmo-section">
-      <dl class="ritmo-streaks">${stat(t("ritmo.streak"), current)}${stat(t("ritmo.best"), best)}</dl>
+      <dl class="ritmo-streaks">${stat(t("ritmo.streak"), current, "ritmo-streak")}${stat(t("ritmo.best"), best, "ritmo-best")}</dl>
       ${note ? `<p class="ritmo-streak-note">${note}</p>` : ""}
     </div>`;
 }
@@ -185,11 +188,11 @@ function renderRitmoMonth() {
   const pct = n => (n / total) * 100;
   // Sin dominadas este mes, la frase dice cuál es el siguiente giro; con alguna, el número grande ya lo dice
   const text = thisMonth ? "" : topGap ? t("ritmo.month.none", { skill: escapeHtml(tSkill(topGap.name)) }) : t("ritmo.month.noneArrived");
-  const segment = (kind, n) => (n ? `<span class="ritmo-month-seg ritmo-month-seg--${kind}" style="flex-basis:${pct(n)}%"></span>` : "");
+  const segment = (kind, n) => (n ? `<span class="ritmo-month-seg ritmo-month-seg--${kind}" style="flex-basis:${pct(n)}%"${kind === "left" ? "" : ` data-motion="bar:ritmo-month-${kind}" data-value="${pct(n)}"`}></span>` : "");
   return `
     <section class="ritmo-section ritmo-month" aria-labelledby="ritmo-month-title">
       <h3 id="ritmo-month-title" class="ritmo-label">${t("ritmo.month.title")}</h3>
-      <p class="ritmo-big"><strong>${thisMonth}</strong> ${tn("ritmo.month.unit", thisMonth)}</p>
+      <p class="ritmo-big"><strong data-motion="count:ritmo-month">${thisMonth}</strong> ${tn("ritmo.month.unit", thisMonth)}</p>
       ${text ? `<p class="ritmo-month-text">${text}</p>` : ""}
       <div class="ritmo-month-bar" aria-hidden="true">
         ${segment("before", before)}${segment("month", thisMonth)}${segment("left", total - before - thisMonth)}
@@ -232,6 +235,7 @@ function refreshRitmo(focus = ritmoFocus()) {
   const card = document.getElementById("ritmo-card");
   if (!card || !ritmo.data) return;
   card.innerHTML = renderRitmoInner();
+  settleMotion(card); // motion.js: números y barras desde el valor anterior
   focus?.();
 }
 
