@@ -5,7 +5,8 @@
 // getLanguage (i18n.js).
 // Todo es real: nombre, titular y correo (sesión), habilidades dominadas y en desarrollo (/api/skills), objetivo activo
 // con su preparación (/api/goals/{id}/readiness) y enlaces y proyectos (/api/profile/links y /api/profile/projects).
-// Los logros se calculan aquí con esos datos, sin guardar nada. Exportar CV abre una vista imprimible (window.print).
+// Los logros se calculan aquí con esos datos, sin guardar nada. Exportar CV abre una vista imprimible (window.print;
+// en la app de escritorio, PDF directo por cenitDesktop.exportPdf).
 // El texto que escribe el usuario (nombre, titular, enlaces, proyectos) se inserta siempre con textContent, value o
 // setAttribute, nunca como HTML. Se editan nombre y titular (PATCH /api/auth/me) y, en Seguridad, la contraseña
 // (PUT /api/auth/me/password) y la cuenta (DELETE /api/auth/me). Las contraseñas solo viven en sus campos hasta
@@ -174,11 +175,14 @@ function renderPerfilSkillsSummary(skillsState) {
 
 // ---------- Estadísticas y logros ----------
 
-function renderStatBar(label, value, pct, tone) {
+// motion: { key, n } para motion.js: el número n (al inicio de value) cuenta y la barra se estira desde el valor anterior
+function renderStatBar(label, value, pct, tone, motion = null) {
+  const shown = motion ? value.replace(String(motion.n), `<span data-motion="count:perfil-${motion.key}">${motion.n}</span>`) : value;
+  const bar = motion ? ` data-motion="bar:perfil-bar-${motion.key}" data-value="${pct}"` : "";
   return `
     <div class="perfil-stat">
-      <div class="perfil-stat-head"><span>${label}</span><strong>${value}</strong></div>
-      <div class="perfil-stat-bar perfil-stat-bar--${tone}" role="img" aria-label="${label}: ${value}"><span style="width:${pct}%"></span></div>
+      <div class="perfil-stat-head"><span>${label}</span><strong>${shown}</strong></div>
+      <div class="perfil-stat-bar perfil-stat-bar--${tone}" role="img" aria-label="${label}: ${value}"><span style="width:${pct}%"${bar}></span></div>
     </div>`;
 }
 
@@ -212,7 +216,7 @@ function renderStatsCard(skillsState, goalState) {
     if (skillsState.error) return renderStatPending(t(key), "—");
     const total = skillsState.skills.length;
     const n = skillsWithStatus(skillsState, status).length;
-    return renderStatBar(t(key), `${n} / ${total}`, total ? (n / total) * 100 : 0, tone);
+    return renderStatBar(t(key), `${n} / ${total}`, total ? (n / total) * 100 : 0, tone, { key: status, n });
   }).join("");
   let goal;
   if (!goalState) goal = renderStatPending(t("perfil.goalStatEmpty"), "…");
@@ -221,7 +225,7 @@ function renderStatsCard(skillsState, goalState) {
   else {
     const r = goalState.readiness;
     goal = renderStatBar(t("perfil.goalStat", { goal: escapeHtml(tGoalTitle(r.goalTitle)) }), `${r.readinessPercentage}%`,
-      r.readinessPercentage, "pink")
+      r.readinessPercentage, "pink", { key: "goal", n: r.readinessPercentage })
       // Abre la selección de objetivos (objetivo.js); el progreso se conserva
       + `<button type="button" class="perfil-stats-action" data-action="change-goal">${routeGlyph()}${t("ruta.changeGoal")}</button>`;
   }
@@ -233,7 +237,7 @@ function renderStatsCard(skillsState, goalState) {
       ${counts}
       ${goal}
       ${routeDivider()}
-      ${renderStatBar(t("perfil.achievementsStat"), `${done} / ${achievements.length}`, (done / achievements.length) * 100, "mint")}
+      ${renderStatBar(t("perfil.achievementsStat"), `${done} / ${achievements.length}`, (done / achievements.length) * 100, "mint", { key: "achievements", n: done })}
     </article>`;
 }
 
@@ -479,8 +483,8 @@ function renderCv() {
     <div id="perfil-cv" class="perfil-cv-wrap">
       <div class="perfil-cv-toolbar">
         <button type="button" class="btn-pill perfil-btn-outline" data-action="close-cv">${t("perfil.cv.back")}</button>
-        <button type="button" class="btn-pill" data-action="print-cv">${t("perfil.cv.print")}</button>
-        <p class="perfil-hint">${t("perfil.cv.hint")}</p>
+        <button type="button" class="btn-pill" data-action="print-cv">${t(desktopPdfExport() ? "perfil.cv.savePdf" : "perfil.cv.print")}</button>
+        <p class="perfil-hint" aria-live="polite">${t(desktopPdfExport() ? "perfil.cv.hintDesktop" : "perfil.cv.hint")}</p>
       </div>
       <article class="perfil-cv" lang="${getLanguage()}" aria-labelledby="perfil-cv-name">
         <header class="perfil-cv-header">
@@ -529,8 +533,31 @@ function refreshCv() {
   if (focused) document.querySelector(`#perfil-cv [data-action='${focused}']`)?.focus();
 }
 
-// El nombre del archivo PDF sale del título de la página
-function printCv() {
+// En la app de escritorio (Cenit.exe) el preload expone cenitDesktop.exportPdf: el PDF se genera ahí (A4, con las
+// mismas reglas de @media print) y se guarda con un diálogo, porque window.print() no funciona en Electron.
+function desktopPdfExport() {
+  return typeof window.cenitDesktop?.exportPdf === "function" ? window.cenitDesktop.exportPdf : null;
+}
+
+// El nombre del archivo PDF sale del título de la página (navegador) o lo propone la app de escritorio
+async function printCv() {
+  const exportPdf = desktopPdfExport();
+  if (exportPdf) {
+    const button = document.querySelector("#perfil-cv [data-action='print-cv']");
+    const hint = document.querySelector("#perfil-cv .perfil-hint");
+    if (button) { button.disabled = true; button.setAttribute("aria-busy", "true"); }
+    let result;
+    try { result = await exportPdf(sessionUser?.name || ""); } catch { result = { ok: false }; }
+    const current = document.querySelector("#perfil-cv [data-action='print-cv']");
+    if (current) { current.disabled = false; current.removeAttribute("aria-busy"); }
+    if (result?.ok) {
+      showToast({ owner: "perfil", text: t("perfil.cv.saved", { file: result.fileName || "" }) }); // toast.js
+      if (hint) hint.textContent = t("perfil.cv.hintDesktop");
+    } else if (!result?.canceled && hint?.isConnected) {
+      hint.textContent = t("perfil.cv.saveError");
+    }
+    return;
+  }
   const title = document.title;
   document.title = t("perfil.cv.fileName", { name: sessionUser?.name || "" });
   window.print();
@@ -643,6 +670,7 @@ function renderPerfil() {
   main.append(renderItemsCard("project"), renderItemsCard("link"), perfilBlock(renderAchievementsCard()));
   side.prepend(perfilBlock(renderPerfilSkillsSummary(perfilState.skills)));
   document.getElementById("perfil-content").replaceChildren(renderPerfilHeader(), grid);
+  settleMotion(grid); // motion.js
 }
 
 // Reemplaza un bloque ya pintado sin reiniciar la entrada: sigue desde donde iba o, si ya había terminado, aparece
@@ -654,6 +682,7 @@ function swapPerfilBlock(id, block) {
   const node = typeof block === "string" ? perfilBlock(block) : block;
   old.replaceWith(node);
   perfilEntrance(node).forEach(a => { if (elapsed != null) a.currentTime = elapsed; else a.finish(); });
+  settleMotion(node); // motion.js: números y barras de Estadísticas desde el valor anterior
 }
 
 // Estadísticas, logros y CV: dependen de todo lo demás
@@ -871,6 +900,11 @@ async function submitItem(form) {
     perfilState[state] = { items: id === "new" ? [...items, saved] : items.map(item => (item.id === saved.id ? saved : item)) };
     perfilState.edit = null;
     refreshPerfilItems();
+    // El elemento nuevo o editado entra con un fundido corto (solo opacity y transform; nada con movimiento reducido)
+    const row = document.querySelector(`[data-action='edit-item'][data-kind='${kind}'][data-id='${Number(saved.id)}']`)?.closest(".perfil-item");
+    if (row && typeof row.animate === "function" && !prefersReducedMotion()) {
+      row.animate([{ opacity: 0, translate: "0 6px" }, { opacity: 1, translate: "0 0" }], { duration: 320, easing: motionEasing().css });
+    }
     focusItemOrigin(kind, id === "new" ? "new" : saved.id, "edit-item");
     announcePerfil(t(`${keys}.saved`));
   } catch (err) {

@@ -150,17 +150,18 @@ function renderNotice(title, detail = "") {
     </div>`;
 }
 
-// Resultado de un análisis nuevo. Con engine "cache" se avisa: no se consultó a la IA.
+// Resultado de un análisis nuevo. Con engine "cache" (la misma oferta ya estaba en el historial) se avisa, sin nombrar
+// el motor: el historial y sus avisos solo dicen cuándo se analizó y el % de ese momento.
 function renderNewResult(r) {
   const notice = r.engine === "cache" ? renderNotice(t("analyzer.cached.title"), t("analyzer.cached.text")) : "";
   return notice + renderAnalysis(r);
 }
 
-// Análisis del historial: siempre recalculado con el progreso actual, y la oferta original plegada debajo.
+// Análisis del historial: siempre recalculado con el progreso actual (el aviso dice fecha, hora y el % de ese momento,
+// sin el motor), y la oferta original plegada debajo.
 function renderHistoryResult(r) {
   const meta = t("analyzer.history.savedMeta", {
     date: escapeHtml(formatSyncDate(r.createdAt)),
-    engine: escapeHtml(engineLabel(r.engine)),
     pct: clampPct(r.savedMatchPercentage),
   });
   return `
@@ -172,11 +173,6 @@ function renderHistoryResult(r) {
     </details>`;
 }
 
-// "gemini", "remote", "cache"…: nombre legible; uno desconocido, tal cual
-function engineLabel(engine) {
-  const key = `analyzer.engine.${engine}`;
-  return key in I18N.es ? t(key) : String(engine ?? "");
-}
 
 // ---------- Estados: vacío, cargando y error ----------
 
@@ -422,8 +418,7 @@ function renderHistoryItem(item) {
         <span class="analizador-history-pct" aria-hidden="true">${pct}%</span>
         <span class="analizador-history-main">
           <span class="analizador-history-name">${title}</span>
-          <span class="analizador-history-meta"><time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(formatSyncDate(item.createdAt))}</time>
-            <span aria-hidden="true">·</span> ${escapeHtml(engineLabel(item.engine))}</span>
+          <span class="analizador-history-meta"><time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(formatSyncDate(item.createdAt))}</time></span>
         </span>
         <span class="sr-only">, ${t("analyzer.match.aria", { pct })}</span>
       </button>

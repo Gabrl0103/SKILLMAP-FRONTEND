@@ -114,12 +114,12 @@ function semanaRange() {
 
 // Marca del estado al inicio de la fila, con las Dos voces: punteado = pendiente, rosa→violeta = aprendiendo, menta con
 // marca = dominada. Decorativa: el selector de la fila ya dice el estado.
-function semanaMark(status) {
+function semanaMark(status, id) {
   const kind = SKILL_STATE_CLASS[status] || "pending";
   const check = kind === "mastered"
     ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>`
     : "";
-  return `<span class="semana-mark semana-mark--${kind}" aria-hidden="true">${check}</span>`;
+  return `<span class="semana-mark semana-mark--${kind}" aria-hidden="true" data-motion="pop:semana-mark-${id}" data-value="${kind}">${check}</span>`;
 }
 
 // Fila del plan: marca del estado, nombre (abre el detalle de la habilidad) con su nivel de demanda, barra con el % real
@@ -137,7 +137,7 @@ function renderSemanaRow(skill) {
     : `<p class="semana-hours"><span aria-hidden="true">${t("semana.hours", { n: hours })}</span><span class="sr-only">${tn("semana.hoursLabel", hours)}</span></p>`;
   return `
     <li class="semana-row${done ? " is-done" : ""}" data-plan-row="${skill.id}">
-      ${semanaMark(skill.status)}
+      ${semanaMark(skill.status, skill.id)}
       <div class="semana-skill">
         <div class="semana-name-line">
           <button type="button" class="gap-name gap-context semana-name" data-context="${skill.id}" aria-label="${escapeHtml(t("skill.contextFor", { name: tSkill(skill.name) }))}">${name}</button>
@@ -202,6 +202,7 @@ function refreshSemana(focus = semanaFocus()) {
   const card = document.getElementById("semana-card");
   if (!card || !semana.plan) return;
   card.innerHTML = renderSemanaInner();
+  settleMotion(card); // motion.js: la marca de la fila que cambió late una vez
   focus?.();
 }
 

@@ -326,9 +326,12 @@ function selectMapaNode(node) {
 function updateMapaNode(skill) {
   const node = document.querySelector(`#mapa-stage .mapa-node[data-skill-id="${skill.id}"]`);
   if (!node) return;
+  const next = `mapa-node--${STATUS_CLASS[skill.status] || "pending"}`;
+  const changed = !node.classList.contains(next);
   Object.values(STATUS_CLASS).forEach(status => node.classList.remove(`mapa-node--${status}`));
-  node.classList.add(`mapa-node--${STATUS_CLASS[skill.status] || "pending"}`);
+  node.classList.add(next);
   node.setAttribute("aria-label", mapaNodeLabel(skill, node.dataset.category));
+  if (changed) motionPop(node); // motion.js: late una vez al cambiar de estado
 }
 
 // Nodo y panel cambian al instante; si el backend falla, vuelven al estado anterior y el panel muestra el error.

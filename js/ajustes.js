@@ -70,13 +70,16 @@ function formatWait(minutes) {
   return m ? `${h} h ${m} min` : `${h} h`;
 }
 
-// Debajo de cada fuente: su última actualización y, si el backend la sincroniza sola, cada cuántos días
+// Debajo de cada fuente: su última actualización, si el backend la sincroniza sola cada cuántos días y, si el último
+// intento falló (sin conexión, la fuente no respondió), cuándo: así una fecha vieja nunca queda sin explicar
 function sourceMeta(s) {
-  const updated = s.lastSyncAt
-    ? t("ajustes.sourceUpdated", { date: `<time datetime="${escapeHtml(s.lastSyncAt)}">${formatSyncDate(s.lastSyncAt)}</time>` })
-    : t("ajustes.sourceNever");
-  const auto = s.autoSyncDays ? ` · ${t("ajustes.autoSync", { name: escapeHtml(s.name), n: s.autoSyncDays })}` : "";
-  return `<span class="ajustes-source-meta">${updated}${auto}</span>`;
+  const time = iso => `<time datetime="${escapeHtml(iso)}">${formatSyncDate(iso)}</time>`;
+  const updated = s.lastSyncAt ? t("ajustes.sourceUpdated", { date: time(s.lastSyncAt) }) : t("ajustes.sourceNever");
+  const auto = s.autoSyncDays ? ` · ${tn("ajustes.autoSync", s.autoSyncDays, { name: escapeHtml(s.name) })}` : "";
+  const failed = s.lastFailedAt && (!s.lastSyncAt || new Date(s.lastFailedAt) > new Date(s.lastSyncAt))
+    ? `<span class="ajustes-source-meta">${t("ajustes.sourceFailed", { date: time(s.lastFailedAt) })}</span>`
+    : "";
+  return `<span class="ajustes-source-meta">${updated}${auto}</span>${failed}`;
 }
 
 function renderJobStats(stats) {

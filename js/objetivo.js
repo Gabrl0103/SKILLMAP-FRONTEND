@@ -67,8 +67,8 @@ function renderHero(goal) {
   const score = pct == null ? "" : `
     <div class="objetivo-hero-score">
       <span class="objetivo-hero-score-label">${t("objetivo.readiness")}</span>
-      <span class="objetivo-hero-pct">${pct}<span>%</span></span>
-      <span class="objetivo-bar" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>
+      <span class="objetivo-hero-pct" data-motion="count:objetivo-hero" data-value="${pct}">${pct}<span>%</span></span>
+      <span class="objetivo-bar" aria-hidden="true"><span style="width:${Math.max(0, Math.min(100, pct))}%" data-motion="bar:objetivo-hero-bar" data-value="${Math.max(0, Math.min(100, pct))}"></span></span>
       <span class="objetivo-hero-score-note">${t("objetivo.readinessNote")}</span>
     </div>`;
   const desc = tGoalDescription(goal.title, goal.description || "");
@@ -193,6 +193,7 @@ function paintObjetivo(focusSelector) {
     ? (active.id ? `#${active.id}` : active.dataset.action ? `[data-action='${active.dataset.action}'][data-goal-id='${active.dataset.goalId || ""}']` : null) : null;
   const y = window.scrollY;
   container.innerHTML = renderObjetivo();
+  settleMotion(container.querySelector(".objetivo-hero")); // motion.js: registra el % que se ve
   filterGoalCards();
   if (window.scrollY !== y) window.scrollTo(0, y);
   const target = focusSelector || keep;
@@ -252,6 +253,11 @@ function swapObjetivo(fromId, toId) {
     if (at >= 0) order[at] = String(fromId);
     objetivoState.order = order;
     hero.outerHTML = renderHero(current);
+    // El contenido nuevo entra con un fundido corto (styles.css, .is-swapping) y el % y la barra van desde el valor del
+    // objetivo anterior (motion.js); la tarjeta en sí no se mueve
+    const fresh = container.querySelector(".objetivo-hero");
+    fresh?.classList.add("is-swapping");
+    settleMotion(fresh);
     let card = null;
     if (slot) {
       const tpl = document.createElement("template");

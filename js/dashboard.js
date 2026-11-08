@@ -184,7 +184,7 @@ function renderRouteStops(stops, goalTitle) {
       <li class="prep-stop prep-stop--${state}" style="--i:${items.length};">
         <button type="button" class="prep-stop-btn" data-context="${s.id}"
           aria-label="${escapeHtml(`${t("skill.contextFor", { name })} · ${statusLabel(s.status)}`)}">
-          <span class="prep-dot" aria-hidden="true">${state === "mastered" ? ROUTE_CHECK : ""}</span>
+          <span class="prep-dot" aria-hidden="true" data-motion="pop:route-dot-${s.id}" data-value="${state}">${state === "mastered" ? ROUTE_CHECK : ""}</span>
           <span class="prep-stop-name">${escapeHtml(name)}</span>
           <span class="prep-stop-state" aria-hidden="true">${statusLabel(s.status)}</span>
         </button>
@@ -229,13 +229,13 @@ function renderGauge(r, stops = r.gaps) {
     ? t("ruta.gauge.done", { goal })
     : tn("ruta.gauge.remaining", remaining, { goal });
   const count = r.totalCount
-    ? `<p class="prep-count">${t("ruta.gauge.stops", { n: `<strong>${r.masteredCount}</strong>`, total: `<strong>${r.totalCount}</strong>` })}</p>` : "";
+    ? `<p class="prep-count">${t("ruta.gauge.stops", { n: `<strong data-motion="count:ruta-mastered">${r.masteredCount}</strong>`, total: `<strong>${r.totalCount}</strong>` })}</p>` : "";
 
   // Gauge compartido con el Analizador: --pct alimenta el conteo del número (styles.css); el span es el respaldo sin CSS.
   return `
     <article class="ruta-card ruta-gauge" aria-labelledby="prep-title">
       <div class="prep-top">
-        <div class="gauge-ring ruta-gauge-ring">
+        <div class="gauge-ring ruta-gauge-ring" data-motion="ring:ruta-gauge" data-value="${r.readinessPercentage}">
           <svg viewBox="0 0 168 168" role="img" aria-label="${t("ruta.gauge.aria", { pct: r.readinessPercentage })}">
             <defs><linearGradient id="gauge-grad-ruta" x1="0" y1="0" x2="1" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs>
             <circle cx="84" cy="84" r="${radius}" fill="none" stroke-width="14" class="gauge-track"/>
@@ -762,7 +762,7 @@ async function setActiveGoal(goalId) {
   const goals = await (goalPicker.options().length ? fetchGoals() : loadGoals()).catch(() => null);
   activeGoalId = String(goalId);
   syncGoalPicker(goals);
-  loadDashboard(goalId);
+  loadDashboard(goalId, { swap: true });
   const goal = goals?.find(g => String(g.id) === activeGoalId);
   if (goal) document.getElementById("ruta-live").textContent = t("goal.changed", { goal: tGoalTitle(goal.title) });
 }
@@ -783,7 +783,9 @@ let latestRequest = 0; // evita que una respuesta vieja pise la del objetivo rec
 
 // quiet: recarga sin skeleton ni entrada, para un cambio hecho en la propia Mi Ruta ("Tu semana"): lo pintado sigue a
 // la vista hasta que llegan los datos y el foco vuelve a donde estaba (tarjetas Tu semana y Tu ritmo)
-async function loadDashboard(goalId, { quiet = false } = {}) {
+// swap: cambio de objetivo. Sin skeleton: lo pintado se atenúa (.is-leaving) mientras llegan los datos y lo nuevo entra
+// con un fundido corto y escalonado (.is-swap); el anillo va del % anterior al nuevo (motion.js)
+async function loadDashboard(goalId, { quiet = false, swap = false } = {}) {
   const container = document.getElementById("app-content");
   const requestId = ++latestRequest;
   rutaStale = false;
@@ -792,8 +794,11 @@ async function loadDashboard(goalId, { quiet = false } = {}) {
     gapScope = focusedGap.closest(".prep-route") ? ".prep-route" : "#brechas-card";
     keepGapFocus(Number(focusedGap.dataset.context));
   }
-  const silent = quiet && Boolean(container.querySelector(".ruta-grid:not(.ruta-skeleton)"));
-  if (!silent) {
+  const painted = Boolean(container.querySelector(".ruta-grid:not(.ruta-skeleton)"));
+  const silent = quiet && painted;
+  const swapping = swap && !silent && painted;
+  if (swapping) container.querySelector(".ruta-grid").classList.add("is-leaving");
+  else if (!silent) {
     document.getElementById("market-demand").hidden = true;
     container.innerHTML = renderRutaSkeleton();
   }
@@ -821,7 +826,7 @@ async function loadDashboard(goalId, { quiet = false } = {}) {
       return `<div class="ruta-row${shown.length < 2 ? " ruta-row--single" : ""}">${shown.join("")}</div>`;
     };
     container.innerHTML = `
-      <div class="ruta-grid${silent ? " is-quiet" : ""}">
+      <div class="ruta-grid${silent ? " is-quiet" : swapping ? " is-swap" : ""}">
         ${row(renderGauge(r, stops))}
         ${row(renderBrechas(r, reference, jobStats, demand.catalog, goalId, stops), renderRitmoCard(demand.catalog, demand.goalSkills, r))}
         ${row(renderTrend(history), renderMarketCard(demand.goalSkills, demand.catalog, r.goalTitle))}
@@ -829,6 +834,7 @@ async function loadDashboard(goalId, { quiet = false } = {}) {
         ${row(renderNextAction(r.gaps[0], r.goalTitle))}
       </div>`;
     bindTrendHover(container, history);
+    settleMotion(container); // motion.js: anillo, números y barras desde el valor que se veía
     loadOffers(goal, goalId, { quiet: silent }); // ofertas.js: llega después, sin frenar el resto de la vista
     restoreFocus?.();
   } catch (err) {
