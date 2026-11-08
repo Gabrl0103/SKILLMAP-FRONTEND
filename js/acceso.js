@@ -167,9 +167,14 @@ async function submitAcceso(e) {
     const { token, user } = await res.json();
     storeSessionToken(token);
     setAccesoBusy(false);
-    closeAcceso();
-    startSession(user);
-    document.querySelector(".nav-item[data-view='dashboard']")?.focus();
+    const greet = acceso.mode === "login"; // "Hola de nuevo" solo al iniciar sesión, no al crear la cuenta
+    // La app se pinta ya debajo (datos pedidos sin esperar) mientras Acceso se funde encima; el foco va al título de
+    // Mi Ruta (contenido principal) y, al terminar el fundido, sale el saludo
+    startSession(user, { entrance: "login" });
+    leaveAcceso(() => {
+      if (greet) showToast({ owner: "session", text: t("session.welcome", { name: user.name || user.email }) }); // toast.js
+    });
+    document.getElementById("goal-title")?.focus({ preventScroll: true });
   } catch (err) {
     setAccesoBusy(false);
     const field = status ? accesoErrorField(status, err.message) : null;
@@ -191,6 +196,20 @@ function openAcceso({ notice = "", email = "" } = {}) {
   // La región role="status" ya está visible cuando llega el texto: así los lectores de pantalla lo anuncian
   if (notice) setTimeout(() => { noticeEl.textContent = notice; }, 100);
   firstAccesoField().focus();
+}
+
+// Fundido de salida de Acceso (styles.css, data-acceso="leaving", 450ms) y luego se cierra de verdad. Con movimiento
+// reducido se cierra ya. then: después de cerrar.
+const ACCESO_LEAVE_MS = 450;
+function leaveAcceso(then) {
+  if (prefersReducedMotion()) { closeAcceso(); then?.(); return; } // theme.js
+  document.documentElement.setAttribute("data-acceso", "leaving");
+  setTimeout(() => {
+    // Si mientras tanto Acceso se volvió a abrir (p. ej. la sesión terminó), no se toca
+    if (document.documentElement.getAttribute("data-acceso") !== "leaving") return;
+    closeAcceso();
+    then?.();
+  }, ACCESO_LEAVE_MS);
 }
 
 function closeAcceso() {

@@ -101,6 +101,7 @@ const I18N = {
     "acceso.missingPassword": "Escribe tu contraseña.",
     "acceso.shortPassword": "La contraseña debe tener al menos {min} caracteres.",
     "session.ended": "Tu sesión terminó. Inicia sesión de nuevo.",
+    "session.welcome": "Hola de nuevo, {name}",
 
     // Barra superior
     "nav.label": "Navegación principal",
@@ -701,6 +702,7 @@ const I18N = {
     "acceso.missingPassword": "Enter your password.",
     "acceso.shortPassword": "The password must be at least {min} characters long.",
     "session.ended": "Your session ended. Please sign in again.",
+    "session.welcome": "Welcome back, {name}",
 
     "nav.label": "Main navigation",
     "nav.objetivo": "Goal",
