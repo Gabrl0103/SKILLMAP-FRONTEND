@@ -1,6 +1,6 @@
 // Vista "Analizador". Usa API_BASE_URL (dashboard.js), escapeHtml (mapa.js), apiFetch y apiJson (session.js), settingsState
-// (theme.js), routeDivider y routeDraw (route-motif.js), formatSyncDate (ajustes.js) y t, tn, i18nError, errorText,
-// formatNumber y tSkill (i18n.js). La IA no cambia con el idioma: solo la interfaz.
+// (theme.js), routeDivider y routeDraw (route-motif.js) y t, tn, i18nError, errorText, getLanguage, formatNumber y tSkill
+// (i18n.js). La IA no cambia con el idioma: solo la interfaz.
 
 // ---------- API ----------
 
@@ -155,6 +155,14 @@ function renderNotice(title, detail = "") {
 function renderNewResult(r) {
   const notice = r.engine === "cache" ? renderNotice(t("analyzer.cached.title"), t("analyzer.cached.text")) : "";
   return notice + renderAnalysis(r);
+}
+
+// Fecha y hora local en el idioma actual: "7 nov 2026 · 15:54" o "Nov 7, 2026 · 15:54" (historial)
+function formatSyncDate(iso) {
+  const date = new Date(iso);
+  const day = new Intl.DateTimeFormat(getLanguage(), { day: "numeric", month: "short", year: "numeric" }).format(date);
+  const time = new Intl.DateTimeFormat(getLanguage(), { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(date);
+  return `${day.replace(/\./g, "")} · ${time}`;
 }
 
 // Análisis del historial: siempre recalculado con el progreso actual (el aviso dice fecha, hora y el % de ese momento,

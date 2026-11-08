@@ -1,8 +1,15 @@
 // Vista "Habilidades": el catálogo completo (/api/skills) como lista, para quien prefiere leer en vez de recorrer el Mapa.
 // Arriba, el resumen: cuántas dominas del total (barra y leyenda dominadas · aprendiendo · pendientes) y, al lado, tu
 // objetivo con lo que llevas de su ruta. Debajo, una sola tarjeta con los filtros Todas · Dominadas · Aprendiendo ·
-// Pendientes (con su cantidad; el elegido dura la sesión del navegador: sessionStorage), cuántas se muestran y la lista
-// en el orden de la API por categoría (como los clusters del Mapa) y, dentro, por demanda.
+// Pendientes (con su cantidad; el elegido dura la sesión del navegador: sessionStorage), "Agrupar por: Categoría |
+// Estado" (recordado por usuario en localStorage), cuántas se muestran y la lista en grupos con encabezado:
+// - Categoría (por defecto): las categorías de la API en su orden (las mismas que los clusters del Mapa), cada una con
+//   "N de M dominadas" y una mini barra con las Dos voces (menta, rosa→violeta y punteado).
+// - Estado: Dominadas, Aprendiendo y Pendientes, con su cantidad. Al cambiar el estado de una fila, pasa a su grupo nuevo
+//   (que se abre si estaba cerrado) con un fundido corto y queda a la vista.
+// Dentro de cada grupo, por demanda. Cada grupo se pliega con su encabezado (aria-expanded; animación de alto con
+// grid-template-rows). Todos abiertos salvo que haya muchos (HAB_MANY_*): entonces solo los que tienen habilidades de tu
+// ruta. Un grupo sin filas con el filtro elegido no se muestra.
 // Cada fila: el estado como punto, el nombre (abre el contexto y preguntas frecuentes, skill-detalle.js), la categoría, si
 // está en tu ruta, la demanda (barra y %) y el selector Pendiente / Aprendiendo / Dominada (skill-status.js), el mismo de
 // Mi Ruta. El cambio se ve al instante, se guarda con PUT y avisa a Mapa, Mi Ruta y Perfil (skillmap:progress con source
@@ -19,14 +26,34 @@
 const HAB_FILTER_KEY = "skillmap.habilidades.filter";
 const HAB_FILTERS = ["all", "MASTERED", "IN_PROGRESS", "PENDING"];
 const HAB_SUMMARY = ["MASTERED", "IN_PROGRESS", "PENDING"]; // orden del resumen: lo logrado primero
+const HAB_GROUP_KEY = "skillmap.habilidades.group"; // + ".{userId}"
+const HAB_GROUP_MODES = ["category", "status"];
+const HAB_MANY_GROUPS = 6;  // con más grupos que esto, o
+const HAB_MANY_SKILLS = 30; // más habilidades que esto, de entrada solo se abren los grupos con habilidades de tu ruta
 
 // skills: { skills } o { error }; null = todavía sin datos. goal: { title, ids } del objetivo activo o null. request
 // descarta respuestas viejas. filter: filtro elegido; keep: habilidades que cambiaron de estado con este filtro y siguen a
 // la vista hasta cambiarlo (así la fila no desaparece bajo el foco); saving: id que se está guardando; error/errorId:
 // último error y la habilidad a la que pertenece (el texto se arma al pintar, en el idioma vigente); undo: último cambio
-// guardado { id, status } (el estado al que vuelve "Deshacer")
+// guardado { id, status } (el estado al que vuelve "Deshacer"). groupMode: "category" | "status" (null = leerlo del
+// usuario al pintar); collapsed: por modo, las claves de los grupos plegados; collapseReady: modos en los que ya se aplicó
+// la regla de "muchos grupos"
 const hab = { skills: null, goal: null, request: 0, filter: readHabFilter(), keep: new Set(), saving: null, error: null,
-  errorId: null, undo: null };
+  errorId: null, undo: null, groupMode: null, collapsed: { category: new Set(), status: new Set() }, collapseReady: new Set() };
+
+const habGroupKey = () => `${HAB_GROUP_KEY}.${sessionUser?.id ?? "anon"}`; // session.js
+
+function habGroupMode() {
+  if (hab.groupMode) return hab.groupMode;
+  let saved = null;
+  try { saved = localStorage.getItem(habGroupKey()); } catch { /* sin storage: por categoría */ }
+  hab.groupMode = HAB_GROUP_MODES.includes(saved) ? saved : "category";
+  return hab.groupMode;
+}
+
+function saveHabGroupMode(mode) {
+  try { localStorage.setItem(habGroupKey(), mode); } catch { /* sin storage: dura hasta recargar */ }
+}
 
 function readHabFilter() {
   try {
@@ -105,19 +132,28 @@ function renderHabFilters(skills) {
   }).join("");
 }
 
+// "Agrupar por: Categoría | Estado" (mismo control segmentado que los filtros)
+function renderHabGroupBy() {
+  const mode = habGroupMode();
+  return HAB_GROUP_MODES.map(m =>
+    `<button type="button" data-group-mode="${m}" aria-pressed="${mode === m}">${t(`habilidades.groupBy.${m}`)}</button>`).join("");
+}
+
 function renderHabRow(skill) {
   const status = habSkillStatus(skill);
   const name = tSkill(skill.name);
   const busy = hab.saving === skill.id;
   const pct = Math.max(0, Math.min(100, Number(skill.demandPercentage) || 0));
   const onGoal = hab.goal?.ids.has(skill.id);
+  // Agrupada por categoría, la categoría ya es el encabezado del grupo
+  const showCat = skill.category && habGroupMode() !== "category";
   return `
     <li class="hab-row" data-skill-row="${skill.id}">
       <span class="hab-row-dot hab-row-dot--${SKILL_STATE_CLASS[status]}" aria-hidden="true"></span>
       <div class="hab-row-main">
         <div class="hab-row-top">
           <button type="button" class="gap-name gap-context hab-name" data-context="${skill.id}" aria-describedby="hab-hint">${escapeHtml(name)}</button>
-          ${skill.category ? `<span class="hab-cat">${escapeHtml(tCategory(skill.category))}</span>` : ""}
+          ${showCat ? `<span class="hab-cat">${escapeHtml(tCategory(skill.category))}</span>` : ""}
           ${onGoal ? `<span class="hab-on-goal">${t("habilidades.onGoal")}</span>` : ""}
         </div>
         <div class="hab-demand">
@@ -141,7 +177,64 @@ function habVisible(skills) {
   return skills.filter(s => filter === "all" || habSkillStatus(s) === filter || keep.has(s.id));
 }
 
-// La lista con lo que deja ver el filtro; sin ninguna, el estado vacío del filtro con el Motivo de Ruta y "Ver todas"
+// Grupos con lo que deja ver el filtro (los vacíos no aparecen): { key, title, skills }
+function habGroups(visible) {
+  const ordered = habOrdered(visible);
+  if (habGroupMode() === "status") {
+    return HAB_SUMMARY.map(status => ({ key: status, title: t(`habilidades.filter.${status}`),
+      skills: ordered.filter(s => habSkillStatus(s) === status) })).filter(g => g.skills.length);
+  }
+  return [...groupByCategory(ordered)].map(([category, items]) => ({ key: category,
+    title: category ? tCategory(category) : t("habilidades.group.other"), skills: items }));
+}
+
+// La primera vez que se agrupa de un modo: con muchos grupos o habilidades, solo quedan abiertos los de tu ruta
+function applyHabDefaultCollapse(groups, skills) {
+  const mode = habGroupMode();
+  if (hab.collapseReady.has(mode)) return;
+  hab.collapseReady.add(mode);
+  if (!hab.goal || (groups.length <= HAB_MANY_GROUPS && skills.length <= HAB_MANY_SKILLS)) return;
+  groups.filter(g => !g.skills.some(s => hab.goal.ids.has(s.id))).forEach(g => hab.collapsed[mode].add(g.key));
+}
+
+// Mini barra de una categoría con las Dos voces: dominadas (menta), aprendiendo (rosa→violeta) y lo pendiente punteado
+function renderHabGroupBar(counts, total) {
+  const seg = (kind, n) => (n ? `<span class="hab-group-seg hab-group-seg--${kind}" style="flex-basis:${(n / total) * 100}%"></span>` : "");
+  return `<span class="hab-group-bar" aria-hidden="true">${seg("mastered", counts.MASTERED)}${seg("progress", counts.IN_PROGRESS)}${seg("pending", counts.PENDING)}</span>`;
+}
+
+// Encabezado (botón que pliega el grupo) y sus filas. Por categoría, el avance cuenta toda la categoría aunque el filtro
+// muestre solo una parte; por estado, cuántas hay en el grupo.
+function renderHabGroup(group, index, skills) {
+  const mode = habGroupMode();
+  const open = !hab.collapsed[mode].has(group.key);
+  const panel = `hab-group-${mode}-${index}`;
+  let meta;
+  if (mode === "category") {
+    const all = skills.filter(s => (s.category || "") === group.key);
+    const counts = habCounts(all);
+    meta = `<span class="hab-group-count">${tn("habilidades.group.mastered", all.length, { done: counts.MASTERED, total: all.length })}</span>
+      ${renderHabGroupBar(counts, all.length)}`;
+  } else {
+    meta = `<span class="hab-group-count">${tn("habilidades.group.count", group.skills.length)}</span>`;
+  }
+  return `
+    <section class="hab-group" data-group="${escapeHtml(group.key)}">
+      <h3 class="hab-group-heading">
+        <button type="button" class="hab-group-toggle" data-group-toggle="${escapeHtml(group.key)}" aria-expanded="${open}" aria-controls="${panel}">
+          <span class="hab-group-title">${escapeHtml(group.title)}</span>
+          ${meta}
+          <svg class="hab-group-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+      </h3>
+      <div class="hab-group-panel" id="${panel}" data-open="${open}"${open ? "" : " inert"}>
+        <div class="hab-group-inner"><ul class="hab-list">${group.skills.map(renderHabRow).join("")}</ul></div>
+      </div>
+    </section>`;
+}
+
+// La lista con lo que deja ver el filtro, en grupos; sin ninguna, el estado vacío del filtro con el Motivo de Ruta y
+// "Ver todas"
 function renderHabBody(skills) {
   const visible = habVisible(skills);
   if (!visible.length) {
@@ -150,7 +243,57 @@ function renderHabBody(skills) {
         ${hab.filter !== "all" ? `<button type="button" class="btn-ghost" data-skill-filter="all">${t("habilidades.clearFilter")}</button>` : ""}
       </div>`;
   }
-  return `<ul class="hab-list">${habOrdered(visible).map(renderHabRow).join("")}</ul>`;
+  const groups = habGroups(visible);
+  applyHabDefaultCollapse(groups, skills);
+  return `<div class="hab-groups">${groups.map((g, i) => renderHabGroup(g, i, skills)).join("")}</div>`;
+}
+
+// Pliega o abre un grupo sin repintar la lista (así se anima el alto); el panel plegado queda inert (sin foco)
+function toggleHabGroup(button) {
+  const key = button.dataset.groupToggle;
+  const set = hab.collapsed[habGroupMode()];
+  const open = set.has(key);
+  if (open) set.delete(key); else set.add(key);
+  button.setAttribute("aria-expanded", String(open));
+  const panel = document.getElementById(button.getAttribute("aria-controls"));
+  if (!panel) return;
+  panel.dataset.open = String(open);
+  panel.inert = !open;
+}
+
+// Agrupada por estado, la fila que cambió de estado pasa a otro grupo: se abre ese grupo y la fila entra con un fundido
+// corto y queda a la vista (sin animación con movimiento reducido)
+const HAB_REVEAL_MS = 320;
+let habReveal = null; // { id, start }: fundido de la fila en curso, para seguirlo si la lista se repinta (al confirmar el PUT)
+
+function revealHabRow(id) {
+  if (habGroupMode() !== "status") return;
+  const row = document.querySelector(`#habilidades-content [data-skill-row="${id}"]`);
+  if (!row) return;
+  const reduced = prefersReducedMotion(); // theme.js
+  row.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+  if (reduced || typeof row.animate !== "function") return;
+  habReveal = { id, start: performance.now() };
+  animateHabReveal(row, 0);
+}
+
+function animateHabReveal(row, from) {
+  const left = HAB_REVEAL_MS * (1 - from);
+  row.animate([{ opacity: from, translate: `0 ${8 * (1 - from)}px` }, { opacity: 1, translate: "0 0" }], { duration: left, easing: motionEasing().css });
+}
+
+// La lista se repintó con la fila a mitad de su fundido: sigue desde donde iba en vez de saltar al final
+function continueHabReveal() {
+  if (!habReveal) return;
+  const p = (performance.now() - habReveal.start) / HAB_REVEAL_MS;
+  const row = document.querySelector(`#habilidades-content [data-skill-row="${habReveal.id}"]`);
+  if (p >= 1 || !row) { habReveal = null; return; }
+  animateHabReveal(row, motionEasing().fn(p));
+}
+
+// Antes de repintar: si la fila va a un grupo plegado (por estado), se abre
+function openHabGroupFor(status) {
+  if (habGroupMode() === "status") hab.collapsed.status.delete(status);
 }
 
 function renderHabShowing(skills) {
@@ -190,7 +333,13 @@ function paintHabilidades({ keepFocus = false } = {}) {
     content.innerHTML = `
       <section class="ruta-card hab-card" aria-labelledby="hab-list-title">
         <h2 id="hab-list-title" class="ruta-card-title">${t("habilidades.listTitle")}</h2>
-        <div class="hab-filters" id="hab-filters" role="group" aria-label="${t("habilidades.filter.group")}">${renderHabFilters(skills)}</div>
+        <div class="hab-toolbar">
+          <div class="hab-filters" id="hab-filters" role="group" aria-label="${t("habilidades.filter.group")}">${renderHabFilters(skills)}</div>
+          <div class="hab-groupby">
+            <span class="hab-groupby-label" id="hab-groupby-label">${t("habilidades.groupBy")}</span>
+            <div class="hab-filters" id="hab-groupby" role="group" aria-labelledby="hab-groupby-label">${renderHabGroupBy()}</div>
+          </div>
+        </div>
         <p class="hab-hint" id="hab-hint">${t("habilidades.hint")}</p>
         <p class="hab-showing" id="hab-showing" aria-live="polite">${renderHabShowing(skills)}</p>
         <div class="hab-body is-new" id="hab-body">${renderHabBody(skills)}</div>
@@ -211,6 +360,8 @@ function refreshHabList(focus = habFocus()) {
   summary.innerHTML = skills.length ? renderHabOverview(skills) : "";
   settleMotion(summary); // motion.js: números y barra desde el valor anterior
   document.getElementById("hab-filters").innerHTML = renderHabFilters(skills);
+  document.getElementById("hab-groupby").innerHTML = renderHabGroupBy();
+  queueMicrotask(continueHabReveal);
   document.getElementById("hab-showing").textContent = renderHabShowing(skills);
   body.classList.remove("is-new");
   body.innerHTML = renderHabBody(skills);
@@ -223,6 +374,15 @@ function focusHab(focus) {
     document.querySelector(`#hab-filters [data-skill-filter="${focus.filter}"]`)?.focus({ preventScroll: true });
     return;
   }
+  if (focus.groupMode) {
+    document.querySelector(`#hab-groupby [data-group-mode="${focus.groupMode}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  if (focus.groupToggle !== undefined) {
+    [...document.querySelectorAll("#habilidades-content [data-group-toggle]")]
+      .find(b => b.dataset.groupToggle === focus.groupToggle)?.focus({ preventScroll: true });
+    return;
+  }
   const row = document.querySelector(`#habilidades-content [data-skill-row="${focus.id}"]`);
   if (!row) document.getElementById("habilidades-title")?.focus({ preventScroll: true });
   else if (focus.kind === "picker") focusStatusPicker(row);
@@ -233,6 +393,8 @@ function habFocus() {
   const active = document.activeElement;
   if (!active?.closest("#habilidades-content")) return null;
   if (active.dataset.skillFilter) return { filter: active.dataset.skillFilter };
+  if (active.dataset.groupMode) return { groupMode: active.dataset.groupMode };
+  if (active.dataset.groupToggle !== undefined) return { groupToggle: active.dataset.groupToggle };
   const row = active.closest("[data-skill-row]");
   if (!row) return null;
   return { id: row.dataset.skillRow, kind: active.closest(".status-picker") ? "picker" : "name" };
@@ -262,7 +424,9 @@ async function setHabSkillStatus(id, status, { undo = false } = {}) {
   replaceHabSkill(id, { status });
   Object.assign(hab, { saving: id, errorId: null });
   hab.keep.add(id);
+  openHabGroupFor(status);
   refreshHabList(undo ? { id, kind: "picker" } : habFocus());
+  revealHabRow(id);
   try {
     const updated = await saveSkillStatus(id, status);
     if (hab.saving !== id) return; // cambió el usuario mientras se guardaba
@@ -277,6 +441,10 @@ async function setHabSkillStatus(id, status, { undo = false } = {}) {
     if (hab.saving !== id) return;
     replaceHabSkill(id, previous);
     Object.assign(hab, { saving: null, error: err, errorId: id });
+    openHabGroupFor(previous.status);
+    refreshHabList();
+    revealHabRow(id);
+    return;
   }
   refreshHabList();
 }
@@ -322,6 +490,16 @@ function openHabilidadesList() {
 function initHabilidades() {
   const view = document.getElementById("view-habilidades");
   view.addEventListener("click", e => {
+    const toggle = e.target.closest("[data-group-toggle]");
+    if (toggle) { toggleHabGroup(toggle); return; }
+    const mode = e.target.closest("[data-group-mode]");
+    if (mode) {
+      if (mode.dataset.groupMode === habGroupMode()) return;
+      hab.groupMode = mode.dataset.groupMode;
+      saveHabGroupMode(hab.groupMode);
+      refreshHabList({ groupMode: hab.groupMode });
+      return;
+    }
     const filter = e.target.closest("[data-skill-filter]");
     if (filter) {
       if (filter.dataset.skillFilter === hab.filter) return;
@@ -362,8 +540,11 @@ document.addEventListener("skillmap:progress", e => {
 
 document.addEventListener("skillmap:user", () => {
   hab.request++;
-  Object.assign(hab, { skills: null, goal: null, saving: null, error: null, errorId: null, undo: null });
+  Object.assign(hab, { skills: null, goal: null, saving: null, error: null, errorId: null, undo: null, groupMode: null });
   hab.keep.clear();
+  hab.collapsed.category.clear();
+  hab.collapsed.status.clear();
+  hab.collapseReady.clear();
   document.getElementById("hab-summary").innerHTML = "";
   document.getElementById("habilidades-content").replaceChildren();
 });

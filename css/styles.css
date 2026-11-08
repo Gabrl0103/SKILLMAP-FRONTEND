@@ -781,6 +781,36 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 
 /* Fila: punto · nombre, categoría y "En tu ruta" con la demanda debajo · selector de estado */
 .hab-list > li + li { border-top:1px solid var(--divider); }
+/* Barra de herramientas: filtros a la izquierda y "Agrupar por" a la derecha (abajo si no caben) */
+.hab-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3) var(--space-6); }
+.hab-groupby { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-3); }
+.hab-groupby-label { font-size:var(--fs-sm); font-weight:600; color:var(--text-2); }
+/* Grupos: encabezado, espacio y una línea fina entre uno y otro; sin tarjeta propia */
+.hab-groups { display:flex; flex-direction:column; gap:var(--space-6); margin-top:var(--space-2); }
+.hab-group + .hab-group { padding-top:var(--space-6); border-top:1px solid var(--card-border); }
+.hab-group-heading { margin:0; }
+/* Encabezado = botón que pliega: título, avance y chevron; velo de hover como las filas */
+.hab-group-toggle { position:relative; isolation:isolate; display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2) var(--space-4);
+  width:100%; min-height:var(--hit); padding:var(--space-2) 0; text-align:left; color:var(--text); cursor:pointer; }
+.hab-group-toggle::before { content:""; position:absolute; inset:0 calc(-1 * var(--space-3)); z-index:-1; border-radius:var(--hover-radius);
+  background:var(--hover-bg); opacity:0; transition:opacity var(--dur) var(--ease-out); pointer-events:none; }
+.hab-group-toggle:hover::before { opacity:1; }
+.hab-group-toggle:focus-visible { outline:var(--focus-ring); outline-offset:2px; border-radius:var(--hover-radius); }
+.hab-group-title { font-size:20px; font-weight:var(--fw-title); letter-spacing:var(--ls-title); }
+.hab-group-count { font-size:var(--fs-sm); font-weight:600; color:var(--text-2); font-variant-numeric:tabular-nums; }
+/* Mini barra con las Dos voces: menta = dominadas, rosa→violeta = aprendiendo, punteado = pendientes */
+.hab-group-bar { display:flex; align-items:center; gap:3px; width:104px; height:8px; }
+.hab-group-seg { flex-shrink:1; min-width:6px; height:8px; border-radius:var(--radius-pill); }
+.hab-group-seg--mastered { background:var(--mastered-bg); }
+.hab-group-seg--progress { background:var(--progress-bg); }
+.hab-group-seg--pending { flex-grow:1; height:2px; border-radius:0; background:var(--route-dash-x); }
+.hab-group-chevron { flex:none; margin-left:auto; color:var(--text-2); transition:transform var(--dur-slow) var(--ease-out); }
+.hab-group-toggle[aria-expanded="false"] .hab-group-chevron { transform:rotate(-90deg); }
+/* Plegar/abrir: solo grid-template-rows (0fr ↔ 1fr) y opacity. El padding con margen negativo deja sitio al velo de
+   hover y al anillo de foco de las filas, que el overflow recortaría */
+.hab-group-panel { display:grid; grid-template-rows:1fr; transition:grid-template-rows var(--dur-slow) var(--ease-out), opacity var(--dur-slow) var(--ease-out); }
+.hab-group-panel[data-open="false"] { grid-template-rows:0fr; opacity:0; }
+.hab-group-inner { min-height:0; overflow:hidden; padding:0 var(--space-3) 4px; margin:0 calc(-1 * var(--space-3)) -4px; }
 .hab-row { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2) var(--space-4); padding:var(--space-4) 0; }
 .hab-row-dot { flex:none; width:24px; height:24px; border-radius:50%; }
 .hab-row-dot--pending { border:2px dashed var(--line-dashed); }
@@ -1752,20 +1782,18 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 :root[data-motion="reduced"] .gap-context:hover svg { translate:none; }
 
 /* ---------- Ajustes ---------- */
-/* Valores de docs/mockups/v2 (Ajustes · modo claro): dos tarjetas arriba, Ofertas de empleo a lo ancho y el pie */
+/* Ajustes: Apariencia e Idioma arriba, lado a lado y del mismo alto, y Seguridad a todo el ancho debajo */
 .ajustes-header { display:flex; flex-direction:column; align-items:flex-start; gap:16px; margin-bottom:40px; }
 .ajustes-header .objetivo-subtitle { font-size:1rem; }
 .ajustes-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
 .ajustes-card { display:flex; flex-direction:column; padding:32px; }
-.ajustes-jobs, .ajustes-security { grid-column:1 / -1; }
+.ajustes-security { grid-column:1 / -1; }
 .ajustes-card-title { margin-bottom:24px; font-size:20px; font-weight:600; letter-spacing:-.01em; color:var(--text); }
-.ajustes-note { margin-top:24px; font-size:14px; line-height:1.55; color:var(--text-2); }
 /* Mensajes de guardado y error: vacíos no ocupan sitio */
 .ajustes-status { margin-top:16px; font-size:14px; line-height:1.5; color:var(--text-mid); }
 .ajustes-status:empty { display:none; }
-.ajustes-status[data-tone="error"], .ajustes-sync-result[data-tone="error"] { color:var(--pink-ink); }
+.ajustes-status[data-tone="error"] { color:var(--pink-ink); }
 .ajustes-status[data-tone="ok"] { color:var(--mint-ink); }
-.ajustes-grid + .route-divider { margin-top:40px; } /* divisor sobre el pie */
 
 /* Tema: radios nativos ocultos dentro de cada tarjeta (flechas del teclado incluidas); la elegida, con borde rosa */
 .ajustes-themes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; min-width:0; }
@@ -1812,47 +1840,22 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .ajustes-switch:focus-visible { outline:var(--focus-ring); outline-offset:3px; }
 
 
-/* Ofertas de empleo: total, desglose por fuente y, a la derecha, el recálculo */
-.ajustes-jobs .ajustes-card-title { margin-bottom:28px; }
-.ajustes-jobs-body { display:flex; align-items:center; justify-content:space-between; gap:40px; }
-.ajustes-jobs-stats { display:flex; align-items:center; gap:40px; min-width:0; }
-.ajustes-jobs-stats > .ajustes-status { margin-top:0; }
-.ajustes-total { display:flex; align-items:baseline; gap:12px; white-space:nowrap; }
-.ajustes-total-num { font-size:64px; font-weight:300; line-height:1; letter-spacing:-.03em; color:var(--text); font-variant-numeric:tabular-nums; }
-.ajustes-total-label { font-size:17px; color:var(--text-2); }
-.ajustes-sources li { font-size:16px; line-height:26px; color:var(--text-2); }
-.ajustes-sources strong { font-weight:700; color:var(--text); }
-.ajustes-sources li + li { margin-top:6px; }
-.ajustes-source-meta { display:block; font-size:14px; line-height:20px; color:var(--text-2); }
-.ajustes-jobs-action { flex-shrink:0; width:344px; }
-.ajustes-jobs-action .ajustes-note { margin-top:16px; }
-.ajustes-jobs-action .btn-pill:disabled { cursor:progress; }
-.ajustes-jobs-action .btn-pill:disabled:hover { transform:none; box-shadow:0 12px 24px var(--action-shadow-color); }
-.ajustes-sync-result { margin-top:12px; font-size:14px; line-height:1.55; color:var(--text-mid); }
-.ajustes-sync-result:empty { display:none; }
-.ajustes-sync-result strong { font-weight:700; color:var(--text); }
-.ajustes-sync-summary { font-weight:600; color:var(--text); }
 
 @media (prefers-reduced-motion: reduce) {
   .ajustes-theme, .ajustes-switch::after { transition:none; }
 }
 :root[data-motion="reduced"] .ajustes-theme, :root[data-motion="reduced"] .ajustes-switch::after { transition:none; }
 
-/* Ajustes · rediseño visual: dos columnas (Apariencia + Idioma | Ofertas de empleo) y
-   Seguridad a todo el ancho al final. Títulos de tarjeta 22/800 y números grandes en 800 como el resto de la app */
+/* Ajustes · rediseño visual: Apariencia | Idioma del mismo alto (stretch) y Seguridad a todo el ancho al final. En Idioma
+   las dos opciones se apilan y reparten el alto de la tarjeta, así no queda un hueco bajo ellas. Títulos de tarjeta como
+   el resto de la app */
 .ajustes-header { gap:0; margin-bottom:var(--space-6); }
 .ajustes-languages { margin-top:0; }
 .ajustes-header .objetivo-subtitle { font-size:18px; }
-.ajustes-grid { align-items:start; }
-.ajustes-col { display:flex; flex-direction:column; gap:var(--grid-gap); min-width:0; }
-.ajustes-col .ajustes-jobs { grid-column:auto; }
+.ajustes-grid { align-items:stretch; gap:var(--grid-gap); }
+.ajustes-languages { flex:1; grid-template-columns:minmax(0,1fr); grid-auto-rows:minmax(var(--hit), 1fr); gap:var(--space-4); }
 .ajustes-card { padding:var(--card-pad); }
 .ajustes-card-title { font-size:var(--fs-h2); font-weight:var(--fw-title); letter-spacing:var(--ls-title); }
-.ajustes-jobs-body { flex-direction:column; align-items:stretch; gap:var(--space-6); }
-.ajustes-jobs-stats { flex-wrap:wrap; gap:var(--space-4) var(--space-8); }
-.ajustes-jobs-action { width:auto; padding-top:var(--space-6); border-top:1px solid var(--divider); }
-.ajustes-total-num { font-size:48px; font-weight:var(--fw-num); letter-spacing:var(--ls-num); }
-.ajustes-grid + .route-divider { margin-top:var(--space-8); }
 
 /* ---------- Introducción ---------- */
 /* Valores de docs/mockups/v2 (Introducción · modo oscuro); la versión clara sale de los mismos tokens.
@@ -2085,10 +2088,9 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .hab-summary-bar { overflow:hidden; }
 
 /* Ajustes: las tarjetas entran en orden al abrir la vista (su HTML es fijo: la animación corre cada vez que se muestra) */
-#view-ajustes .ajustes-col > *, #view-ajustes .ajustes-security > * { animation:card-in var(--dur-slow) var(--ease-out) backwards; }
-#view-ajustes .ajustes-col:nth-child(2) > :first-child { animation-delay:50ms; }
-#view-ajustes .ajustes-col:nth-child(1) > :nth-child(2) { animation-delay:100ms; }
-#view-ajustes .ajustes-security > * { animation-delay:150ms; }
+#view-ajustes .ajustes-grid > .ajustes-card, #view-ajustes .ajustes-security > * { animation:card-in var(--dur-slow) var(--ease-out) backwards; }
+#view-ajustes .ajustes-grid > .ajustes-card:nth-child(2) { animation-delay:50ms; }
+#view-ajustes .ajustes-security > * { animation-delay:100ms; }
 
 /* Menús (cuenta y "Cambiar objetivo"): bajan un poco y crecen desde su esquina */
 @keyframes menu-in { from { opacity:0; transform:translateY(-4px) scale(.97); } }

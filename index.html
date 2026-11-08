@@ -368,11 +368,11 @@
   <section id="view-ajustes" class="hidden">
     <header class="view-header ajustes-header">
       <h1 class="objetivo-title" data-i18n="ajustes.title">Ajustes</h1>
-      <p class="objetivo-subtitle" data-i18n="ajustes.subtitle">Personaliza Cenit y mantén tu ruta al día.</p>
+      <p class="objetivo-subtitle" data-i18n="ajustes.subtitle">Elige cómo se ve Cenit, su idioma y la seguridad de tu cuenta.</p>
     </header>
 
+    <!-- Apariencia a la izquierda e Idioma a la derecha, del mismo alto; Seguridad debajo a todo el ancho -->
     <div class="ajustes-grid">
-    <div class="ajustes-col">
       <!-- Apariencia: tema y animaciones (js/theme.js guarda en el backend) -->
       <section class="ruta-card ajustes-card" aria-labelledby="ajustes-apariencia-title">
         <h2 id="ajustes-apariencia-title" class="ajustes-card-title" data-i18n="ajustes.appearance">Apariencia</h2>
@@ -418,22 +418,6 @@
         </fieldset>
         <p id="ajustes-idioma-status" class="ajustes-status" role="status"></p>
       </section>
-    </div>
-    <div class="ajustes-col">
-      <!-- Ofertas de empleo: /api/jobs/stats y recálculo con /api/jobs/sync -->
-      <section class="ruta-card ajustes-card ajustes-jobs" aria-labelledby="ajustes-jobs-title">
-        <h2 id="ajustes-jobs-title" class="ajustes-card-title" data-i18n="ajustes.jobs">Ofertas de empleo</h2>
-        <div class="ajustes-jobs-body">
-          <!-- Lo llena js/ajustes.js -->
-          <div id="ajustes-jobs-stats" class="ajustes-jobs-stats"></div>
-          <div class="ajustes-jobs-action">
-            <button type="button" id="ajustes-sync" class="btn-pill"><span data-label data-i18n="ajustes.sync">Recalcular ruta con ofertas nuevas</span></button>
-            <p class="ajustes-note" data-i18n="ajustes.syncNote">Cada fuente se actualiza como máximo cada 6 horas. Remotive pide citarlo como fuente.</p>
-            <div id="ajustes-sync-result" class="ajustes-sync-result" role="status"></div>
-          </div>
-        </div>
-      </section>
-    </div>
       <!-- Seguridad de la cuenta (cambiar contraseña y eliminar cuenta): la pinta y la maneja js/perfil.js -->
       <div id="ajustes-security" class="ajustes-security"></div>
     </div>
