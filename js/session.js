@@ -69,9 +69,23 @@ function notifyUserChange() {
   document.dispatchEvent(new CustomEvent("skillmap:user"));
 }
 
+// Entrada de la app (styles.css, data-entering en <html>): "login" tras entrar desde Acceso (la barra baja un poco y
+// las tarjetas suben escalonadas mientras Acceso se funde encima) o "restore" al reabrir con la sesión guardada (solo
+// un fundido corto). Se quita al terminar, así volver a una vista no la repite. No espera a nada: los datos se piden ya.
+const ENTRANCE_MS = 1200;
+let entranceTimer = null;
+
+function playEntrance(kind) {
+  clearTimeout(entranceTimer);
+  document.documentElement.setAttribute("data-entering", kind);
+  entranceTimer = setTimeout(() => document.documentElement.removeAttribute("data-entering"), ENTRANCE_MS);
+}
+
 // Entra un usuario (login, registro o sesión guardada válida): ajustes del backend y Mi Ruta con sus datos.
-function startSession(user) {
+// entrance: "login" | "restore" | null (ver playEntrance)
+function startSession(user, { entrance = null } = {}) {
   sessionUser = user;
+  if (entrance) playEntrance(entrance);
   notifyUserChange();
   renderUserMenu();
   loadSettings({ fresh: true }).catch(() => { /* sin backend: queda la copia local */ });
@@ -201,7 +215,7 @@ async function checkSavedSession() {
 async function bootSession() {
   bindUserMenu();
   const user = await checkSavedSession();
-  if (user) startSession(user);
+  if (user) startSession(user, { entrance: INTRO_FORCED ? null : "restore" }); // sin saludo: solo un fundido corto
   if (!user || INTRO_FORCED) openIntro();
   else setIntroState(null); // quita el "checking" del <head>: la app ya se puede ver
 }

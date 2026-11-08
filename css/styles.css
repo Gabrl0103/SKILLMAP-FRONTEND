@@ -729,8 +729,8 @@ a.perfil-link:hover { background:var(--chip-azul-bg); text-decoration:underline;
 /* Vista Habilidades (habilidades.js): resumen arriba (dominadas del total + tu objetivo) y una sola tarjeta con los
    filtros y la lista. Cada fila: punto de estado, nombre, categoría, "En tu ruta", demanda y el selector segmentado */
 #habilidades-title { border-radius:8px; }
-#habilidades-title:focus { outline:none; }
-#habilidades-title:focus-visible { outline:var(--focus-ring); outline-offset:4px; }
+#habilidades-title:focus, #goal-title:focus { outline:none; }
+#habilidades-title:focus-visible, #goal-title:focus-visible { outline:var(--focus-ring); outline-offset:4px; }
 
 /* Aviso con "Deshacer": queda pegado bajo la barra superior mientras se recorre la lista */
 
@@ -1950,6 +1950,11 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .acceso { display:none; position:fixed; inset:0; z-index:50; flex-direction:column; padding:28px 48px 0; overflow:auto;
   background:var(--bg-glow), var(--bg-base); background-color:var(--bg-solid); }
 :root[data-acceso="open"] .acceso { display:flex; }
+/* Login correcto (acceso.js, leaveAcceso): Acceso se funde en 450ms sobre la app, que ya se pinta debajo con su
+   entrada (data-entering="login", al final de "Movimiento"). Sin clics durante el fundido. El body ya puede desplazarse:
+   si aparece la barra de desplazamiento, el ancho cambia al empezar (bajo Acceso aún opaco) y no al terminar. */
+@keyframes acceso-out { to { opacity:0; } }
+:root[data-acceso="leaving"] .acceso { display:flex; pointer-events:none; animation:acceso-out 450ms var(--ease-out) forwards; }
 .acceso-top, .acceso-main, .acceso-footer { width:100%; max-width:1120px; margin-inline:auto; }
 .acceso-main { flex:1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,440px); align-items:center;
   gap:clamp(48px, 7vw, 112px); padding:48px 0 64px; }
@@ -2101,6 +2106,14 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .topbar-settings:hover, .user-button:hover { transform:translateY(-1px); }
 .btn-ghost:active:not(:disabled), .topbar-settings:active, .user-button:active, .nav-item:active, .status-option:active:not([aria-checked="true"]),
 .prep-stop-btn:active, .mapa-tip-close:active { transform:scale(.96); transition-duration:60ms; }
+/* Entrada de la app (session.js, playEntrance; data-entering en <html> durante 1,2 s y luego se quita, así no se repite
+   al volver a una vista). "login": la barra baja 10px con fundido mientras Acceso se funde encima; las tarjetas de la
+   vista suben escalonadas con su entrada de siempre (card-in, 60ms) y el anillo cuenta desde 0. "restore" (sesión
+   guardada al abrir): solo un fundido corto de barra y contenido. */
+@keyframes topbar-in { from { opacity:0; translate:0 -10px; } }
+:root[data-entering="login"] .topbar { animation:topbar-in 450ms var(--ease-out) 120ms backwards; }
+:root[data-entering="restore"] .topbar, :root[data-entering="restore"] .app-main { animation:fade-in 250ms var(--ease-out) backwards; }
+
 /* Filas de las listas (Habilidades y Tu semana): un velo suave al pasar el puntero, con opacidad sobre un ::before */
 .hab-row, .semana-row { position:relative; isolation:isolate; }
 .hab-row::before, .semana-row::before { content:""; position:absolute; inset:0 calc(-1 * var(--space-3)); z-index:-1; border-radius:var(--hover-radius);
