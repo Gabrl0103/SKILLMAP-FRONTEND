@@ -8,7 +8,7 @@ Diseño basado en los mockups de `docs/mockups/`. Paleta: rosa `#D95F8E` (princi
 
 ## Features
 
-### Mi Ruta (`docs/mockups/Dashboard.jpeg`)
+### Mi Ruta (`docs/mockups/v2/Mi Ruta · modo claro@2x.png`)
 
 Datos de `GET /api/goals/{id}/readiness`:
 
@@ -48,7 +48,7 @@ SKILLMAP-FRONTEND/
 ├── assets/cenit-star.svg  # Favicon: la estrella de Cenit
 ├── css/
 │   └── styles.css      # Tokens, barra superior, tarjetas de Mi Ruta, gráfico y Mapa Visual
-├── docs/mockups/       # Mockups de referencia de cada vista
+├── docs/mockups/v2/    # Mockups de referencia (PNG y HTML)
 └── js/
     ├── brand.js        # Logo de Cenit (estrella de brújula): brandMark() y las marcas de index.html
     ├── dashboard.js    # Vista Mi Ruta: fetch a la API, render y datos de ejemplo
@@ -64,7 +64,9 @@ vendor/
 
 ## Dependencias locales (`vendor/`)
 
-Las librerías van copiadas en `vendor/` para que la app funcione sin internet y dentro del ejecutable (`scripts\build-app.ps1` del backend copia `vendor` entero junto con `index.html`, `css`, `js` y `assets`). No se usa npm ni CDN en tiempo de ejecución. Hoy solo hay una: `vendor/tailwind.js` (Tailwind Play CDN 3.4.17).
+Las librerías van copiadas en `vendor/` para que la app funcione sin internet y dentro del ejecutable (`cenit-desktop\scripts\build-desktop.ps1` y `skillmap-api\scripts\build-app.ps1` del backend copian `vendor` entero junto con `index.html`, `css`, `js` y `assets`). No se usa npm ni CDN en tiempo de ejecución. Hoy solo hay una: `vendor/tailwind.js` (Tailwind Play CDN 3.4.17, licencia MIT).
+
+La fuente Plus Jakarta Sans (`assets/fonts/`) se distribuye con licencia SIL Open Font License 1.1.
 
 ## Requisitos
 

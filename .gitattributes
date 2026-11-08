@@ -1,0 +1,22 @@
+# Fin de línea: en el repositorio todo el texto va con LF; en la copia de trabajo lo decide core.autocrlf.
+* text=auto
+
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.sh  text eol=lf
+
+# Librerías de terceros minificadas: tal cual, sin diff de texto.
+vendor/** -text -diff linguist-vendored
+
+# Binarios: sin conversión ni diff de texto.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.zip   binary
+*.pdf   binary
