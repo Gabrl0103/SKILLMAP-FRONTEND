@@ -38,8 +38,10 @@ const HAB_MANY_SKILLS = 30; // más habilidades que esto, de entrada solo se abr
 // guardado { id, status } (el estado al que vuelve "Deshacer"). groupMode: "category" | "status" (null = leerlo del
 // usuario al pintar); collapsed: por modo, las claves de los grupos plegados; collapseReady: modos en los que ya se aplicó
 // la regla de "muchos grupos"
+// onlyRoute: "Solo mi ruta" (solo las habilidades del objetivo activo; dura mientras la app está abierta)
 const hab = { skills: null, goal: null, request: 0, filter: readHabFilter(), keep: new Set(), saving: null, error: null,
-  errorId: null, undo: null, groupMode: null, collapsed: { category: new Set(), status: new Set() }, collapseReady: new Set() };
+  errorId: null, undo: null, groupMode: null, collapsed: { category: new Set(), status: new Set() }, collapseReady: new Set(),
+  onlyRoute: false };
 
 const habGroupKey = () => `${HAB_GROUP_KEY}.${sessionUser?.id ?? "anon"}`; // session.js
 
@@ -102,7 +104,7 @@ function renderHabOverview(skills) {
   const goalSkills = goal ? skills.filter(s => goal.ids.has(s.id)) : [];
   const goalDone = goalSkills.filter(s => habSkillStatus(s) === "MASTERED").length;
   const side = goal && goalSkills.length ? `
-    <div class="hab-goal">
+    <div class="hab-goal is-plain">
       <span class="hab-goal-label">${t("habilidades.goal.label")}</span>
       <span class="hab-goal-name">${escapeHtml(tGoalTitle(goal.title))}</span>
       <span class="hab-goal-count">${t("habilidades.goal.count", { n: `<strong data-motion="count:hab-goal-done">${goalDone}</strong>`, total: `<strong>${goalSkills.length}</strong>` })}</span>
@@ -123,7 +125,8 @@ function renderHabOverview(skills) {
 
 // ---------- Marcado ----------
 
-function renderHabFilters(skills) {
+function renderHabFilters(all) {
+  const skills = habScoped(all);
   const counts = habCounts(skills);
   return HAB_FILTERS.map(filter => {
     const n = filter === "all" ? skills.length : counts[filter];
@@ -172,9 +175,21 @@ function habOrdered(skills) {
   return [...groupByCategory(skills)].flatMap(([, items]) => [...items].sort((a, b) => b.demandPercentage - a.demandPercentage));
 }
 
+// "Solo mi ruta" encendido (y con objetivo): solo las habilidades del objetivo activo
+function habScoped(skills) {
+  return hab.onlyRoute && hab.goal ? skills.filter(s => hab.goal.ids.has(s.id)) : skills;
+}
+
+// "Solo mi ruta": un botón que se enciende y apaga (aria-pressed), con el mismo control que los filtros. Sin objetivo no sale
+function renderHabRouteToggle() {
+  if (!hab.goal) return "";
+  return `<div class="hab-filters" role="group" aria-label="${escapeHtml(t("habilidades.onlyRoute"))}">
+    <button type="button" data-only-route aria-pressed="${hab.onlyRoute}">${t("habilidades.onlyRoute")}</button></div>`;
+}
+
 function habVisible(skills) {
   const { filter, keep } = hab;
-  return skills.filter(s => filter === "all" || habSkillStatus(s) === filter || keep.has(s.id));
+  return habScoped(skills).filter(s => filter === "all" || habSkillStatus(s) === filter || keep.has(s.id));
 }
 
 // Grupos con lo que deja ver el filtro (los vacíos no aparecen): { key, title, skills }
@@ -238,9 +253,10 @@ function renderHabGroup(group, index, skills) {
 function renderHabBody(skills) {
   const visible = habVisible(skills);
   if (!visible.length) {
+    const scoped = hab.onlyRoute && hab.goal;
     return `
-      <div class="route-state hab-empty">${routeDraw()}<p>${t(`habilidades.empty.${hab.filter}`)}</p>
-        ${hab.filter !== "all" ? `<button type="button" class="btn-ghost" data-skill-filter="all">${t("habilidades.clearFilter")}</button>` : ""}
+      <div class="route-state hab-empty">${routeDraw()}<p>${t(scoped ? "habilidades.empty.route" : `habilidades.empty.${hab.filter}`)}</p>
+        ${hab.filter !== "all" || scoped ? `<button type="button" class="btn-ghost" data-skill-filter="all">${t("habilidades.clearFilter")}</button>` : ""}
       </div>`;
   }
   const groups = habGroups(visible);
@@ -297,7 +313,7 @@ function openHabGroupFor(status) {
 }
 
 function renderHabShowing(skills) {
-  return t("habilidades.showing", { n: habVisible(skills).length, total: skills.length });
+  return t("habilidades.showing", { n: habVisible(skills).length, total: habScoped(skills).length });
 }
 
 // Aviso breve tras guardar un cambio, con "Deshacer" (toast.js). Si al deshacer otra fila se está guardando, espera.
@@ -331,10 +347,13 @@ function paintHabilidades({ keepFocus = false } = {}) {
     // La demanda se marca como ejemplo mientras alguna habilidad la tenga sembrada (demandIsSample)
     const note = skills.length ? sampleDemandNote("hab-sample-note", skills) : "";
     content.innerHTML = `
-      <section class="ruta-card hab-card" aria-labelledby="hab-list-title">
+      <section class="ruta-card hab-card is-flat" aria-labelledby="hab-list-title">
         <h2 id="hab-list-title" class="ruta-card-title">${t("habilidades.listTitle")}</h2>
         <div class="hab-toolbar">
-          <div class="hab-filters" id="hab-filters" role="group" aria-label="${t("habilidades.filter.group")}">${renderHabFilters(skills)}</div>
+          <div class="hab-groupby">
+            <div class="hab-filters" id="hab-filters" role="group" aria-label="${t("habilidades.filter.group")}">${renderHabFilters(skills)}</div>
+            <div id="hab-route-toggle" class="hab-groupby">${renderHabRouteToggle()}</div>
+          </div>
           <div class="hab-groupby">
             <span class="hab-groupby-label" id="hab-groupby-label">${t("habilidades.groupBy")}</span>
             <div class="hab-filters" id="hab-groupby" role="group" aria-labelledby="hab-groupby-label">${renderHabGroupBy()}</div>
@@ -361,6 +380,7 @@ function refreshHabList(focus = habFocus()) {
   settleMotion(summary); // motion.js: números y barra desde el valor anterior
   document.getElementById("hab-filters").innerHTML = renderHabFilters(skills);
   document.getElementById("hab-groupby").innerHTML = renderHabGroupBy();
+  document.getElementById("hab-route-toggle").innerHTML = renderHabRouteToggle();
   queueMicrotask(continueHabReveal);
   document.getElementById("hab-showing").textContent = renderHabShowing(skills);
   body.classList.remove("is-new");
@@ -372,6 +392,10 @@ function refreshHabList(focus = habFocus()) {
 function focusHab(focus) {
   if (focus.filter) {
     document.querySelector(`#hab-filters [data-skill-filter="${focus.filter}"]`)?.focus({ preventScroll: true });
+    return;
+  }
+  if (focus.onlyRoute) {
+    document.querySelector("#habilidades-content [data-only-route]")?.focus({ preventScroll: true });
     return;
   }
   if (focus.groupMode) {
@@ -394,6 +418,7 @@ function habFocus() {
   if (!active?.closest("#habilidades-content")) return null;
   if (active.dataset.skillFilter) return { filter: active.dataset.skillFilter };
   if (active.dataset.groupMode) return { groupMode: active.dataset.groupMode };
+  if (active.hasAttribute("data-only-route")) return { onlyRoute: true };
   if (active.dataset.groupToggle !== undefined) return { groupToggle: active.dataset.groupToggle };
   const row = active.closest("[data-skill-row]");
   if (!row) return null;
@@ -500,9 +525,17 @@ function initHabilidades() {
       refreshHabList({ groupMode: hab.groupMode });
       return;
     }
+    if (e.target.closest("[data-only-route]")) {
+      hab.onlyRoute = !hab.onlyRoute;
+      hab.keep.clear();
+      refreshHabList({ onlyRoute: true });
+      return;
+    }
     const filter = e.target.closest("[data-skill-filter]");
     if (filter) {
-      if (filter.dataset.skillFilter === hab.filter) return;
+      const clearsRoute = filter.closest(".hab-empty") && hab.onlyRoute;
+      if (clearsRoute) hab.onlyRoute = false; // "Ver todas" del estado vacío también quita "Solo mi ruta"
+      if (filter.dataset.skillFilter === hab.filter && !clearsRoute) return;
       hab.filter = filter.dataset.skillFilter;
       hab.keep.clear();
       saveHabFilter(hab.filter);
@@ -540,7 +573,8 @@ document.addEventListener("skillmap:progress", e => {
 
 document.addEventListener("skillmap:user", () => {
   hab.request++;
-  Object.assign(hab, { skills: null, goal: null, saving: null, error: null, errorId: null, undo: null, groupMode: null });
+  Object.assign(hab, { skills: null, goal: null, saving: null, error: null, errorId: null, undo: null, groupMode: null, onlyRoute: false });
+
   hab.keep.clear();
   hab.collapsed.category.clear();
   hab.collapsed.status.clear();
