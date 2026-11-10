@@ -97,9 +97,15 @@ function setTheme(theme) {
   return saveSettings({ theme });
 }
 
+// Desde el interruptor de Ajustes. Las reglas de movimiento reducido cambian qué animación lleva la vista (view-in ↔
+// view-fade) y muestran u ocultan la estela del nav: el navegador lo toma como animaciones nuevas y la vista entera
+// repetía su entrada al pulsar. Las que estaban hechas se dan por terminadas (las de carga, sin fin, siguen).
 function setReduceMotion(reduced) {
   settingsTouched.add("reduceMotion");
   applyReduceMotion(reduced);
+  document.getAnimations().forEach(anim => {
+    if (anim instanceof CSSAnimation && anim.effect?.getComputedTiming().iterations !== Infinity) anim.finish();
+  });
   return saveSettings({ reduceMotion: reduced });
 }
 
