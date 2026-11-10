@@ -77,7 +77,7 @@ function renderMatch(pct, detected) {
   const offset = circumference - (pct / 100) * circumference;
   // Mismo gauge que Mi Ruta: --pct alimenta el conteo del número (styles.css); el span es el respaldo sin CSS.
   return `
-    <article class="analizador-card analizador-match">
+    <div class="analizador-card analizador-match is-plain">
       <h2 class="analizador-card-title">${t("analyzer.match.title")}</h2>
       <div class="gauge-ring analizador-ring">
         <svg viewBox="0 0 160 160" role="img" aria-label="${t("analyzer.match.aria", { pct })}">
@@ -89,7 +89,33 @@ function renderMatch(pct, detected) {
         <p class="gauge-value" aria-hidden="true" style="--pct:${pct};"><span>${pct}%</span></p>
       </div>
       <p class="analizador-match-text">${matchMessage(pct, detected)}</p>
-    </article>`;
+    </div>`;
+}
+
+// Demanda de cada habilidad del catálogo por nombre (para "Te faltan · N% de ofertas"); la llena openAnalizador
+let analyzerDemand = new Map();
+
+function loadAnalyzerDemand() {
+  fetchSkills() // dashboard.js (en caché)
+    .then(list => { analyzerDemand = new Map(list.map(s => [s.name, s.demandPercentage])); })
+    .catch(() => { /* sin demanda: los chips van sin el % */ });
+}
+
+// "Te faltan": las que estás aprendiendo (rosa→violeta) y las pendientes, cada una con el % de ofertas que la piden
+function renderLackGroup(inProgress, missing) {
+  const items = [...inProgress.map(name => ({ name, tone: "progress" })), ...missing.map(name => ({ name, tone: "missing" }))];
+  const chips = items.length
+    ? `<ul class="analizador-chips">${items.map(({ name, tone }, i) => {
+        const pct = analyzerDemand.get(name);
+        const demand = pct == null ? "" : ` <span class="analizador-chip-demand">· ${t("analyzer.chipDemand", { pct })}</span>`;
+        return `<li class="analizador-chip analizador-chip--${tone}" style="--i:${i};">${escapeHtml(tSkill(name))}${demand}</li>`;
+      }).join("")}</ul>`
+    : `<p class="analizador-group-empty">${t("analyzer.lackEmpty")}</p>`;
+  return `
+    <section class="analizador-group">
+      <h3 class="analizador-group-title analizador-group-title--missing">${BREAKDOWN_ICONS.missing}${t("analyzer.lack")} (${items.length})</h3>
+      ${chips}
+    </section>`;
 }
 
 const BREAKDOWN_ICONS = {
@@ -109,16 +135,15 @@ function renderBreakdownGroup(label, items, tone) {
     </section>`;
 }
 
+// Desglose en dos grupos: "Ya las tienes" (dominadas) y "Te faltan" (aprendiendo y pendientes, con su demanda)
 function renderBreakdown(mastered, inProgress, missing) {
   return `
-    <article class="analizador-card analizador-breakdown">
+    <div class="analizador-card analizador-breakdown is-plain">
       <h2 class="analizador-card-title">${t("analyzer.breakdown")}</h2>
-      ${renderBreakdownGroup(t("analyzer.mastered"), mastered, "mastered")}
+      ${renderBreakdownGroup(t("analyzer.have"), mastered, "mastered")}
       ${routeDivider()}
-      ${renderBreakdownGroup(t("analyzer.progress"), inProgress, "progress")}
-      ${routeDivider()}
-      ${renderBreakdownGroup(t("analyzer.missing"), missing, "missing")}
-    </article>`;
+      ${renderLackGroup(inProgress, missing)}
+    </div>`;
 }
 
 function renderAnalysis(r) {
@@ -127,11 +152,14 @@ function renderAnalysis(r) {
   const inProgress = r.inProgressSkills ?? [];
   const missing = r.missingSkills ?? [];
   const detected = mastered.length + inProgress.length + missing.length > 0;
+  // Una sola tarjeta de resultado: compatibilidad y desglose dentro, sin cajas propias
   return `
-    <div class="analizador-grid">
-      ${renderMatch(pct, detected)}
-      ${renderBreakdown(mastered, inProgress, missing)}
-    </div>`;
+    <article class="analizador-card analizador-result-card" aria-label="${escapeHtml(t("analyzer.resultLabel"))}">
+      <div class="analizador-grid">
+        ${renderMatch(pct, detected)}
+        ${renderBreakdown(mastered, inProgress, missing)}
+      </div>
+    </article>`;
 }
 
 const clampPct = value => Math.max(0, Math.min(100, Math.round(value ?? 0)));
@@ -150,28 +178,30 @@ function renderNotice(title, detail = "") {
     </div>`;
 }
 
-// Resultado de un análisis nuevo. Con engine "cache" (la misma oferta ya estaba en el historial) se avisa, sin nombrar
-// el motor: el historial y sus avisos solo dicen cuándo se analizó y el % de ese momento.
+// Resultado de un análisis nuevo: sin etiquetas de motor, IA ni caché (una oferta repetida se recupera del historial
+// sin gastar consulta y se ve como cualquier resultado)
 function renderNewResult(r) {
-  const notice = r.engine === "cache" ? renderNotice(t("analyzer.cached.title"), t("analyzer.cached.text")) : "";
-  return notice + renderAnalysis(r);
+  return renderAnalysis(r);
 }
 
-// Fecha y hora local en el idioma actual: "7 nov 2026 · 15:54" o "Nov 7, 2026 · 15:54" (historial)
-function formatSyncDate(iso) {
+// Fecha y hora local en el idioma actual: { day: "7 nov 2026", time: "15:54" } ("Nov 7, 2026" en inglés)
+function syncDateParts(iso) {
   const date = new Date(iso);
   const day = new Intl.DateTimeFormat(getLanguage(), { day: "numeric", month: "short", year: "numeric" }).format(date);
   const time = new Intl.DateTimeFormat(getLanguage(), { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(date);
-  return `${day.replace(/\./g, "")} · ${time}`;
+  return { day: day.replace(/\./g, ""), time };
+}
+
+// "Analizado el 7 nov 2026 a las 15:54. En ese momento: 57%."
+function analyzedWhen(iso, pct) {
+  const { day, time } = syncDateParts(iso);
+  return t("analyzer.history.savedMeta", { date: day, time, pct: clampPct(pct) });
 }
 
 // Análisis del historial: siempre recalculado con el progreso actual (el aviso dice fecha, hora y el % de ese momento,
 // sin el motor), y la oferta original plegada debajo.
 function renderHistoryResult(r) {
-  const meta = t("analyzer.history.savedMeta", {
-    date: escapeHtml(formatSyncDate(r.createdAt)),
-    pct: clampPct(r.savedMatchPercentage),
-  });
+  const meta = escapeHtml(analyzedWhen(r.createdAt, r.savedMatchPercentage));
   return `
     ${renderNotice(t("analyzer.history.recalculated"), meta)}
     ${renderAnalysis(r)}
@@ -191,7 +221,7 @@ function renderAnalyzerEmpty({ stale = false } = {}) {
   const title = t(stale ? "analyzer.stale.title" : "analyzer.empty.title");
   const text = t(stale ? "analyzer.stale.text" : "analyzer.empty.text");
   return `
-    <div class="analizador-card analizador-empty">
+    <div class="analizador-card analizador-empty is-plain">
       ${analyzerEmptyArt()}
       <div class="analizador-empty-copy">
         <p class="analizador-empty-title">${title}</p>
@@ -242,20 +272,21 @@ function renderAnalyzerSkeleton(labelKey = "analyzer.skeleton") {
       <div class="analizador-chips">${widths.map(w => `<span class="skel analizador-skel-chip" style="width:${w}rem;"></span>`).join("")}</div>
     </div>`;
   return `
-    <div class="analizador-grid analizador-skeleton" role="status">
+    <div class="analizador-card analizador-result-card" role="status">
+    <div class="analizador-grid analizador-skeleton">
       <span class="sr-only">${t(labelKey)}</span>
-      <div class="analizador-card analizador-match" aria-hidden="true">
+      <div class="analizador-card analizador-match is-plain" aria-hidden="true">
         <span class="skel skel-line skel-line--title"></span>
         <span class="skel skel-ring"></span>
         <span class="skel skel-line skel-line--short"></span>
         <span class="skel skel-line skel-line--shorter"></span>
       </div>
-      <div class="analizador-card analizador-breakdown" aria-hidden="true">
+      <div class="analizador-card analizador-breakdown is-plain" aria-hidden="true">
         <div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span>${routeDraw({ loop: true })}</div>
         ${group([5, 6.5, 6, 5.5, 4.5])}
-        ${group([4.5, 6])}
         ${group([5.5, 6.5, 5])}
       </div>
+    </div>
     </div>`;
 }
 
@@ -423,12 +454,10 @@ function renderHistoryItem(item) {
   return `
     <li class="analizador-history-item">
       <button type="button" class="analizador-history-open" data-history-open="${Number(item.id)}"${current}>
-        <span class="analizador-history-pct" aria-hidden="true">${pct}%</span>
         <span class="analizador-history-main">
           <span class="analizador-history-name">${title}</span>
-          <span class="analizador-history-meta"><time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(formatSyncDate(item.createdAt))}</time></span>
+          <span class="analizador-history-when"><time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(analyzedWhen(item.createdAt, pct))}</time></span>
         </span>
-        <span class="sr-only">, ${t("analyzer.match.aria", { pct })}</span>
       </button>
       <button type="button" class="analizador-icon-btn" data-history-delete="${Number(item.id)}" aria-label="${deleteLabel}" title="${deleteLabel}">${TRASH_ICON}</button>
     </li>`;
@@ -604,11 +633,23 @@ function initHistory() {
 
 // ---------- Arranque ----------
 
+// "Probar con un ejemplo": pega una oferta de ejemplo (en el idioma de la app) sin analizarla; analizar lo decide el usuario
+function useAnalyzerSample() {
+  const text = document.getElementById("analizador-text");
+  text.value = t("analyzer.sampleText");
+  updateCounter();
+  showEmptyWarning(false);
+  text.focus();
+  text.setSelectionRange(0, 0);
+  text.scrollTop = 0;
+}
+
 function initAnalizador() {
   const form = document.getElementById("analizador-form");
   const text = document.getElementById("analizador-text");
   const result = document.getElementById("analizador-result");
   text.maxLength = ANALYZER_MAX_CHARS;
+  document.getElementById("analizador-sample").addEventListener("click", useAnalyzerSample);
   showAnalyzerResult("empty", {});
   updateCounter();
   text.addEventListener("input", () => {
@@ -654,6 +695,8 @@ function prefillAnalyzer(text, title) {
 // analizar solo: cada análisis gasta cuota de IA. El historial se carga la primera vez (no gasta IA).
 function openAnalizador() {
   if (!historyState.items && !historyState.error) loadHistory();
+  loadAnalyzerDemand();
+
   if (!analyzerStale) return;
   analyzerStale = false;
   analyzerShown = false;
