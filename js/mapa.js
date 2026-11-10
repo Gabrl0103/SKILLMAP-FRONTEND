@@ -196,10 +196,9 @@ function renderMapa(skills) {
   // La ruta sugerida (polyline) la llena updateMapaRoute cuando llega el objetivo activo.
   return `
     <div class="mapa-layout">
-      ${renderMapaTip()}
       <div class="mapa-card">
         <div class="mapa-viewport" id="mapa-viewport">
-          <div class="mapa-stage" id="mapa-stage" style="width:${width}px; height:${height}px;"
+          <div class="mapa-stage${mapaRouteOn ? "" : " is-route-off"}" id="mapa-stage" style="width:${width}px; height:${height}px;"
             role="group" aria-label="${t("mapa.stage")}">
             <svg class="mapa-links" width="${width}" height="${height}" aria-hidden="true">${lines}<polyline class="mapa-route" id="mapa-route" points=""/></svg>
             ${labels.map(renderClusterLabel).join("")}
@@ -224,14 +223,14 @@ function renderMapa(skills) {
             <span><i class="mapa-dot mapa-dot--mastered"></i>${statusLabel("MASTERED")}</span>
             <span><i class="mapa-dot mapa-dot--progress"></i>${statusLabel("IN_PROGRESS")}</span>
             <span><i class="mapa-dot mapa-dot--pending"></i>${statusLabel("PENDING")}</span>
-            <span id="mapa-legend-route" hidden><i class="mapa-key-route"></i>${t("mapa.route")}</span>
+            <button type="button" class="mapa-route-toggle" id="mapa-legend-route" aria-pressed="${mapaRouteOn}" hidden><span><i class="mapa-key-route"></i>${t("mapa.route")}</span></button>
           </div>
 
           <div class="mapa-tooltip" id="mapa-tooltip" aria-hidden="true" hidden></div>
         </div>
       </div>
 
-      <aside class="mapa-panel" id="mapa-panel" aria-label="${t("mapa.panel")}">${renderMapaPanelEmpty()}</aside>
+      <aside class="mapa-panel is-plain" id="mapa-panel" aria-label="${t("mapa.panel")}">${renderMapaPanelEmpty()}</aside>
       <p class="sr-only" id="mapa-live" aria-live="polite"></p>
     </div>`;
 }
@@ -675,11 +674,11 @@ function bindMapaEvents() {
 
 window.addEventListener("resize", applyMapaTransform);
 
-// Botones del panel (se redibuja con cada selección) y consejo: un solo listener en el contenedor
+// Botones del panel (se redibuja con cada selección) y "Ruta sugerida" de la leyenda: un solo listener en el contenedor
 document.getElementById("mapa-content").addEventListener("click", e => {
   const context = e.target.closest("#mapa-panel [data-context]");
   if (context) openSkillDetail(Number(context.dataset.context), context); // skill-detalle.js
-  if (e.target.closest("[data-tip-close]")) dismissMapaTip();
+  if (e.target.closest("#mapa-legend-route")) toggleMapaRoute();
 });
 bindStatusPicker(document.getElementById("mapa-content"), setMapaSkillStatus);
 // "Ver mis habilidades como lista", en el encabezado de la vista
@@ -736,33 +735,18 @@ function loadMapa() {
   return mapaRequest;
 }
 
-// ---------- Consejo de primera vez ----------
+// ---------- Ruta sugerida (encender y apagar) ----------
+// El consejo de primera vez se quitó: repetía la bajada de la vista. "Ruta sugerida", en la leyenda, es un botón
+// (aria-pressed) que muestra u oculta la línea de la ruta; la elección dura mientras la app está abierta.
 
-const MAPA_TIP_KEY = "skillmap.mapa.tip"; // "visto" cuando se cerró el consejo
+let mapaRouteOn = true;
 
-function mapaTipSeen() {
-  try { return localStorage.getItem(MAPA_TIP_KEY) === "visto"; } catch { return false; }
+function toggleMapaRoute() {
+  mapaRouteOn = !mapaRouteOn;
+  document.getElementById("mapa-stage")?.classList.toggle("is-route-off", !mapaRouteOn);
+  document.getElementById("mapa-legend-route")?.setAttribute("aria-pressed", String(mapaRouteOn));
 }
 
-// Una línea sobre el mapa y el panel; se cierra una sola vez (localStorage)
-function renderMapaTip() {
-  if (mapaTipSeen()) return "";
-  return `
-    <p class="mapa-tip" id="mapa-tip">
-      <span class="mapa-tip-dot" aria-hidden="true"></span>
-      <span class="mapa-tip-text">${t("mapa.tip")}</span>
-      <button type="button" class="mapa-tip-close" data-tip-close aria-label="${t("mapa.tip.close")}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-      </button>
-    </p>`;
-}
-
-// Se cierra para siempre; el foco pasa al nodo activo del mapa (lo que el consejo invita a tocar)
-function dismissMapaTip() {
-  try { localStorage.setItem(MAPA_TIP_KEY, "visto"); } catch { /* sin storage: vuelve a salir la próxima vez */ }
-  document.getElementById("mapa-tip")?.remove();
-  document.querySelector('#mapa-stage .mapa-node[tabindex="0"]')?.focus();
-}
 
 // ---------- Navegación ----------
 
