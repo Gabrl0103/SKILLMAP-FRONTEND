@@ -96,12 +96,20 @@ function startSession(user, { entrance = null } = {}) {
 
 // La sesión ya no vale en el backend: 401 con la app abierta (aviso "Tu sesión terminó" y el correo escrito) o cuenta
 // eliminada (perfil.js, con su propio aviso y sin correo)
-function endSession({ notice = t("session.ended"), keepEmail = true } = {}) {
+// to: "acceso" (por defecto, con el aviso arriba del formulario) o "intro" (cuenta eliminada: la Introducción con el aviso
+// breve de toast.js encima y el mismo texto para lectores de pantalla en #intro-live)
+function endSession({ notice = t("session.ended"), keepEmail = true, to = "acceso" } = {}) {
   const email = keepEmail ? sessionUser?.email || "" : "";
   sessionUser = null;
   clearSessionToken();
   closeUserMenu();
   notifyUserChange();
+  if (to === "intro") {
+    openIntro();
+    showToast({ owner: "session", text: notice });
+    document.getElementById("intro-live").textContent = notice;
+    return;
+  }
   openAcceso({ notice, email });
 }
 
