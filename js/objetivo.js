@@ -31,7 +31,7 @@ function normalizeText(text) {
 // se está guardando; query: búsqueda; focusOnOpen: al abrir desde "Cambiar objetivo" (Perfil) el foco va al objetivo
 // actual.
 // area: filtro por área ("all" o una de GOAL_AREA_ORDER; dura mientras la app está abierta)
-const objetivoState = { goals: null, catalog: [], readiness: new Map(), order: null, saving: null, busy: false,
+const objetivoState = { goals: null, catalog: [], readiness: new Map(), order: null, saving: null, savingShown: false, busy: false,
   error: null, query: "", area: "all", focusOnOpen: false };
 
 // Objetivo activo actual: el de Mi Ruta; si aún no cargó, el guardado; si no, el primero.
@@ -137,7 +137,7 @@ function renderGoalCard(goal, current, index) {
       <button type="button" class="objetivo-card objetivo-card--choose is-flat" data-action="choose" data-goal-id="${id}"
         aria-label="${escapeHtml(label)}" aria-describedby="objetivo-meta-${id}"${saving ? ` aria-busy="true"` : ""}${objetivoState.busy ? ` aria-disabled="true"` : ""}>
         ${goalCardBody(goal, current, id)}
-        <span class="objetivo-card-cta" aria-hidden="true">${goalCardCta(saving)}</span>
+        <span class="objetivo-card-cta" aria-hidden="true">${goalCardCta(saving && objetivoState.savingShown)}</span>
       </button>
     </li>`;
 }
@@ -219,7 +219,8 @@ function renderObjetivo() {
     </section>`;
 }
 
-// Filtra por la búsqueda y el área: cada grupo dice cuántas rutas muestra y se oculta si no queda ninguna
+// Filtra por la búsqueda y el área: cada grupo dice cuántas rutas muestra y se oculta si no queda ninguna. Lo que vuelve
+// a verse entra con un fundido corto, sin repetir la entrada de la vista (tarjetas que suben, barras desde 0)
 function filterGoalCards() {
   const q = normalizeText(objetivoState.query.trim());
   // El área elegida puede quedar sin rutas tras cambiar de objetivo (su única ruta pasó a ser la actual): vuelve a Todas
@@ -228,20 +229,29 @@ function filterGoalCards() {
   }
   const { area } = objetivoState;
   let visible = 0;
+  const back = []; // ocultos que vuelven a verse
+  // Las tarjetas y títulos que siguen a la vista y cambian de lugar se deslizan hasta él (motion.js)
+  const moving = motionRects([...document.querySelectorAll("#objetivo-content .objetivo-item[data-title], #objetivo-content .objetivo-area-title")]
+    .filter(el => el.getClientRects().length));
   document.querySelectorAll("#objetivo-content .objetivo-area[data-area]").forEach(group => {
     if (group.dataset.area === "mine") { group.hidden = !OWN_ROLES_ENABLED || (area !== "all" && area !== "mine"); return; }
     const inArea = area === "all" || area === group.dataset.area;
     let shown = 0;
     group.querySelectorAll(".objetivo-item[data-title]").forEach(card => {
+      const was = card.hidden;
       card.hidden = !inArea || !card.dataset.title.includes(q);
       if (!card.hidden) shown++;
+      if (was && !card.hidden) back.push(card);
     });
+    if (group.hidden && shown > 0) back.push(group.querySelector(".objetivo-area-title"));
     group.hidden = shown === 0;
     const count = group.querySelector("[data-area-count]");
     if (count) count.textContent = `· ${shown}`;
     visible += shown;
   });
   document.querySelectorAll("#objetivo-content [data-area-filter]").forEach(chip => chip.setAttribute("aria-pressed", String(chip.dataset.areaFilter === area)));
+  back.forEach(el => { motionSkipEntry(el); motionFade(el); }); // motion.js
+  motionFlip(moving);
   const empty = document.querySelector("#objetivo-content .objetivo-empty");
   const any = document.querySelector("#objetivo-content .objetivo-item[data-title]");
   if (empty && any) {
@@ -283,15 +293,22 @@ function keepObjetivoInPlace(change) {
   if (Math.abs(delta) >= 1) window.scrollBy(0, delta);
 }
 
-// Mientras se guarda: la tarjeta tocada dice "Guardando…" (aria-busy) y ninguna responde (aria-disabled). Solo cambian
-// atributos y el pie de las tarjetas: nada se vuelve a pintar.
+// Mientras se guarda: la tarjeta tocada queda ocupada (aria-busy) y ninguna responde (aria-disabled). Solo cambian
+// atributos y el pie de las tarjetas: nada se vuelve a pintar. El texto "Guardando…" ocupa una línea más en la tarjeta:
+// solo aparece si el guardado tarda (objetivoSavingDelay); si no, la tarjeta crecía y encogía en un instante y empujaba
+// a las de abajo (savingShown).
+function objetivoSavingDelay() {
+  return motionMs("--dur-slow", 250) * 2; // motion.js: lo que dura el llenado de las barras
+}
+
 function syncObjetivoBusy() {
   document.querySelectorAll("#objetivo-content [data-action='choose']").forEach(button => {
     const saving = objetivoState.saving === button.dataset.goalId;
     if (saving) button.setAttribute("aria-busy", "true"); else button.removeAttribute("aria-busy");
     if (objetivoState.busy) button.setAttribute("aria-disabled", "true"); else button.removeAttribute("aria-disabled");
     const cta = button.querySelector(".objetivo-card-cta");
-    if (cta) cta.innerHTML = goalCardCta(saving);
+    const text = goalCardCta(saving && objetivoState.savingShown);
+    if (cta && cta.innerHTML !== text) cta.innerHTML = text;
   });
 }
 
@@ -305,37 +322,61 @@ function showObjetivoError() {
 // Tras cambiar de "from" a "to": la tarjeta del objetivo actual pasa a ser la de "to" y, en el hueco de la tarjeta tocada,
 // entra "from" (la rejilla no se reordena bajo el puntero); el dato "en común" de las demás se recalcula. Si el foco estaba
 // en la tarjeta tocada, en la del objetivo actual o se perdió, queda en la tarjeta que ocupó el hueco.
+// Nada se vuelve a pintar entero (motion.js: morphElement / morphInto): la tarjeta del objetivo actual y la del hueco son
+// los mismos nodos con otro contenido, que entra con un fundido corto; el % y la barra cuentan desde el valor anterior; si
+// la ruta anterior es de otra área, las tarjetas que cambian de lugar se deslizan (FLIP) y la lista conserva su alto.
 function swapObjetivo(fromId, toId) {
   const container = document.getElementById("objetivo-content");
   const current = goalById(toId);
   const previous = goalById(fromId);
-  if (!container.querySelector(".objetivo-hero") || !current || !previous) { paintObjetivo(); return; }
+  const hero = container.querySelector(".objetivo-hero");
+  const list = container.querySelector(".objetivo-areas-list");
+  if (!hero || !list || !current || !previous) { paintObjetivo(); return; }
   keepObjetivoInPlace(() => {
     const active = document.activeElement;
-    const slot = container.querySelector(`.objetivo-item[data-goal-id="${toId}"]`);
-    const hero = container.querySelector(".objetivo-hero");
+    const slot = list.querySelector(`.objetivo-item[data-goal-id="${toId}"]`);
     const refocus = !active || active === document.body || Boolean(slot?.contains(active)) || hero.contains(active);
     const order = gridOrder(objetivoState.goals, previous);
     const at = order.indexOf(String(toId));
     if (at >= 0) order[at] = String(fromId);
     objetivoState.order = order;
-    hero.outerHTML = renderHero(current);
-    // El contenido nuevo entra con un fundido corto (styles.css, .is-swapping) y el % y la barra van desde el valor del
-    // objetivo anterior (motion.js); la tarjeta en sí no se mueve
-    const fresh = container.querySelector(".objetivo-hero");
-    fresh?.classList.add("is-swapping");
-    settleMotion(fresh);
-    // Los grupos por área se vuelven a armar (la ruta anterior puede ser de otra área que la tocada) con el nuevo orden:
-    // la anterior queda en el lugar de la tocada si son de la misma área y entra con un fundido; el dato "en común" de
-    // las demás se recalcula al pintar
+    // Dónde estaba cada tarjeta y cada área, y qué decía su línea de datos, para deslizar y fundir solo lo que cambia
+    const rectOf = el => el.getBoundingClientRect();
+    const cardsBefore = new Map([...list.querySelectorAll(".objetivo-item[data-goal-id]")].filter(el => !el.hidden).map(el => [el.dataset.goalId, rectOf(el)]));
+    const areasBefore = new Map([...list.querySelectorAll(".objetivo-area[data-area]")].filter(el => !el.hidden).map(el => [el.dataset.area, rectOf(el.querySelector(".objetivo-area-title"))]));
+    const metaBefore = new Map([...list.querySelectorAll(".objetivo-card-meta")].map(el => [el.closest("[data-goal-id]")?.dataset.goalId, el.textContent]));
+    const listHeight = list.getBoundingClientRect().height;
+    // La tarjeta tocada pasa a ser la del objetivo anterior: si es de la misma área, es el mismo nodo con otro contenido
+    const sameArea = slot && goalArea(previous) === goalArea(current);
+    if (sameArea) {
+      slot.querySelectorAll("[data-goal-id]").forEach(el => { el.dataset.goalId = String(fromId); });
+      slot.dataset.goalId = String(fromId);
+      const meta = slot.querySelector(`#objetivo-meta-${toId}`);
+      if (meta) meta.id = `objetivo-meta-${fromId}`;
+    }
+    morphElement(hero, renderHero(current));
+    hero.querySelectorAll(".objetivo-hero-head, .objetivo-hero-desc").forEach(motionFade);
+    settleMotion(hero); // motion.js: el % y la barra van desde el valor del objetivo anterior
     const others = order.map(goalById);
-    container.querySelector(".objetivo-tools").innerHTML = renderAreaFilters(others);
-    const list = container.querySelector(".objetivo-areas-list");
+    morphInto(container.querySelector(".objetivo-tools"), renderAreaFilters(others));
     list.classList.add("is-static"); // las demás no repiten su entrada
-    list.innerHTML = renderAreaGroups(others, current);
-    const card = container.querySelector(`.objetivo-item[data-goal-id="${fromId}"]`);
-    card?.classList.add("is-swapped");
+    const added = morphInto(list, renderAreaGroups(others, current));
     filterGoalCards();
+    // Lo nuevo (la ruta anterior en otra área, un área que vuelve) entra con el fundido corto, sin repetir su entrada
+    added.forEach(el => { motionSkipEntry(el); motionFade(el); });
+    const card = list.querySelector(`.objetivo-item[data-goal-id="${fromId}"]`);
+    if (sameArea) card?.querySelectorAll(".objetivo-card-top, .objetivo-card-meta, .objetivo-bar").forEach(motionFade);
+    list.querySelectorAll(".objetivo-card-meta").forEach(el => {
+      const id = el.closest("[data-goal-id]")?.dataset.goalId;
+      if (id !== String(fromId) && metaBefore.has(id) && metaBefore.get(id) !== el.textContent) motionFade(el);
+    });
+    // Las tarjetas y los títulos de área que quedaron en otro lugar se deslizan hasta él
+    const flip = new Map();
+    list.querySelectorAll(".objetivo-item[data-goal-id]").forEach(el => { if (cardsBefore.has(el.dataset.goalId) && el.dataset.goalId !== String(fromId)) flip.set(el, cardsBefore.get(el.dataset.goalId)); });
+    list.querySelectorAll(".objetivo-area[data-area]").forEach(el => { if (areasBefore.has(el.dataset.area)) flip.set(el.querySelector(".objetivo-area-title"), areasBefore.get(el.dataset.area)); });
+    motionFlip(flip);
+    // La lista no encoge bajo el puntero: conserva el alto que tenía (se libera al volver a pintar la vista)
+    if (list.getBoundingClientRect().height < listHeight) list.style.minHeight = `${Math.ceil(listHeight)}px`;
     showObjetivoError();
     if (refocus) (card?.querySelector("[data-action='choose']") || document.getElementById("objetivo-current-title"))?.focus({ preventScroll: true });
   });
@@ -379,8 +420,9 @@ async function switchGoal(goalId, { undo = false } = {}) {
   const before = currentActiveGoalId(objetivoState.goals);
   const target = String(goalId);
   if (target === before) return;
-  Object.assign(objetivoState, { busy: true, saving: undo ? null : target, error: null });
+  Object.assign(objetivoState, { busy: true, saving: undo ? null : target, savingShown: false, error: null });
   syncObjetivoBusy();
+  const slow = setTimeout(() => { objetivoState.savingShown = true; syncObjetivoBusy(); }, objetivoSavingDelay());
   let changed = false;
   try {
     await setActiveGoal(goalId); // dashboard.js: guarda en el backend y recalcula Mi Ruta
@@ -388,7 +430,8 @@ async function switchGoal(goalId, { undo = false } = {}) {
   } catch (err) {
     objetivoState.error = err;
   }
-  Object.assign(objetivoState, { busy: false, saving: null });
+  clearTimeout(slow);
+  Object.assign(objetivoState, { busy: false, saving: null, savingShown: false });
   if (!changed) {
     syncObjetivoBusy();
     keepObjetivoInPlace(showObjetivoError);
@@ -414,13 +457,13 @@ function initObjetivo() {
   container.addEventListener("input", e => {
     if (e.target.id !== "objetivo-search") return;
     objetivoState.query = e.target.value;
-    filterGoalCards();
+    keepScrollRoom(filterGoalCards); // motion.js: si la lista encoge, la página no salta
   });
   container.addEventListener("click", e => {
     const areaChip = e.target.closest("[data-area-filter]");
     if (areaChip) {
       objetivoState.area = areaChip.dataset.areaFilter;
-      keepObjetivoInPlace(filterGoalCards);
+      keepScrollRoom(() => keepObjetivoInPlace(filterGoalCards)); // motion.js: si la lista encoge, la página no salta
       return;
     }
     const button = e.target.closest("[data-action]");
@@ -440,7 +483,7 @@ function initObjetivo() {
 
 // Cambio de usuario: la vista se vuelve a armar la próxima vez que se abra
 document.addEventListener("skillmap:user", () => {
-  Object.assign(objetivoState, { goals: null, catalog: [], readiness: new Map(), order: null, saving: null, busy: false,
+  Object.assign(objetivoState, { goals: null, catalog: [], readiness: new Map(), order: null, saving: null, savingShown: false, busy: false,
     error: null, query: "", area: "all", focusOnOpen: false });
   document.getElementById("objetivo-content").innerHTML = "";
 });
