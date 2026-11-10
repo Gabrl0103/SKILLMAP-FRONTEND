@@ -124,7 +124,10 @@ function renderOffersBody({ enterFrom = Infinity } = {}) {
   const more = items.length > shown.length
     ? `<button type="button" class="btn-pill perfil-btn-outline ofertas-more" data-offers-more>${t("ruta.offers.more", { n: formatNumber(items.length - shown.length) })}</button>`
     : "";
-  body.innerHTML = `<ul class="offer-list offer-list--flat">${shown.map(renderOffer).join("")}</ul>${more}`;
+  const html = `<ul class="offer-list offer-list--flat">${shown.map(renderOffer).join("")}</ul>${more}`;
+  // Sin entrada (recarga silenciosa o un botón): la lista se actualiza en su lugar (motion.js), sin volver a crearla
+  if (enterFrom === Infinity && body.querySelector(".offer-list")) morphInto(body, html);
+  else body.innerHTML = html;
 
 }
 

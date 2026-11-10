@@ -74,7 +74,7 @@ function initToast() {
   region.addEventListener("click", e => {
     if (!e.target.closest("[data-toast-undo]") || !toastState.onUndo) return;
     const undo = toastState.onUndo;
-    hideToast(null, { instant: true });
+    hideToast(); // sale con su animación (.is-leaving), como al irse solo; sin onUndo, otro clic no hace nada
     undo();
   });
   region.addEventListener("keydown", e => {

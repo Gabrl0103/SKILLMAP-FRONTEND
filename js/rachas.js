@@ -234,7 +234,7 @@ function renderRitmoCard(catalog, goalSkills, readiness) {
 function refreshRitmo(focus = ritmoFocus()) {
   const card = document.getElementById("ritmo-card");
   if (!card || !ritmo.data) return;
-  card.innerHTML = renderRitmoInner();
+  morphInto(card, renderRitmoInner()); // motion.js: en su lugar, sin repintar la tarjeta
   settleMotion(card); // motion.js: números y barras desde el valor anterior
   focus?.();
 }
