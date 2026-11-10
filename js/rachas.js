@@ -228,7 +228,7 @@ function renderRitmoCard(catalog, goalSkills, readiness) {
     data, skills: catalog.length ? goalSkills : null, goalSkills,
     goal: escapeHtml(tGoalTitle(readiness.goalTitle)), topGap: readiness.gaps[0] || null,
   });
-  return `<article id="ritmo-card" class="ruta-card ruta-ritmo" aria-labelledby="ritmo-title">${renderRitmoInner()}</article>`;
+  return `<article id="ritmo-card" class="ruta-card ruta-ritmo is-flat" aria-labelledby="ritmo-title">${renderRitmoInner()}</article>`;
 }
 
 function refreshRitmo(focus = ritmoFocus()) {

@@ -93,24 +93,103 @@ function renderMarketDemand(goalSkills, catalog) {
 
 // Tarjeta "Mercado laboral": demanda media de las habilidades del objetivo y del catálogo completo. Cada barra mide el %
 // real de ofertas que dice su texto (0–100), como las barras de demanda de las brechas.
-function renderMarketCard(goalSkills, catalog, goalTitle) {
+// Pestaña Mercado: la comparación, las habilidades más pedidas del objetivo (MARKET_TOP, con la misma barra de % real) y
+// de cuántas ofertas y fuentes sale la demanda (atribución a Remotive y Arbeitnow).
+const MARKET_TOP = 5;
+
+function renderMarketCard(goalSkills, catalog, goalTitle, jobStats = null) {
   const level = marketLevel(goalSkills, catalog);
-  if (!level) return "";
+  if (!level) {
+    return `
+      <section class="ruta-card ruta-market is-flat" aria-labelledby="market-title">
+        <h2 id="market-title" class="ruta-card-title">${t("ruta.market")}</h2>
+        <div class="route-state">${routeDraw()}<p class="text-sm text-muted">${t("ruta.market.empty")}</p></div>
+      </section>`;
+  }
+  const bar = (pct, kind) => `<span class="market-bar" aria-hidden="true"><span class="market-bar-fill market-bar-fill--${kind}" style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>`;
   const row = (label, pct, kind) => `
     <div class="market-row">
       <div class="market-row-head"><span class="market-row-name">${label}</span><span>${t("ruta.market.avg", { n: pct })}</span></div>
-      <span class="market-bar" aria-hidden="true"><span class="market-bar-fill market-bar-fill--${kind}" style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>
+      ${bar(pct, kind)}
     </div>`;
+  const top = [...goalSkills].sort((a, b) => b.demandPercentage - a.demandPercentage).slice(0, MARKET_TOP);
+  const topList = top.length ? `
+      <div class="market-top">
+        <h3 class="market-top-title">${t("ruta.market.top")}</h3>
+        <ul class="flat-rows" aria-label="${escapeHtml(t("ruta.market.top"))}">
+          ${top.map(s => `<li class="market-top-row"><span>${escapeHtml(tSkill(s.name))}</span>${bar(s.demandPercentage, "goal")}<span>${s.demandPercentage}%</span></li>`).join("")}
+        </ul>
+      </div>` : "";
+  const statsText = jobStatsText(jobStats, "jobs.routeFrom");
   return `
-    <article class="ruta-card ruta-market" aria-labelledby="market-title">
+    <section class="ruta-card ruta-market is-flat" aria-labelledby="market-title">
       <h2 id="market-title" class="ruta-card-title">${t("ruta.market")}</h2>
       <div class="market-rows">
         ${row(escapeHtml(tGoalTitle(goalTitle)), level.numbers.goal, "goal")}
         ${row(t("ruta.market.catalog"), level.numbers.market, "catalog")}
       </div>
       <p class="market-text">${t("ruta.market.note", level.numbers)}</p>
-      ${sampleDemandNote("ruta-sample-note", goalSkills)}
-    </article>`;
+      ${topList}
+      ${sampleDemandNote("ruta-sample-note", goalSkills) || (statsText ? `<p class="ruta-sample-note">${statsText}</p>` : "")}
+    </section>`;
+}
+
+// ---------- Pestañas de Mi Ruta ----------
+// Bajo la tarjeta de preparación: Resumen (Tu semana, Tu ritmo, tendencia y Siguiente giro), Mercado y Ofertas. Patrón
+// tablist: flechas, Inicio y Fin cambian de pestaña (activación automática) y solo la elegida entra con Tab. La elegida
+// dura la sesión del navegador (sessionStorage) y se conserva al recargar Mi Ruta; cambiar no mueve la página: la fila de
+// pestañas queda en el mismo punto de la pantalla.
+const RUTA_TABS = ["summary", "market", "offers"];
+const RUTA_TAB_KEY = "skillmap.ruta.tab";
+
+function readRutaTab() {
+  try {
+    const saved = sessionStorage.getItem(RUTA_TAB_KEY);
+    if (RUTA_TABS.includes(saved)) return saved;
+  } catch { /* sin storage: Resumen */ }
+  return "summary";
+}
+
+let rutaTab = readRutaTab();
+
+function renderRutaTabs() {
+  const tabs = RUTA_TABS.map(key => {
+    const selected = key === rutaTab;
+    return `<button type="button" class="view-tab" role="tab" id="ruta-tab-${key}" aria-controls="ruta-panel-${key}"
+      aria-selected="${selected}" tabindex="${selected ? 0 : -1}">${t(`ruta.tab.${key}`)}</button>`;
+  }).join("");
+  return `<div class="view-tabs" role="tablist" aria-label="${escapeHtml(t("ruta.tabs"))}">${tabs}</div>`;
+}
+
+function renderRutaPanel(key, html) {
+  return `<div class="view-tabpanel" role="tabpanel" id="ruta-panel-${key}" aria-labelledby="ruta-tab-${key}"${key === rutaTab ? "" : " hidden"}>${html}</div>`;
+}
+
+function selectRutaTab(key, { focus = false } = {}) {
+  const tablist = document.querySelector("#app-content .view-tabs");
+  if (!tablist || !RUTA_TABS.includes(key)) return;
+  const before = tablist.getBoundingClientRect().top;
+  rutaTab = key;
+  try { sessionStorage.setItem(RUTA_TAB_KEY, key); } catch { /* sin storage: dura hasta recargar */ }
+  tablist.querySelectorAll("[role='tab']").forEach(tab => {
+    const selected = tab.id === `ruta-tab-${key}`;
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    if (selected && focus) tab.focus({ preventScroll: true });
+  });
+  document.querySelectorAll("#app-content .view-tabpanel").forEach(panel => { panel.hidden = panel.id !== `ruta-panel-${key}`; });
+  const delta = tablist.getBoundingClientRect().top - before;
+  if (Math.abs(delta) >= 1) window.scrollBy(0, delta);
+}
+
+function handleRutaTabKey(e) {
+  const tab = e.target.closest("#app-content [role='tab']");
+  if (!tab) return;
+  const i = RUTA_TABS.indexOf(tab.id.replace("ruta-tab-", ""));
+  const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: RUTA_TABS.length - 1 }[e.key];
+  if (next === undefined) return;
+  e.preventDefault();
+  selectRutaTab(RUTA_TABS[(next + RUTA_TABS.length) % RUTA_TABS.length], { focus: true });
 }
 
 // Paradas de la ruta: todas las habilidades del objetivo, también las dominadas, por demanda. Las dominadas no vienen en
@@ -291,7 +370,7 @@ function renderBrechas(r, reference, jobStats, catalog, goalId, stops = r.gaps) 
   const foot = more || note ? `<div class="brechas-foot">${more}${note}</div>` : "";
 
   return `
-    <article id="brechas-card" class="ruta-card ruta-brechas" tabindex="-1" aria-labelledby="brechas-title">
+    <article id="brechas-card" class="ruta-card ruta-brechas is-flat" tabindex="-1" aria-labelledby="brechas-title">
       <header class="ruta-card-header">
         <h2 id="brechas-title" class="ruta-card-title" tabindex="-1">${t("ruta.week.title")}</h2>
         <span class="ruta-card-hint">${semanaRange()}</span>
@@ -364,7 +443,7 @@ function trendDelta(points) {
 
 function renderTrendCard(header, body) {
   return `
-    <article class="ruta-card ruta-trend">
+    <article class="ruta-card ruta-trend is-flat">
       <header class="ruta-card-header">
         <h2 class="ruta-card-title">${t("ruta.trend.title")}</h2>
         ${header}
@@ -472,7 +551,7 @@ function bindTrendHover(container, history) {
 // Skeleton de carga: misma grilla y tarjetas que la vista final. El texto solo lo leen los lectores de pantalla.
 function renderRutaSkeleton() {
   const row = `<div class="skel-row"><span class="skel skel-line skel-line--half"></span><span class="skel skel-bar"></span></div>`;
-  const card = (body, cls = "") => `<div class="ruta-card ${cls}"><div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span></div>${body}</div>`;
+  const card = (body, cls = "is-flat") => `<div class="ruta-card ${cls}"><div class="ruta-card-header"><span class="skel skel-line skel-line--title"></span></div>${body}</div>`;
   return `
     <div class="ruta-grid ruta-skeleton" role="status">
       <span class="sr-only">${t("ruta.loading")}</span>
@@ -483,16 +562,14 @@ function renderRutaSkeleton() {
           <span class="skel skel-bar"></span>
         </div>
       </div>
-      <div class="ruta-row" aria-hidden="true">
-        ${card(row.repeat(3))}
-        ${card(row.repeat(2))}
+      <div class="view-tabs" aria-hidden="true"><span class="view-tab"><span class="skel skel-line skel-line--short"></span></span></div>
+      <div class="view-tabpanel" aria-hidden="true">
+        <div class="ruta-row">
+          ${card(row.repeat(3))}
+          ${card(row.repeat(2))}
+        </div>
+        <div class="ruta-row ruta-row--single">${card(`<span class="skel skel-chart"></span>`)}</div>
       </div>
-      <div class="ruta-row" aria-hidden="true">
-        ${card(`<span class="skel skel-chart"></span>`)}
-        ${card(row.repeat(2))}
-      </div>
-      <div class="ruta-row ruta-row--single" aria-hidden="true">${card(row.repeat(2))}</div>
-      <div class="ruta-row ruta-row--single" aria-hidden="true"><div class="skel-action"></div></div>
     </div>`;
 }
 
@@ -825,14 +902,20 @@ async function loadDashboard(goalId, { quiet = false, swap = false } = {}) {
       const shown = cards.filter(Boolean);
       return `<div class="ruta-row${shown.length < 2 ? " ruta-row--single" : ""}">${shown.join("")}</div>`;
     };
+    // Arriba la única tarjeta (preparación y ruta); debajo, las pestañas con secciones sin tarjeta
+    const focusedTab = document.activeElement?.closest("#app-content [role='tab']")?.id;
     container.innerHTML = `
       <div class="ruta-grid${silent ? " is-quiet" : swapping ? " is-swap" : ""}">
         ${row(renderGauge(r, stops))}
-        ${row(renderBrechas(r, reference, jobStats, demand.catalog, goalId, stops), renderRitmoCard(demand.catalog, demand.goalSkills, r))}
-        ${row(renderTrend(history), renderMarketCard(demand.goalSkills, demand.catalog, r.goalTitle))}
-        ${row(renderOffersCard(goal))}
-        ${row(renderNextAction(r.gaps[0], r.goalTitle))}
+        ${renderRutaTabs()}
+        ${renderRutaPanel("summary", `
+          ${row(renderBrechas(r, reference, jobStats, demand.catalog, goalId, stops), renderRitmoCard(demand.catalog, demand.goalSkills, r))}
+          ${row(renderTrend(history))}
+          ${row(renderNextAction(r.gaps[0], r.goalTitle))}`)}
+        ${renderRutaPanel("market", row(renderMarketCard(demand.goalSkills, demand.catalog, r.goalTitle, jobStats)))}
+        ${renderRutaPanel("offers", row(renderOffersCard(goal)))}
       </div>`;
+    if (focusedTab) document.getElementById(focusedTab)?.focus({ preventScroll: true });
     bindTrendHover(container, history);
     settleMotion(container); // motion.js: anillo, números y barras desde el valor que se veía
     loadOffers(goal, goalId, { quiet: silent }); // ofertas.js: llega después, sin frenar el resto de la vista
@@ -850,7 +933,10 @@ function initRuta() {
   setGoalTitle(t("common.loading"));
   document.getElementById("app-content").innerHTML = renderRutaSkeleton(); // hasta que haya sesión y lleguen los datos
   bindGoalPicker();
+  document.getElementById("app-content").addEventListener("keydown", handleRutaTabKey);
   document.getElementById("app-content").addEventListener("click", e => {
+    const tab = e.target.closest("[role='tab']");
+    if (tab) { selectRutaTab(tab.id.replace("ruta-tab-", "")); return; }
     const context = e.target.closest("[data-context]");
     if (context) gapScope = context.closest(".prep-route") ? ".prep-route" : "#brechas-card";
     if (context) { openSkillDetail(Number(context.dataset.context), context); return; } // skill-detalle.js
@@ -900,6 +986,8 @@ document.addEventListener("skillmap:user", () => {
   activeGoalId = null;
   routeExpanded = false;
   routeStops = { stops: [], goalTitle: "", goalId: null };
+  rutaTab = "summary"; // otra cuenta: Mi Ruta abre en Resumen
+  try { sessionStorage.removeItem(RUTA_TAB_KEY); } catch { /* sin storage */ }
   closeGoalList({ focusButton: false });
   goalPicker.list().innerHTML = "";
   goalPicker.button().disabled = true;
