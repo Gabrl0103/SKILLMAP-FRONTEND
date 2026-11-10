@@ -20,13 +20,14 @@ const OFFER_EXTERNAL_ICON = `<svg class="offer-external" width="16" height="16" 
 // Tarjeta vacía con su estado de carga; loadOffers la llena. goal: título del objetivo ya traducido y escapado.
 function renderOffersCard(goal) {
   return `
-    <article id="ofertas-card" class="ruta-card ruta-ofertas" aria-labelledby="ofertas-title">
+    <section id="ofertas-card" class="ruta-card ruta-ofertas is-flat" aria-labelledby="ofertas-title">
       <header class="ruta-card-header">
         <h2 id="ofertas-title" class="ruta-card-title" tabindex="-1">${t("ruta.offers.title")}</h2>
         <span class="ruta-card-hint">${t("ruta.offers.hint")}</span>
       </header>
       <div id="ofertas-body">${renderOffersLoading()}</div>
-    </article>`;
+      <p class="ofertas-attribution">${t("ruta.offers.attribution")}</p>
+    </section>`;
 }
 
 function renderOffersLoading() {
@@ -56,7 +57,7 @@ function renderOfferChips(o) {
   return `
     <div class="offer-chips">
       ${mastered ? `<ul class="offer-chip-list" aria-label="${escapeHtml(t("ruta.offers.have"))}">${mastered}</ul>` : ""}
-      ${missing ? `<ul class="offer-chip-list" aria-label="${escapeHtml(t("ruta.offers.missing"))}">${missing}</ul>` : ""}
+      ${missing ? `<span class="offer-chips-label" aria-hidden="true">${t("ruta.offers.lack")}</span><ul class="offer-chip-list" aria-label="${escapeHtml(t("ruta.offers.missing"))}">${missing}</ul>` : ""}
     </div>`;
 }
 
@@ -81,7 +82,7 @@ function renderOffer(o, i) {
     <li class="offer-item"${i >= offersEnterFrom ? ` data-enter style="--i:${i - offersEnterFrom};"` : ""}>
       <div class="offer-top">
         <h3 class="offer-heading">${heading}</h3>
-        <span class="offer-pct" aria-hidden="true">${pct}%</span>
+        <span class="offer-pct" aria-hidden="true">${t("ruta.offers.matchShort", { pct })}</span>
       </div>
       <p class="offer-meta">${meta}<span class="sr-only">. ${t("ruta.offers.matchAria", { pct })}</span></p>
       ${renderOfferChips(o)}
@@ -123,7 +124,8 @@ function renderOffersBody({ enterFrom = Infinity } = {}) {
   const more = items.length > shown.length
     ? `<button type="button" class="btn-pill perfil-btn-outline ofertas-more" data-offers-more>${t("ruta.offers.more", { n: formatNumber(items.length - shown.length) })}</button>`
     : "";
-  body.innerHTML = `<ul class="offer-list">${shown.map(renderOffer).join("")}</ul>${more}`;
+  body.innerHTML = `<ul class="offer-list offer-list--flat">${shown.map(renderOffer).join("")}</ul>${more}`;
+
 }
 
 // goal: título del objetivo ya traducido y escapado (para el estado vacío). goalId: el objetivo que muestra Mi Ruta; se

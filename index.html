@@ -282,7 +282,8 @@
     <!-- Dos columnas: la oferta y su resultado a la izquierda; el historial a la derecha -->
     <div class="analizador-layout">
     <div class="analizador-main">
-    <form id="analizador-form" class="analizador-card analizador-input">
+    <!-- La oferta: el campo sin tarjeta; la única tarjeta de la vista es la del resultado -->
+    <form id="analizador-form" class="analizador-card analizador-input is-plain">
       <label for="analizador-text" class="analizador-label">
         <span class="analizador-label-icon" aria-hidden="true">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="6" width="12" height="15" rx="2.5" opacity=".55"/><rect x="8" y="3" width="13" height="16" rx="2.5"/></svg>
@@ -299,6 +300,7 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></svg>
           <span data-i18n="analyzer.emptyWarning">Pega el texto de una oferta para analizarla.</span>
         </p>
+        <button type="button" id="analizador-sample" class="btn-ghost" data-i18n="analyzer.sample">Probar con un ejemplo</button>
         <button type="submit" id="analizador-submit" class="btn-pill">
           <span data-label data-i18n="analyzer.submit">Analizar compatibilidad</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 11-11M13 7l4 4"/><path d="M18 3v3M16.5 4.5h3M20 10v2M19 11h2M11 2.5v1.5M10.25 3.25h1.5"/></svg>
@@ -309,7 +311,8 @@
     <div id="analizador-result" aria-live="polite"></div>
     </div>
     <!-- Historial de análisis (js/analizador.js): la lista, su estado y las confirmaciones de borrado los pinta el JS -->
-    <section id="analizador-history" class="analizador-card analizador-history" aria-labelledby="analizador-history-title">
+    <section id="analizador-history" class="analizador-card analizador-history is-plain" aria-labelledby="analizador-history-title">
+
       <header class="analizador-history-header">
         <h2 id="analizador-history-title" class="analizador-card-title" tabindex="-1" data-i18n="analyzer.history.title">Historial</h2>
         <p id="analizador-history-count" class="analizador-history-count"></p>
@@ -371,11 +374,20 @@
       <p class="objetivo-subtitle" data-i18n="ajustes.subtitle">Elige cómo se ve Cenit, su idioma y la seguridad de tu cuenta.</p>
     </header>
 
-    <!-- Apariencia a la izquierda e Idioma a la derecha, del mismo alto; Seguridad debajo a todo el ancho -->
-    <div class="ajustes-grid">
+    <!-- Categorías a la izquierda (arriba y desplazables en pantallas angostas) y, a la derecha, solo la elegida: la única
+         tarjeta de la vista (js/ajustes.js). La lista admite más categorías (Recordatorios, Sistema) sin cambiar el layout -->
+    <div class="ajustes-layout">
+      <nav class="ajustes-nav" aria-label="Categorías de ajustes" data-i18n-aria-label="ajustes.categories">
+        <button type="button" class="ajustes-nav-item" data-ajustes-cat="apariencia" aria-controls="ajustes-panel-apariencia" data-i18n="ajustes.appearance">Apariencia</button>
+        <button type="button" class="ajustes-nav-item" data-ajustes-cat="idioma" aria-controls="ajustes-panel-idioma" data-i18n="ajustes.language">Idioma</button>
+        <button type="button" class="ajustes-nav-item" data-ajustes-cat="cuenta" aria-controls="ajustes-panel-cuenta" data-i18n="ajustes.account">Datos y cuenta</button>
+        <button type="button" class="ajustes-nav-item" data-ajustes-cat="acerca" aria-controls="ajustes-panel-acerca" data-i18n="ajustes.about">Acerca de</button>
+      </nav>
+      <div class="ajustes-panels">
       <!-- Apariencia: tema y animaciones (js/theme.js guarda en el backend) -->
-      <section class="ruta-card ajustes-card" aria-labelledby="ajustes-apariencia-title">
-        <h2 id="ajustes-apariencia-title" class="ajustes-card-title" data-i18n="ajustes.appearance">Apariencia</h2>
+      <section id="ajustes-panel-apariencia" class="ruta-card ajustes-card ajustes-panel" data-ajustes-panel="apariencia" aria-labelledby="ajustes-apariencia-title">
+        <h2 id="ajustes-apariencia-title" class="ajustes-card-title" tabindex="-1" data-i18n="ajustes.appearance">Apariencia</h2>
+        <p class="ajustes-panel-text" data-i18n="ajustes.appearanceText">Cómo se ve Cenit en tu pantalla.</p>
         <fieldset class="ajustes-themes">
           <legend class="sr-only" data-i18n="ajustes.theme">Tema</legend>
           <label class="ajustes-theme">
@@ -400,10 +412,12 @@
         <p id="ajustes-apariencia-status" class="ajustes-status" role="status"></p>
       </section>
       <!-- Idioma (js/theme.js guarda en el backend) -->
-      <section class="ruta-card ajustes-card" aria-labelledby="ajustes-idioma-title">
-        <h2 id="ajustes-idioma-title" class="ajustes-card-title" data-i18n="ajustes.language">Idioma</h2>
+      <section id="ajustes-panel-idioma" class="ruta-card ajustes-card ajustes-panel" data-ajustes-panel="idioma" aria-labelledby="ajustes-idioma-title" hidden>
+        <h2 id="ajustes-idioma-title" class="ajustes-card-title" tabindex="-1" data-i18n="ajustes.language">Idioma</h2>
+        <p class="ajustes-panel-text" data-i18n="ajustes.languageText">El idioma de toda la app.</p>
         <!-- Idioma: mismas tarjetas que el tema. Cada idioma se nombra en su propio idioma, no se traduce -->
         <fieldset class="ajustes-themes ajustes-languages">
+
           <legend class="sr-only" data-i18n="ajustes.language">Idioma</legend>
           <label class="ajustes-theme ajustes-language">
             <input type="radio" name="ajustes-language" value="es" class="sr-only">
@@ -418,9 +432,58 @@
         </fieldset>
         <p id="ajustes-idioma-status" class="ajustes-status" role="status"></p>
       </section>
-      <!-- Seguridad de la cuenta (cambiar contraseña y eliminar cuenta): la pinta y la maneja js/perfil.js -->
-      <div id="ajustes-security" class="ajustes-security"></div>
+      <!-- Datos y cuenta: exportar mis datos (js/ajustes.js), cerrar sesión (js/session.js), cambiar contraseña y eliminar
+           cuenta (#ajustes-security: los pinta y maneja js/perfil.js) -->
+      <section id="ajustes-panel-cuenta" class="ruta-card ajustes-card ajustes-panel" data-ajustes-panel="cuenta" aria-labelledby="ajustes-cuenta-title" hidden>
+        <h2 id="ajustes-cuenta-title" class="ajustes-card-title" tabindex="-1" data-i18n="ajustes.account">Datos y cuenta</h2>
+        <p class="ajustes-panel-text" data-i18n="ajustes.accountText">Tu perfil y tu progreso se guardan solo en este equipo.</p>
+        <div class="ajustes-rows flat-rows">
+          <div>
+            <div class="ajustes-toggle">
+              <div>
+                <p class="ajustes-toggle-title" data-i18n="ajustes.export">Exportar mis datos</p>
+                <p id="ajustes-export-desc" class="ajustes-toggle-desc" data-i18n="ajustes.exportDesc">Descarga tu perfil, tu objetivo, tus habilidades, tus metas y tus análisis en un archivo JSON. No incluye tu contraseña.</p>
+              </div>
+              <div class="ajustes-row-actions">
+                <button type="button" id="ajustes-export" class="btn-ghost" aria-describedby="ajustes-export-desc"><span data-label data-i18n="ajustes.exportButton">Exportar</span></button>
+              </div>
+            </div>
+            <p id="ajustes-export-status" class="ajustes-status" role="status"></p>
+          </div>
+          <div class="ajustes-toggle">
+            <div>
+              <p class="ajustes-toggle-title" data-i18n="user.logout">Cerrar sesión</p>
+              <p id="ajustes-logout-desc" class="ajustes-toggle-desc" data-i18n="ajustes.logoutDesc">Sales de tu cuenta en este equipo; tus datos se quedan guardados.</p>
+            </div>
+            <div class="ajustes-row-actions">
+              <button type="button" id="ajustes-logout" class="btn-ghost" aria-describedby="ajustes-logout-desc" data-i18n="user.logout">Cerrar sesión</button>
+            </div>
+          </div>
+          <div id="ajustes-security" class="ajustes-security-rows"></div>
+        </div>
+      </section>
+      <!-- Acerca de: versión (la da la app de escritorio), fuentes de ofertas y privacidad -->
+      <section id="ajustes-panel-acerca" class="ruta-card ajustes-card ajustes-panel" data-ajustes-panel="acerca" aria-labelledby="ajustes-acerca-title" hidden>
+        <h2 id="ajustes-acerca-title" class="ajustes-card-title" tabindex="-1" data-i18n="ajustes.about">Acerca de</h2>
+        <p class="ajustes-panel-text" data-i18n="ajustes.aboutText">Cenit, tu GPS de carrera.</p>
+        <dl class="ajustes-rows flat-rows">
+          <div>
+            <dt class="ajustes-toggle-title" data-i18n="ajustes.version">Versión</dt>
+            <dd class="ajustes-about-value"><strong id="ajustes-version">—</strong></dd>
+          </div>
+          <div>
+            <dt class="ajustes-toggle-title" data-i18n="ajustes.sources">Fuentes de ofertas</dt>
+            <dd class="ajustes-about-value" data-i18n="ajustes.sourcesText">Ofertas de empleo remoto cortesía de Remotive y Arbeitnow. Cada oferta enlaza a su fuente original.</dd>
+          </div>
+          <div>
+            <dt class="ajustes-toggle-title" data-i18n="ajustes.privacy">Privacidad</dt>
+            <dd class="ajustes-about-value" data-i18n="ajustes.privacyText">Tu perfil y progreso se guardan solo en este equipo. El Analizador envía únicamente el texto de la oferta que pegas.</dd>
+          </div>
+        </dl>
+      </section>
+      </div>
     </div>
+
   </section>
 </main>
 

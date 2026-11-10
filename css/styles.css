@@ -2191,3 +2191,161 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 @media (prefers-reduced-transparency: reduce) {
   :root, :root[data-theme="dark"] { --glass-bg:var(--glass-solid); --glass-bg-strong:var(--glass-solid); --nav-bg:var(--glass-solid); --header-bg:var(--bg-solid); }
 }
+
+/* ---------- Aligerar (estructura y jerarquía) ----------
+   Solo se AÑADE: ninguna regla de arriba cambia. Una tarjeta destacada por pantalla (nivel 1, la de siempre); lo demás
+   pasa a secciones sin tarjeta separadas por espacio y una línea fina (nivel 2) y a filas planas (nivel 3). Todo con los
+   tokens que ya existen (--divider, --space-*, --hit, --fs-*, --fw-*, --text*, --title-solid, --focus-ring, --dur*,
+   --ease-out): tipografía, colores, radios, sombras y vidrio de los elementos que se conservan no cambian. */
+/* Nivel 2: una tarjeta de antes sin su caja (fondo, borde, sombra, vidrio, brillo y radio); queda la línea fina de arriba.
+   .is-plain: igual, sin la línea (columnas laterales y piezas dentro de la tarjeta destacada) */
+:is(.ruta-card, .perfil-card, .analizador-card, .mapa-panel, .perfil-stats, .objetivo-hero-score, .hab-goal, .perfil-danger).is-flat,
+:is(.ruta-card, .perfil-card, .analizador-card, .mapa-panel, .perfil-stats, .objetivo-hero-score, .hab-goal, .perfil-danger).is-plain {
+  background:none; border:0; border-radius:0; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
+:is(.ruta-card, .perfil-card, .analizador-card, .mapa-panel, .perfil-stats, .objetivo-hero-score, .hab-goal, .perfil-danger).is-flat {
+  padding:var(--space-8) 0 0; border-top:1px solid var(--divider); }
+:is(.ruta-card, .perfil-card, .analizador-card, .mapa-panel, .perfil-stats, .objetivo-hero-score, .hab-goal, .perfil-danger).is-plain { padding:0; }
+/* Sin su tarjeta, el texto secundario queda sobre el fondo de página: ahí se usa el token que ya existe para eso
+   (--text-2-page, ≥6.2:1 en el peor punto de los resplandores; en oscuro es el mismo valor que --text-2) */
+.is-flat, .objetivo-card.is-flat, .analizador-input.is-plain, .analizador-empty.is-plain, .analizador-history.is-plain, .mapa-panel.is-plain {
+  --text-2:var(--text-2-page); }
+/* Nivel 3: filas planas separadas por la misma línea fina */
+.flat-rows { display:flex; flex-direction:column; }
+.flat-rows > * + * { border-top:1px solid var(--divider); }
+
+/* Pestañas (Mi Ruta): texto de sección con una raya de acento bajo la elegida; foco con el anillo del tema */
+.view-tabs { display:flex; gap:var(--space-2); overflow-x:auto; border-bottom:1px solid var(--divider); scrollbar-width:none; }
+.view-tabs::-webkit-scrollbar { display:none; }
+.view-tab { position:relative; flex:none; min-height:var(--hit); padding:var(--space-3) var(--space-5); border-radius:var(--radius-control) var(--radius-control) 0 0;
+  font-size:var(--fs-row); font-weight:var(--fw-title); letter-spacing:var(--ls-title); color:var(--text-2-page); white-space:nowrap; cursor:pointer;
+  transition:color var(--dur-fast) ease, background-color var(--dur-fast) ease; }
+.view-tab::after { content:""; position:absolute; left:var(--space-3); right:var(--space-3); bottom:-1px; height:3px; border-radius:var(--radius-pill);
+  background:var(--title-solid); transform:scaleX(0); transition:transform var(--dur) var(--ease-out); }
+.view-tab:hover { color:var(--text); background:var(--hover-bg); }
+.view-tab[aria-selected="true"] { color:var(--text); }
+.view-tab[aria-selected="true"]::after { transform:scaleX(1); }
+.view-tab:focus-visible { outline:var(--focus-ring); outline-offset:-2px; }
+.view-tabpanel { display:flex; flex-direction:column; gap:var(--grid-gap); }
+.view-tabpanel[hidden] { display:none; }
+.view-tabpanel:focus { outline:none; }
+.view-tabpanel:focus-visible { outline:var(--focus-ring); outline-offset:6px; border-radius:var(--radius-control); }
+/* Las filas dentro de una pestaña entran como las de la grilla (mismos keyframes y tiempos) */
+.ruta-grid:not(.ruta-skeleton) .view-tabpanel > .ruta-row > * { animation:card-in var(--dur-slow) var(--ease-out) backwards; }
+.ruta-grid:not(.ruta-skeleton) .view-tabpanel > .ruta-row > :nth-child(2) { animation-delay:60ms; }
+.ruta-grid.is-swap .view-tabpanel > .ruta-row > * { animation:fade-in 300ms var(--ease-out) backwards; }
+@media (prefers-reduced-motion: reduce) { .ruta-grid:not(.ruta-skeleton) .view-tabpanel > .ruta-row > *, .view-tab::after { animation:none; transition:none; } }
+:root[data-motion="reduced"] .ruta-grid:not(.ruta-skeleton) .view-tabpanel > .ruta-row > *, :root[data-motion="reduced"] .view-tab::after { animation:none; transition:none; }
+/* Secciones planas una al lado de la otra: arriba alineadas, sin estirarse a la altura de la vecina */
+.ruta-row:has(> .is-flat) { align-items:start; }
+/* Justo bajo las pestañas no hace falta otra línea: la de la fila de pestañas ya separa */
+.view-tabpanel > .ruta-row:first-child > .is-flat { padding-top:var(--space-2); border-top:0; }
+/* Mercado: habilidades más pedidas del objetivo con su barra (mismas barras que Mercado laboral) y la fuente */
+.market-top { display:flex; flex-direction:column; gap:var(--space-4); padding-top:var(--space-6); border-top:1px solid var(--divider); }
+.market-top-title { font-size:var(--fs-body); font-weight:var(--fw-strong); color:var(--text); }
+.market-top-row { display:grid; grid-template-columns:minmax(120px, 200px) minmax(0,1fr) 3.5em; align-items:center; gap:var(--space-4); padding:var(--space-3) 0;
+  font-size:var(--fs-sm); color:var(--text-2); }
+.market-top-row > :first-child { font-weight:var(--fw-strong); color:var(--text); overflow-wrap:anywhere; }
+.market-top-row > :last-child { text-align:right; font-variant-numeric:tabular-nums; }
+
+/* Ofertas como filas planas: título, empresa y fuente, habilidades y "Analizar con IA" a la derecha */
+.offer-list--flat { display:flex; flex-direction:column; gap:0; }
+.offer-list--flat > .offer-item { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:var(--space-6); row-gap:var(--space-2);
+  padding:var(--space-5) 0; border:0; border-radius:0; background:none; box-shadow:none; }
+.offer-list--flat > .offer-item + .offer-item { border-top:1px solid var(--divider); }
+.offer-list--flat > .offer-item:hover { transform:none; }
+.offer-list--flat > .offer-item > * { grid-column:1; }
+.offer-list--flat > .offer-item > .offer-analyze { grid-column:2; grid-row:1 / span 3; align-self:center; margin-top:0; }
+.offer-chips-label { align-self:center; margin-right:var(--space-1); font-size:var(--fs-xs); font-weight:600; color:var(--text-2); }
+.ofertas-attribution { margin-top:var(--space-4); padding-top:var(--space-4); border-top:1px solid var(--divider); font-size:var(--fs-xs); color:var(--text-2); }
+
+/* Objetivo: filtros por área sobre la lista y las rutas agrupadas por área, con su cantidad */
+.objetivo-tools { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-4); }
+.objetivo-area { display:flex; flex-direction:column; gap:var(--space-4); }
+.objetivo-area + .objetivo-area { padding-top:var(--space-6); border-top:1px solid var(--divider); }
+.objetivo-area[hidden] { display:none; }
+.objetivo-area-title { display:flex; align-items:baseline; gap:var(--space-2); }
+.objetivo-areas-list { display:flex; flex-direction:column; gap:var(--space-6); }
+/* Mosaicos planos: el borde fino de siempre, sin relleno ni sombra en reposo (hover y foco conservan su respuesta) */
+.objetivo-card.is-flat { background:transparent; background-image:none; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.objetivo-card--choose.is-flat:hover, .objetivo-card--choose.is-flat:focus-visible { box-shadow:0 1px 2px var(--card-border), var(--card-glow-hover), var(--card-edge); }
+.objetivo-card-cta:empty { display:none; }
+.objetivo-areas-list.is-static .objetivo-grid > .objetivo-item:not(.is-swapped) { animation:none; }
+/* Preparación dentro de la tarjeta destacada: sin caja propia, separada por una línea vertical */
+.objetivo-hero-score.is-plain { padding:0 0 0 var(--space-10); border-left:1px solid var(--divider); }
+.hab-goal.is-plain { padding:0 0 0 var(--space-8); border-left:1px solid var(--divider); }
+
+/* Ajustes: categorías a la izquierda y solo la elegida a la derecha (la única tarjeta). Angosto: categorías arriba, en
+   una fila que se desplaza */
+.ajustes-layout { display:grid; grid-template-columns:220px minmax(0,1fr); gap:var(--space-8); align-items:start; }
+.ajustes-nav { display:flex; flex-direction:column; gap:var(--space-1); position:sticky; top:calc(var(--header-h) + var(--space-6)); }
+.ajustes-nav-item { display:flex; align-items:center; min-height:var(--hit); padding:0 var(--space-4); border-radius:var(--radius-control);
+  font-size:var(--fs-body); font-weight:var(--fw-nav); color:var(--text-2-page); text-align:left; white-space:nowrap; cursor:pointer;
+  transition:color var(--dur-fast) ease, background-color var(--dur-fast) ease; }
+.ajustes-nav-item:hover { color:var(--text); background:var(--hover-bg); }
+.ajustes-nav-item[aria-current="true"] { color:var(--text); background:var(--hover-bg); box-shadow:inset 3px 0 0 var(--title-solid); }
+.ajustes-nav-item:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.ajustes-panel[hidden] { display:none; }
+.ajustes-panel-text { margin:calc(-1 * var(--space-4)) 0 var(--space-6); font-size:var(--fs-sm); line-height:1.5; color:var(--text-2); }
+.ajustes-panel .ajustes-languages { margin-top:0; }
+.ajustes-rows dd { margin:var(--space-1) 0 0; }
+
+.ajustes-rows > * { padding:var(--space-5) 0; }
+.ajustes-rows > :first-child { padding-top:0; }
+.ajustes-rows > :last-child { padding-bottom:0; }
+.ajustes-rows .ajustes-toggle { margin-top:0; }
+.ajustes-row-actions { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-3); flex:none; }
+.ajustes-row-body { margin-top:var(--space-4); }
+.ajustes-row-body[hidden] { display:none; }
+.ajustes-security-rows { display:contents; }
+.ajustes-security-rows > .ajustes-row { padding:var(--space-5) 0; border-top:1px solid var(--divider); }
+.ajustes-security-rows > .ajustes-row:last-child { padding-bottom:0; }
+.ajustes-row-actions [hidden] { display:none; }
+.ajustes-about-value { font-size:var(--fs-sm); line-height:1.5; color:var(--text-2); }
+.ajustes-about-value strong { font-weight:var(--fw-strong); color:var(--text); font-variant-numeric:tabular-nums; }
+@media (max-width:900px) {
+  .ajustes-layout { grid-template-columns:minmax(0,1fr); gap:var(--space-6); }
+  .ajustes-nav { position:static; flex-direction:row; overflow-x:auto; padding-bottom:var(--space-1); border-bottom:1px solid var(--divider); scrollbar-width:thin; }
+  .ajustes-nav-item[aria-current="true"] { box-shadow:inset 0 -3px 0 var(--title-solid); }
+}
+
+/* Analizador: el campo sin tarjeta, el estado vacío sin tarjeta, una sola tarjeta de resultado e historial en lista */
+.analizador-result-card { display:flex; flex-direction:column; gap:var(--space-6); padding:var(--card-pad); }
+.analizador-result-card > .analizador-grid { gap:var(--space-8); }
+.analizador-chip-demand { font-weight:500; opacity:.85; }
+.analizador-history-when { display:block; font-size:var(--fs-xs); line-height:1.5; color:var(--text-2); }
+/* Historial como lista simple: filas separadas por la línea fina, sin ficha; el análisis abierto conserva su tinte */
+.analizador-history.is-plain .analizador-history-list { gap:0; }
+.analizador-history.is-plain .analizador-history-item { padding:var(--space-2) 0; }
+.analizador-history.is-plain .analizador-history-item + .analizador-history-item { border-top:1px solid var(--divider); }
+.analizador-history.is-plain .analizador-history-open { padding:var(--space-3); border-color:transparent; background:none; }
+.analizador-history.is-plain .analizador-history-open:hover { border-color:transparent; background:var(--hover-bg); transform:none; }
+.analizador-history.is-plain .analizador-history-open[aria-current="true"] { border-color:var(--pink-line); background:var(--pink-tint); }
+.analizador-history.is-plain .analizador-history-name { white-space:normal; }
+
+/* Perfil: completitud en la tarjeta destacada y columna lateral en secciones planas */
+.perfil-complete { flex:1 1 260px; display:flex; flex-direction:column; gap:var(--space-2); min-width:0; max-width:340px; margin-left:auto; }
+.perfil-col > .perfil-card.is-flat .btn-pill { align-self:flex-start; }
+#perfil-cv-card, .perfil-stats.is-flat { display:flex; flex-direction:column; align-items:flex-start; gap:var(--space-3); }
+#perfil-cv-card > .perfil-card-title, .perfil-stats.is-flat > .perfil-card-title { margin-bottom:var(--space-1); }
+.perfil-stats.is-flat > .perfil-stat { align-self:stretch; }
+#perfil-about .perfil-card-header > .btn-ghost { margin-left:auto; }
+.perfil-complete-label { font-size:var(--fs-sm); font-weight:var(--fw-strong); color:var(--text); }
+.perfil-complete-hint { font-size:var(--fs-xs); line-height:1.5; color:var(--text-2); }
+.perfil-side-text { font-size:var(--fs-sm); line-height:1.5; color:var(--text-2); }
+.perfil-side-goal { font-size:var(--fs-row); font-weight:var(--fw-title); color:var(--text); }
+.perfil-col > .is-flat:first-child { padding-top:0; border-top:0; }
+.perfil-about-text { font-size:var(--fs-body); line-height:1.6; color:var(--text-2); }
+.perfil-about-text.perfil-headline--empty { font-style:italic; }
+
+/* Mapa: "Ruta sugerida" se enciende y apaga desde la leyenda (botón de 44px de alto) */
+.mapa-route-toggle { display:inline-flex; align-items:center; min-height:var(--hit); margin:calc((var(--hit) - 1.5em) / -2) 0; padding:0;
+  border-radius:var(--radius-pill); font:inherit; color:inherit; cursor:pointer; }
+.mapa-route-toggle[hidden] { display:none; }
+.mapa-route-toggle:focus-visible { outline:var(--focus-ring); outline-offset:2px; }
+.mapa-route-toggle[aria-pressed="false"] { color:var(--text-2); }
+.mapa-route-toggle[aria-pressed="false"] .mapa-key-route { opacity:.35; }
+.mapa-stage.is-route-off .mapa-route { display:none; }
+.mapa-panel.is-plain { padding:var(--space-2) 0 0 var(--space-2); }
+
+/* Tras borrar la cuenta el aviso breve se ve sobre la Introducción (la app queda inerte debajo; sin acciones) */
+:root[data-intro="open"] .app-toast-region { z-index:60; }

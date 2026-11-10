@@ -104,40 +104,47 @@ function renderProfileForm() {
     </form>`;
 }
 
-// Iniciales, nombre, titular, correo y enlaces reales
+// Qué tan completo está el perfil: nombre, titular, un enlace, un proyecto, un objetivo y una habilidad dominada. Con
+// datos que aún no llegan, ese punto cuenta como pendiente. next: lo primero que falta (para la pista)
+function perfilCompleteness() {
+  const user = sessionUser || {};
+  const checks = [
+    ["name", Boolean(user.name)],
+    ["headline", Boolean(user.headline)],
+    ["link", (perfilState.links?.items?.length ?? 0) >= 1],
+    ["project", (perfilState.projects?.items?.length ?? 0) >= 1],
+    ["goal", Boolean(perfilState.goal?.readiness)],
+    ["mastered", skillsWithStatus(perfilState.skills, "MASTERED").length >= 1],
+  ];
+  const done = checks.filter(([, ok]) => ok).length;
+  return { pct: Math.round((done / checks.length) * 100), next: checks.find(([, ok]) => !ok)?.[0] ?? null };
+}
+
+// La única tarjeta de Perfil: iniciales, nombre, correo y enlaces reales y, a la derecha, el perfil completo al N % con
+// su barra y lo siguiente que falta. El titular está en "Sobre mí", donde se edita
 function renderPerfilHeader() {
   const user = sessionUser || {};
   const name = user.name || user.email || "";
-  const editing = perfilState.editing;
+  const { pct, next } = perfilCompleteness();
   const header = perfilBlock(`
     <article id="perfil-header" class="perfil-card perfil-header">
       <div class="perfil-photo"><span class="perfil-photo-initials" role="img"></span></div>
       <div class="perfil-identity">
         <h1 class="perfil-name"></h1>
-        ${editing ? renderProfileForm() : `
-          <p class="perfil-headline"></p>
-          <ul class="perfil-links">
-            <li class="perfil-link">${perfilIcon("mail", 13)}<span class="sr-only">${t("perfil.emailLabel")}</span><span data-slot="email"></span></li>
-          </ul>`}
+        <ul class="perfil-links">
+          <li class="perfil-link">${perfilIcon("mail", 13)}<span class="sr-only">${t("perfil.emailLabel")}</span><span data-slot="email"></span></li>
+        </ul>
       </div>
-      ${editing ? "" : `
-        <div class="perfil-header-actions">
-          <button type="button" class="btn-ghost btn-ghost--strong" data-action="edit-profile">${t("perfil.edit")}</button>
-          <button type="button" class="btn-ghost" data-action="open-cv">${t("perfil.exportCv")}</button>
-        </div>`}
+      <div class="perfil-complete">
+        <span class="perfil-complete-label">${t("perfil.complete", { pct: `<span data-motion="count:perfil-complete">${pct}</span>` })}</span>
+        <div class="perfil-stat-bar perfil-stat-bar--pink" aria-hidden="true"><span style="width:${pct}%" data-motion="bar:perfil-complete-bar" data-value="${pct}"></span></div>
+        <span class="perfil-complete-hint">${t(next ? `perfil.complete.next.${next}` : "perfil.complete.done")}</span>
+      </div>
     </article>`);
   const initials = header.querySelector(".perfil-photo-initials");
   initials.textContent = initialsOf(name);
   initials.setAttribute("aria-label", t("perfil.photo", { name }));
   header.querySelector(".perfil-name").textContent = name;
-  if (editing) {
-    header.querySelector("#perfil-name").value = user.name || "";
-    header.querySelector("#perfil-headline").value = user.headline || "";
-    return header;
-  }
-  const headline = header.querySelector(".perfil-headline");
-  headline.textContent = user.headline || t("perfil.noHeadline");
-  headline.classList.toggle("perfil-headline--empty", !user.headline);
   header.querySelector("[data-slot='email']").textContent = user.email || "";
   for (const link of perfilState.links?.items || []) {
     const li = document.createElement("li");
@@ -147,6 +154,40 @@ function renderPerfilHeader() {
     header.querySelector(".perfil-links").append(li);
   }
   return header;
+}
+
+// "Sobre mí" (sección plana): el titular profesional y "Editar perfil", que abre aquí mismo el formulario de nombre y
+// titular (perfilState.editing)
+function renderPerfilAbout() {
+  const user = sessionUser || {};
+  const editing = perfilState.editing;
+  const about = perfilBlock(`
+    <section id="perfil-about" class="perfil-card is-flat" aria-labelledby="perfil-about-title">
+      <header class="perfil-card-header">
+        <h2 id="perfil-about-title" class="perfil-card-title">${t("perfil.about")}</h2>
+        ${editing ? "" : `<button type="button" class="btn-ghost btn-ghost--strong" data-action="edit-profile">${t("perfil.edit")}</button>`}
+      </header>
+      ${editing ? renderProfileForm() : `<p class="perfil-about-text"></p>`}
+    </section>`);
+  if (editing) {
+    about.querySelector("#perfil-name").value = user.name || "";
+    about.querySelector("#perfil-headline").value = user.headline || "";
+    return about;
+  }
+  const text = about.querySelector(".perfil-about-text");
+  text.textContent = user.headline || t("perfil.noHeadline");
+  text.classList.toggle("perfil-headline--empty", !user.headline);
+  return about;
+}
+
+// "Currículum" (columna lateral): de qué sale y "Exportar currículum" (en el .exe, PDF por IPC)
+function renderPerfilCvCard() {
+  return `
+    <section id="perfil-cv-card" class="perfil-card is-flat" aria-labelledby="perfil-cv-card-title">
+      <h2 id="perfil-cv-card-title" class="perfil-card-title">${t("perfil.cvCard")}</h2>
+      <p class="perfil-side-text">${t("perfil.cvCardText")}</p>
+      <button type="button" class="btn-pill" data-action="open-cv">${t("perfil.cvCardButton")}</button>
+    </section>`;
 }
 
 // ---------- Mis Habilidades (resumen) ----------
@@ -161,7 +202,7 @@ function renderPerfilSkillsSummary(skillsState) {
   else if (!skillsState) body = `<p class="route-state text-sm text-muted">${routeDraw({ loop: true })}${t("perfil.loadingSkills")}</p>`;
   else body = renderSkillSummary(skillsState.skills);
   return `
-    <article id="perfil-skills" class="perfil-card perfil-skills" aria-labelledby="perfil-skills-title">
+    <article id="perfil-skills" class="perfil-card perfil-skills is-flat" aria-labelledby="perfil-skills-title">
       <div class="perfil-skills-text">
         <h2 id="perfil-skills-title" class="perfil-card-title">${t("perfil.skills")}</h2>
         ${body}
@@ -209,36 +250,24 @@ function perfilAchievements() {
   ];
 }
 
-// Real: dominadas y en desarrollo sobre el total de /api/skills, preparación del objetivo activo y logros
+// "Mi objetivo" (columna lateral, sección plana): el objetivo activo, su preparación de hoy con la barra y "Cambiar
+// objetivo". skillsState queda por compatibilidad con quien la llama
 function renderStatsCard(skillsState, goalState) {
-  const counts = [["MASTERED", "perfil.masteredStat", "mint"], ["IN_PROGRESS", "perfil.learningStat", "pink"]].map(([status, key, tone]) => {
-    if (!skillsState) return renderStatPending(t(key), "…");
-    if (skillsState.error) return renderStatPending(t(key), "—");
-    const total = skillsState.skills.length;
-    const n = skillsWithStatus(skillsState, status).length;
-    return renderStatBar(t(key), `${n} / ${total}`, total ? (n / total) * 100 : 0, tone, { key: status, n });
-  }).join("");
-  let goal;
-  if (!goalState) goal = renderStatPending(t("perfil.goalStatEmpty"), "…");
-  else if (goalState.error) goal = renderStatPending(t("perfil.goalStatEmpty"), "—");
-  else if (!goalState.readiness) goal = renderStatPending(t("perfil.goalStatEmpty"), t("perfil.noGoal"));
+  let body;
+  if (!goalState) body = renderStatPending(t("perfil.goalStatEmpty"), "…");
+  else if (goalState.error) body = renderStatPending(t("perfil.goalStatEmpty"), "—");
+  else if (!goalState.readiness) body = `<p class="perfil-side-text">${t("perfil.noGoal")}</p>`;
   else {
     const r = goalState.readiness;
-    goal = renderStatBar(t("perfil.goalStat", { goal: escapeHtml(tGoalTitle(r.goalTitle)) }), `${r.readinessPercentage}%`,
-      r.readinessPercentage, "pink", { key: "goal", n: r.readinessPercentage })
-      // Abre la selección de objetivos (objetivo.js); el progreso se conserva
-      + `<button type="button" class="perfil-stats-action" data-action="change-goal">${routeGlyph()}${t("ruta.changeGoal")}</button>`;
+    body = `<p class="perfil-side-goal">${escapeHtml(tGoalTitle(r.goalTitle))}</p>`
+      + renderStatBar(t("perfil.goalToday"), `${r.readinessPercentage}%`, r.readinessPercentage, "pink", { key: "goal", n: r.readinessPercentage });
   }
-  const achievements = perfilAchievements();
-  const done = achievements.filter(a => a.done).length;
   return `
-    <article id="perfil-stats" class="perfil-stats">
-      <h2 class="perfil-stats-title">${t("perfil.stats")}</h2>
-      ${counts}
-      ${goal}
-      ${routeDivider()}
-      ${renderStatBar(t("perfil.achievementsStat"), `${done} / ${achievements.length}`, (done / achievements.length) * 100, "mint", { key: "achievements", n: done })}
-    </article>`;
+    <section id="perfil-stats" class="perfil-stats is-flat" aria-labelledby="perfil-stats-title">
+      <h2 id="perfil-stats-title" class="perfil-card-title">${t("perfil.goalCard")}</h2>
+      ${body}
+      <button type="button" class="perfil-stats-action" data-action="change-goal">${routeGlyph()}${t("ruta.changeGoal")}</button>
+    </section>`;
 }
 
 // Desbloqueado en menta; pendiente con borde punteado ("todavía no"). Cada uno dice cómo conseguirlo.
@@ -255,7 +284,7 @@ function renderAchievementsCard() {
       </div>
     </li>`).join("");
   return `
-    <article id="perfil-achievements" class="perfil-card">
+    <article id="perfil-achievements" class="perfil-card is-flat">
       <header class="perfil-card-header">
         <h2 class="perfil-card-title">${t("perfil.achievements")}</h2>
         <span class="perfil-count">${t("perfil.achievements.count", { n: done, total: achievements.length })}</span>
@@ -393,7 +422,7 @@ function renderItemsCard(kind) {
   else if (!items.length && edit !== "new") status = `<p class="route-state perfil-empty">${routeDraw()}${t(`${keys}.empty`)}</p>`;
   else if (items.length >= max) status = `<p class="perfil-hint">${t(`${keys}.max`, { max })}</p>`;
   const article = perfilBlock(`
-    <article id="${card}" class="perfil-card" aria-labelledby="${card}-title">
+    <article id="${card}" class="perfil-card is-flat" aria-labelledby="${card}-title">
       <header class="perfil-card-header">
         <h2 id="${card}-title" class="perfil-card-title" tabindex="-1">${t(keys)}</h2>
         ${data?.items ? `<span class="perfil-count">${t("perfil.item.count", { n: items.length, max })}</span>` : ""}
@@ -522,7 +551,7 @@ function setCvOpen(open) {
   closed.hidden = true;
   document.getElementById("perfil-cv").replaceWith(open ? renderCv() : closed);
   window.scrollTo(0, 0);
-  document.querySelector(open ? "#perfil-cv-name" : "#perfil-header [data-action='open-cv']")?.focus();
+  document.querySelector(open ? "#perfil-cv-name" : "#perfil-content [data-action='open-cv']")?.focus();
 }
 
 // Con datos nuevos (o cambio de idioma) el CV abierto se vuelve a armar; el foco vuelve al botón en el que estaba
@@ -604,41 +633,53 @@ function renderPasswordField(id, labelKey, autocomplete, describedBy, ruleText =
     </div>`;
 }
 
-// Seguridad: cambiar contraseña y eliminar cuenta (con aviso y confirmación escribiendo la contraseña). Vive en
-// Ajustes (#ajustes-security), con las demás preferencias de la cuenta; Perfil queda para lo que se muestra de ti.
+// Ajustes > Datos y cuenta: "Cambiar contraseña" y "Eliminar cuenta" como filas planas (título, texto y su botón). Cada
+// fila abre su formulario en el lugar: la contraseña con sus reglas; el borrado, con la confirmación en línea (sin
+// alert/confirm): aviso de que no se puede deshacer, la contraseña, "Sí, eliminar" y "Cancelar".
 function renderSecurityCard() {
   return `
-    <section id="perfil-security" class="ruta-card ajustes-card perfil-security" aria-labelledby="perfil-security-title">
-      <h2 id="perfil-security-title" class="ajustes-card-title">${t("perfil.security")}</h2>
-      <div class="perfil-security-grid">
-        <form class="perfil-form" data-form="password" aria-labelledby="perfil-password-title" novalidate>
-          <h3 id="perfil-password-title" class="perfil-security-title">${t("perfil.password.title")}</h3>
-          <p class="perfil-security-text">${t("perfil.password.text")}</p>
-          ${renderPasswordField("perfil-password-current", "perfil.password.current", "current-password", "perfil-password-error")}
-          ${renderPasswordField("perfil-password-new", "perfil.password.new", "new-password", "perfil-password-error", t("perfil.password.hint", { min: PERFIL_MIN_PASSWORD }))}
-          ${renderPasswordField("perfil-password-confirm", "perfil.password.confirm", "new-password", "perfil-password-error", t("perfil.password.matchRule"))}
-          <p id="perfil-password-error" class="perfil-error" aria-live="assertive" aria-atomic="true"></p>
-          <p class="perfil-success" role="status"></p>
-          <div class="perfil-form-actions">
-            <button type="submit" class="btn-pill perfil-btn-outline" data-idle="perfil.password.submit" data-busy="perfil.password.busy"><span data-label>${t("perfil.password.submit")}</span></button>
-          </div>
-        </form>
-        <section class="perfil-danger" aria-labelledby="perfil-delete-title">
-          <h3 id="perfil-delete-title" class="perfil-security-title">${t("perfil.delete.title")}</h3>
-          <p class="perfil-security-text">${t("perfil.delete.text")}</p>
-          <button type="button" class="btn-pill perfil-btn-danger" data-action="open-delete" aria-expanded="false" aria-controls="perfil-delete-form">${t("perfil.delete.open")}</button>
-          <form id="perfil-delete-form" class="perfil-form" data-form="delete" aria-labelledby="perfil-delete-title" novalidate hidden>
-            <p id="perfil-delete-warning" class="perfil-danger-warning">${t("perfil.delete.warning")}</p>
-            ${renderPasswordField("perfil-delete-password", "perfil.delete.password", "current-password", "perfil-delete-warning perfil-delete-error")}
-            <p id="perfil-delete-error" class="perfil-error" aria-live="assertive" aria-atomic="true"></p>
-            <div class="perfil-form-actions">
-              <button type="submit" class="btn-pill perfil-btn-danger" data-idle="perfil.delete.submit" data-busy="perfil.delete.busy"><span data-label>${t("perfil.delete.submit")}</span></button>
-              <button type="button" class="btn-pill perfil-btn-outline" data-action="cancel-delete">${t("perfil.delete.cancel")}</button>
-            </div>
-          </form>
-        </section>
+    <div class="ajustes-row">
+      <div class="ajustes-toggle">
+        <div>
+          <p id="perfil-password-title" class="ajustes-toggle-title">${t("perfil.password.title")}</p>
+          <p class="ajustes-toggle-desc">${t("perfil.password.text")}</p>
+        </div>
+        <div class="ajustes-row-actions">
+          <button type="button" class="btn-ghost" data-action="open-password" aria-expanded="false" aria-controls="perfil-password-form">${t("perfil.password.open")}</button>
+        </div>
       </div>
-    </section>`;
+      <form id="perfil-password-form" class="perfil-form ajustes-row-body" data-form="password" aria-labelledby="perfil-password-title" novalidate hidden>
+        ${renderPasswordField("perfil-password-current", "perfil.password.current", "current-password", "perfil-password-error")}
+        ${renderPasswordField("perfil-password-new", "perfil.password.new", "new-password", "perfil-password-error", t("perfil.password.hint", { min: PERFIL_MIN_PASSWORD }))}
+        ${renderPasswordField("perfil-password-confirm", "perfil.password.confirm", "new-password", "perfil-password-error", t("perfil.password.matchRule"))}
+        <p id="perfil-password-error" class="perfil-error" aria-live="assertive" aria-atomic="true"></p>
+        <p class="perfil-success" role="status"></p>
+        <div class="perfil-form-actions">
+          <button type="submit" class="btn-pill perfil-btn-outline" data-idle="perfil.password.submit" data-busy="perfil.password.busy"><span data-label>${t("perfil.password.submit")}</span></button>
+          <button type="button" class="btn-pill perfil-btn-outline" data-action="cancel-password">${t("perfil.delete.cancel")}</button>
+        </div>
+      </form>
+    </div>
+    <div class="ajustes-row">
+      <div class="ajustes-toggle">
+        <div>
+          <p id="perfil-delete-title" class="ajustes-toggle-title">${t("perfil.delete.title")}</p>
+          <p class="ajustes-toggle-desc">${t("perfil.delete.text")}</p>
+        </div>
+        <div class="ajustes-row-actions">
+          <button type="button" class="btn-pill perfil-btn-danger" data-action="open-delete" aria-expanded="false" aria-controls="perfil-delete-form">${t("perfil.delete.open")}</button>
+        </div>
+      </div>
+      <form id="perfil-delete-form" class="perfil-form ajustes-row-body" data-form="delete" aria-labelledby="perfil-delete-title" novalidate hidden>
+        <p id="perfil-delete-warning" class="perfil-danger-warning" role="alert">${t("perfil.delete.warning")}</p>
+        ${renderPasswordField("perfil-delete-password", "perfil.delete.password", "current-password", "perfil-delete-warning perfil-delete-error")}
+        <p id="perfil-delete-error" class="perfil-error" aria-live="assertive" aria-atomic="true"></p>
+        <div class="perfil-form-actions">
+          <button type="submit" class="btn-pill perfil-btn-danger" data-idle="perfil.delete.submit" data-busy="perfil.delete.busy"><span data-label>${t("perfil.delete.submit")}</span></button>
+          <button type="button" class="btn-pill perfil-btn-outline" data-action="cancel-delete">${t("perfil.delete.cancel")}</button>
+        </div>
+      </form>
+    </div>`;
 }
 
 // Pinta (o repinta, vacía) la tarjeta de Seguridad de Ajustes
@@ -665,10 +706,10 @@ function renderPerfil() {
       <div class="perfil-col">${renderStatsCard(perfilState.skills, perfilState.goal)}</div>
     </div>`);
   const [main, side] = grid.children;
-  // Columna ancha: lo que se muestra de ti (proyectos, enlaces y logros). Angosta: tus habilidades y las estadísticas con
-  // el objetivo (Seguridad está en Ajustes)
-  main.append(renderItemsCard("project"), renderItemsCard("link"), perfilBlock(renderAchievementsCard()));
-  side.prepend(perfilBlock(renderPerfilSkillsSummary(perfilState.skills)));
+  // Columna ancha: Sobre mí, proyectos, enlaces y logros. Angosta: Mi objetivo, tus habilidades y el currículum (Seguridad
+  // está en Ajustes). Todo en secciones planas: la única tarjeta es la cabecera
+  main.append(renderPerfilAbout(), renderItemsCard("project"), renderItemsCard("link"), perfilBlock(renderAchievementsCard()));
+  side.append(perfilBlock(renderPerfilSkillsSummary(perfilState.skills)), perfilBlock(renderPerfilCvCard()));
   document.getElementById("perfil-content").replaceChildren(renderPerfilHeader(), grid);
   settleMotion(grid); // motion.js
 }
@@ -687,6 +728,7 @@ function swapPerfilBlock(id, block) {
 
 // Estadísticas, logros y CV: dependen de todo lo demás
 function refreshPerfilProgress() {
+  swapPerfilBlock("perfil-header", renderPerfilHeader());
   swapPerfilBlock("perfil-stats", renderStatsCard(perfilState.skills, perfilState.goal));
   swapPerfilBlock("perfil-achievements", renderAchievementsCard());
   refreshCv();
@@ -696,7 +738,6 @@ function refreshPerfilProgress() {
 function refreshPerfilItems() {
   swapPerfilBlock("perfil-links-card", renderItemsCard("link"));
   swapPerfilBlock("perfil-projects-card", renderItemsCard("project"));
-  if (!perfilState.editing) swapPerfilBlock("perfil-header", renderPerfilHeader());
   refreshPerfilProgress();
 }
 
@@ -786,8 +827,8 @@ function setPerfilFormBusy(form, busy) {
 
 function setProfileEditing(editing) {
   perfilState.editing = editing;
-  swapPerfilBlock("perfil-header", renderPerfilHeader());
-  document.querySelector(editing ? "#perfil-name" : "#perfil-header [data-action='edit-profile']")?.focus();
+  swapPerfilBlock("perfil-about", renderPerfilAbout());
+  document.querySelector(editing ? "#perfil-name" : "#perfil-about [data-action='edit-profile']")?.focus();
 }
 
 async function submitProfile(form) {
@@ -962,13 +1003,22 @@ async function submitPassword(form) {
 }
 
 function setDeleteOpen(open) {
-  const toggle = document.querySelector("#perfil-security [data-action='open-delete']");
-  const form = document.getElementById("perfil-delete-form");
+  setSecurityFormOpen("delete", open);
+}
+
+// Abre o cierra el formulario de una fila de Datos y cuenta ("password" o "delete"): el botón de la fila se oculta mientras
+// está abierto, los campos se vacían y el foco va al primer campo o vuelve al botón
+function setSecurityFormOpen(kind, open) {
+  const toggle = document.querySelector(`#ajustes-security [data-action='open-${kind}']`);
+  const form = document.getElementById(`perfil-${kind}-form`);
+  if (!toggle || !form) return;
   toggle.setAttribute("aria-expanded", String(open));
   toggle.hidden = open;
   form.hidden = !open;
-  form.querySelector("input").value = "";
+  form.querySelectorAll("input").forEach(input => { input.value = ""; });
+  form.querySelector(".perfil-success")?.replaceChildren();
   setPerfilFormError(form, "");
+  if (kind === "password") updatePasswordRules();
   (open ? form.querySelector("input") : toggle).focus();
 }
 
@@ -982,7 +1032,7 @@ async function submitDelete(form) {
   try {
     const res = await apiFetch("/api/auth/me", { method: "DELETE", headers: PERFIL_JSON, body });
     if (!res.ok) throw await apiError(res);
-    endSession({ notice: t("perfil.delete.done"), keepEmail: false }); // el token ya no existe: de vuelta a Acceso
+    endSession({ notice: t("perfil.delete.done"), keepEmail: false, to: "intro" }); // el token ya no existe: a la Introducción con un aviso
   } catch (err) {
     setPerfilFormBusy(form, false);
     setPerfilFormError(form, friendlyError(err), password);
@@ -1019,6 +1069,8 @@ function handlePerfilClick(e) {
     "edit-profile": () => setProfileEditing(true),
     "cancel-edit": () => setProfileEditing(false),
     "open-delete": () => setDeleteOpen(true),
+    "open-password": () => setSecurityFormOpen("password", true),
+    "cancel-password": () => setSecurityFormOpen("password", false),
     "cancel-delete": () => setDeleteOpen(false),
     "open-cv": () => setCvOpen(true),
     "close-cv": () => setCvOpen(false),
@@ -1056,7 +1108,8 @@ function bindPerfilEvents(view) {
     if (e.key !== "Escape") return;
     const form = e.target.closest("form");
     if (form?.dataset.busy) return;
-    const cancel = { profile: () => setProfileEditing(false), delete: () => setDeleteOpen(false), link: cancelItemMode,
+    const cancel = { profile: () => setProfileEditing(false), delete: () => setDeleteOpen(false),
+      password: () => setSecurityFormOpen("password", false), link: cancelItemMode,
       project: cancelItemMode, "delete-item": cancelItemMode }[form?.dataset.form];
     if (cancel) cancel();
     else if (perfilState.cv) setCvOpen(false);
