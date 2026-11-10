@@ -57,15 +57,22 @@ let ajustesCat = "apariencia";
 
 const ajustesCatButtons = () => [...document.querySelectorAll(".ajustes-nav [data-ajustes-cat]")].filter(b => !b.hidden);
 
+// Al cambiar de categoría el panel entra con un fundido corto (motion.js) y, si es más bajo, la página no se recorta bajo
+// el scroll (keepScrollRoom)
 function selectAjustesCat(cat, { focus = false } = {}) {
   const buttons = ajustesCatButtons();
   if (!buttons.some(b => b.dataset.ajustesCat === cat)) cat = buttons[0]?.dataset.ajustesCat || "apariencia";
+  const changed = cat !== ajustesCat;
   ajustesCat = cat;
   buttons.forEach(b => {
     if (b.dataset.ajustesCat === cat) b.setAttribute("aria-current", "true");
     else b.removeAttribute("aria-current");
   });
-  document.querySelectorAll("#view-ajustes [data-ajustes-panel]").forEach(panel => { panel.hidden = panel.dataset.ajustesPanel !== cat; });
+  keepScrollRoom(() => {
+    document.querySelectorAll("#view-ajustes [data-ajustes-panel]").forEach(panel => { panel.hidden = panel.dataset.ajustesPanel !== cat; });
+  });
+  const panel = document.querySelector(`#view-ajustes [data-ajustes-panel="${cat}"]`);
+  if (changed && panel) { motionSkipEntry(panel); motionFade(panel); }
   if (focus) buttons.find(b => b.dataset.ajustesCat === cat)?.focus();
 }
 

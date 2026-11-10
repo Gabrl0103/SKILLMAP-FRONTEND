@@ -368,23 +368,27 @@ function paintHabilidades({ keepFocus = false } = {}) {
   if (focus) focusHab(focus);
 }
 
-// Repinta resumen, filtros y lista. focus: { id, kind: "picker" | "name" } o { filter }; sin él, se devuelve el foco a
-// donde estaba (repintar lo quita)
+// Actualiza resumen, filtros y lista en su lugar (motion.js: morphInto): una fila que cambia de estado sigue siendo el
+// mismo nodo (su opción elegida hace el fundido y nada más se repinta) y las barras de demanda no vuelven a crecer. Las
+// filas que reaparecen (filtro, agrupar) entran con un fundido corto; si la lista encoge, la página no salta
+// (keepScrollRoom). focus: { id, kind: "picker" | "name" } o { filter }; sin él, el foco vuelve a donde estaba.
 function refreshHabList(focus = habFocus()) {
   const body = document.getElementById("hab-body");
   const skills = hab.skills?.skills;
   if (!body || !skills) return;
   const summary = document.getElementById("hab-summary");
   summary.classList.remove("is-new");
-  summary.innerHTML = skills.length ? renderHabOverview(skills) : "";
+  morphInto(summary, skills.length ? renderHabOverview(skills) : "");
   settleMotion(summary); // motion.js: números y barra desde el valor anterior
-  document.getElementById("hab-filters").innerHTML = renderHabFilters(skills);
-  document.getElementById("hab-groupby").innerHTML = renderHabGroupBy();
-  document.getElementById("hab-route-toggle").innerHTML = renderHabRouteToggle();
+  morphInto(document.getElementById("hab-filters"), renderHabFilters(skills));
+  morphInto(document.getElementById("hab-groupby"), renderHabGroupBy());
+  morphInto(document.getElementById("hab-route-toggle"), renderHabRouteToggle());
   queueMicrotask(continueHabReveal);
   document.getElementById("hab-showing").textContent = renderHabShowing(skills);
   body.classList.remove("is-new");
-  body.innerHTML = renderHabBody(skills);
+  let added = [];
+  keepScrollRoom(() => { added = morphInto(body, renderHabBody(skills)); });
+  added.forEach(el => { motionSkipEntry(el); motionFade(el); });
   if (focus) focusHab(focus);
 }
 
@@ -446,6 +450,7 @@ async function setHabSkillStatus(id, status, { undo = false } = {}) {
   const skill = hab.skills?.skills?.find(s => s.id === id);
   if (!skill || hab.saving !== null || habSkillStatus(skill) === status) return;
   const previous = { status: habSkillStatus(skill) };
+  if (undo) pulseStatus(id, status); // skill-status.js: Deshacer vuelve con el mismo fundido
   replaceHabSkill(id, { status });
   Object.assign(hab, { saving: id, errorId: null });
   hab.keep.add(id);

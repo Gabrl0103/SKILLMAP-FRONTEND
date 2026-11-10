@@ -295,13 +295,17 @@ function renderMapaPanel(skill) {
     ${note}`;
 }
 
-function refreshMapaPanel() {
+// inPlace: cambió el estado de la habilidad que ya se ve (no otra elegida): el panel se actualiza en su lugar (motion.js:
+// morphInto) y su contenido no repite la entrada; al elegir otro nodo, el panel nuevo entra con su fundido
+function refreshMapaPanel({ inPlace = false } = {}) {
   const panel = document.getElementById("mapa-panel");
   if (!panel) return;
   const focused = panel.contains(document.activeElement)
     ? (document.activeElement.matches("[data-context]") ? "context" : "status") : null;
   const skill = mapaSkills.find(s => s.id === mapaSelectedId);
-  panel.innerHTML = skill ? renderMapaPanel(skill) : renderMapaPanelEmpty();
+  const html = skill ? renderMapaPanel(skill) : renderMapaPanelEmpty();
+  if (inPlace) morphInto(panel, html).forEach(el => { motionSkipEntry(el); motionFade(el); });
+  else panel.innerHTML = html;
   // Redibujar quita el foco: si estaba en el panel, vuelve al botón de contexto o a la opción elegida del selector
   if (focused === "context") panel.querySelector("[data-context]")?.focus({ preventScroll: true });
   if (focused === "status") focusStatusPicker(panel);
@@ -342,7 +346,7 @@ async function setMapaSkillStatus(id, status) {
   mapaSkills[index] = { ...previous, status };
   Object.assign(mapaMark, { id, errorId: null });
   updateMapaNode(mapaSkills[index]);
-  refreshMapaPanel();
+  refreshMapaPanel({ inPlace: true });
   try {
     const updated = await saveSkillStatus(id, status);
     if (mapaMark.id !== id) return; // cambió el usuario mientras se guardaba
@@ -359,7 +363,7 @@ async function setMapaSkillStatus(id, status) {
   }
   mapaMark.id = null;
   updateMapaNode(mapaSkills[index]);
-  refreshMapaPanel();
+  refreshMapaPanel({ inPlace: true });
   updateMapaRoute();
 }
 
@@ -405,7 +409,7 @@ async function updateMapaRoute() {
     mapaRoute = { goalId: null, goalTitle: "", gapIds: [], goalSkillIds: new Set() }; // la ruta es complementaria
   }
   drawMapaRoute();
-  refreshMapaPanel();
+  refreshMapaPanel({ inPlace: true }); // misma habilidad elegida: solo cambia el texto de la ruta
 }
 
 const PAN_MARGIN = 80; // px del grafo que siempre quedan visibles al arrastrar
@@ -693,7 +697,7 @@ document.addEventListener("skillmap:progress", e => {
   mapaSkills[index] = { ...mapaSkills[index], ...skill };
   updateMapaNode(mapaSkills[index]);
   mapaRoute.goalId = null;
-  refreshMapaPanel();
+  refreshMapaPanel({ inPlace: true });
 });
 
 let mapaRequest = null; // se reutiliza para no volver a pedir /api/skills en cada apertura
@@ -802,6 +806,7 @@ function drawNavTrail(nav, from, to) {
 
 // Navegación sin router: muestra la sección elegida, oculta las demás y marca el item activo (nav o botón Ajustes).
 function showView(view) {
+  releaseScrollRoom(); // motion.js: la reserva de alto era de la vista anterior
   document.querySelectorAll("main > section[id^='view-']").forEach(section => {
     section.classList.toggle("hidden", section.id !== `view-${view}`);
   });

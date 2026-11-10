@@ -8,8 +8,9 @@
 const SKILL_STATES = ["PENDING", "IN_PROGRESS", "MASTERED"];
 const SKILL_STATE_CLASS = { MASTERED: "mastered", IN_PROGRESS: "progress", PENDING: "pending" };
 
-// Último estado elegido: la opción nueva entra con un pequeño "pop" (.is-just-set, styles.css) en los repintados de los
-// siguientes segundos, venga de la vista que venga (la vista vuelve a pintar el selector al guardar)
+// Último estado elegido: la opción nueva entra con un fundido corto (.is-just-set, styles.css) en los repintados de los
+// siguientes segundos, venga de la vista que venga (la vista vuelve a pintar el selector al guardar; si lo actualiza en
+// su lugar, motion.js: morphInto, la clase ya puesta no repite el fundido)
 let statusPulse = null;
 const STATUS_PULSE_MS = 3000;
 
@@ -26,11 +27,16 @@ function renderStatusPicker(skill, busy, { menu = false } = {}) {
     aria-label="${escapeHtml(t("state.group", { name: tSkill(skill.name) }))}"${busy ? ` aria-busy="true"` : ""}>${options}</div>`;
 }
 
+// Marca el estado recién elegido para su fundido (también lo usa "Deshacer": vuelve con la misma suavidad)
+function pulseStatus(id, status) {
+  statusPulse = { id: Number(id), status, until: Date.now() + STATUS_PULSE_MS };
+}
+
 // Clic, Espacio o Enter en una opción, o flechas / Inicio / Fin dentro del grupo: onPick(id, estado). Un listener por
 // contenedor, porque el selector se vuelve a pintar con cada cambio.
 function bindStatusPicker(container, pick) {
   const onPick = (id, status) => {
-    statusPulse = { id, status, until: Date.now() + STATUS_PULSE_MS };
+    pulseStatus(id, status);
     pick(id, status);
   };
   container.addEventListener("click", e => {

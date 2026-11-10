@@ -82,12 +82,12 @@ function renderMarketDemand(goalSkills, catalog) {
   const el = document.getElementById("market-demand");
   const level = marketLevel(goalSkills, catalog);
   if (!level) { el.hidden = true; return; }
-  el.innerHTML = `
+  morphInto(el, `
     <p class="market-demand-label">${t("ruta.market")}</p>
     <p class="market-demand-value market-demand-value--${level.tone}" title="${t("ruta.market.title", level.numbers)}">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${level.icon}"/></svg>
       ${level.label}
-    </p>`;
+    </p>`); // motion.js: en su lugar (la recarga silenciosa no lo vuelve a pintar)
   el.hidden = false;
 }
 
@@ -165,10 +165,13 @@ function renderRutaPanel(key, html) {
   return `<div class="view-tabpanel" role="tabpanel" id="ruta-panel-${key}" aria-labelledby="ruta-tab-${key}"${key === rutaTab ? "" : " hidden"}>${html}</div>`;
 }
 
+// Cambio de pestaña: el panel nuevo entra con un fundido corto (motion.js) sin repetir la entrada de sus tarjetas y
+// barras, y si es más bajo que el anterior la página no se recorta bajo el scroll (keepScrollRoom)
 function selectRutaTab(key, { focus = false } = {}) {
   const tablist = document.querySelector("#app-content .view-tabs");
   if (!tablist || !RUTA_TABS.includes(key)) return;
   const before = tablist.getBoundingClientRect().top;
+  const changed = key !== rutaTab;
   rutaTab = key;
   try { sessionStorage.setItem(RUTA_TAB_KEY, key); } catch { /* sin storage: dura hasta recargar */ }
   tablist.querySelectorAll("[role='tab']").forEach(tab => {
@@ -177,7 +180,11 @@ function selectRutaTab(key, { focus = false } = {}) {
     tab.tabIndex = selected ? 0 : -1;
     if (selected && focus) tab.focus({ preventScroll: true });
   });
-  document.querySelectorAll("#app-content .view-tabpanel").forEach(panel => { panel.hidden = panel.id !== `ruta-panel-${key}`; });
+  keepScrollRoom(() => {
+    document.querySelectorAll("#app-content .view-tabpanel").forEach(panel => { panel.hidden = panel.id !== `ruta-panel-${key}`; });
+  });
+  const panel = document.getElementById(`ruta-panel-${key}`);
+  if (changed && panel) { motionSkipEntry(panel); motionFade(panel); }
   const delta = tablist.getBoundingClientRect().top - before;
   if (Math.abs(delta) >= 1) window.scrollBy(0, delta);
 }
@@ -542,8 +549,13 @@ function bindTrendHover(container, history) {
   };
   const hide = () => { cross.setAttribute("visibility", "hidden"); tooltip.hidden = true; };
 
-  plot.addEventListener("pointerover", e => { const hit = e.target.closest(".trend-hit"); if (hit) show(hit); });
-  plot.addEventListener("focusin", e => { const hit = e.target.closest(".trend-hit"); if (hit) show(hit); });
+  // Mi Ruta se actualiza en su lugar (morphInto): el gráfico puede ser el mismo nodo de antes; se escucha una sola vez y
+  // show usa siempre el historial más reciente
+  plot.__trendShow = show;
+  if (plot.__trendBound) return;
+  plot.__trendBound = true;
+  plot.addEventListener("pointerover", e => { const hit = e.target.closest(".trend-hit"); if (hit) plot.__trendShow(hit); });
+  plot.addEventListener("focusin", e => { const hit = e.target.closest(".trend-hit"); if (hit) plot.__trendShow(hit); });
   plot.addEventListener("pointerleave", hide);
   plot.addEventListener("focusout", hide);
 }
@@ -857,11 +869,16 @@ async function changeGoalFromRuta(goalId) {
 }
 
 let latestRequest = 0; // evita que una respuesta vieja pise la del objetivo recién elegido
+// Bloques de Mi Ruta que pueden quedar más abajo cuando el plan de la semana suma una fila (recarga silenciosa)
+const RUTA_FLIP = ".ruta-grid > .ruta-row, .view-tabpanel:not([hidden]) > .ruta-row, .semana-row, .semana-foot, .brechas-foot";
 
-// quiet: recarga sin skeleton ni entrada, para un cambio hecho en la propia Mi Ruta ("Tu semana"): lo pintado sigue a
-// la vista hasta que llegan los datos y el foco vuelve a donde estaba (tarjetas Tu semana y Tu ritmo)
-// swap: cambio de objetivo. Sin skeleton: lo pintado se atenúa (.is-leaving) mientras llegan los datos y lo nuevo entra
-// con un fundido corto y escalonado (.is-swap); el anillo va del % anterior al nuevo (motion.js)
+// quiet: recarga sin skeleton ni entrada, para un cambio hecho en la propia Mi Ruta ("Tu semana"): la vista se actualiza
+// en su lugar (motion.js: morphInto), solo cambia lo que cambió y el foco sigue donde estaba; lo que entra nuevo (la
+// siguiente brecha del plan) hace un fundido corto
+// swap: cambio de objetivo. Con Mi Ruta a la vista, sin skeleton: lo pintado se atenúa (.is-leaving) mientras llegan los
+// datos y lo nuevo entra con un fundido corto y escalonado (.is-swap); el anillo va del % anterior al nuevo (motion.js).
+// Con Mi Ruta oculta (se cambió desde Objetivo) se pinta como recién abierta: al volver, anillo y nodos del nuevo
+// objetivo hacen su entrada de siempre, una sola vez
 async function loadDashboard(goalId, { quiet = false, swap = false } = {}) {
   const container = document.getElementById("app-content");
   const requestId = ++latestRequest;
@@ -872,9 +889,11 @@ async function loadDashboard(goalId, { quiet = false, swap = false } = {}) {
     keepGapFocus(Number(focusedGap.dataset.context));
   }
   const painted = Boolean(container.querySelector(".ruta-grid:not(.ruta-skeleton)"));
+  const offscreen = document.getElementById("view-dashboard").classList.contains("hidden");
   const silent = quiet && painted;
-  const swapping = swap && !silent && painted;
+  const swapping = swap && !silent && painted && !offscreen;
   if (swapping) container.querySelector(".ruta-grid").classList.add("is-leaving");
+  else if (swap && painted && offscreen) { /* lo pintado sigue oculto hasta que llegan los datos */ }
   else if (!silent) {
     document.getElementById("market-demand").hidden = true;
     container.innerHTML = renderRutaSkeleton();
@@ -904,7 +923,7 @@ async function loadDashboard(goalId, { quiet = false, swap = false } = {}) {
     };
     // Arriba la única tarjeta (preparación y ruta); debajo, las pestañas con secciones sin tarjeta
     const focusedTab = document.activeElement?.closest("#app-content [role='tab']")?.id;
-    container.innerHTML = `
+    const html = `
       <div class="ruta-grid${silent ? " is-quiet" : swapping ? " is-swap" : ""}">
         ${row(renderGauge(r, stops))}
         ${renderRutaTabs()}
@@ -915,9 +934,16 @@ async function loadDashboard(goalId, { quiet = false, swap = false } = {}) {
         ${renderRutaPanel("market", row(renderMarketCard(demand.goalSkills, demand.catalog, r.goalTitle, jobStats)))}
         ${renderRutaPanel("offers", row(renderOffersCard(goal)))}
       </div>`;
+    if (silent) {
+      // motion.js: en su lugar (las ofertas las actualiza loadOffers); lo que entra nuevo hace un fundido y lo que queda
+      // debajo (pie de Tu semana, tarjetas siguientes) se desliza a su sitio en vez de saltar
+      const moving = motionRects(container.querySelectorAll(RUTA_FLIP));
+      morphInto(container, html, { keep: "#ofertas-body" }).forEach(motionFade);
+      motionFlip(moving);
+    } else container.innerHTML = html;
     if (focusedTab) document.getElementById(focusedTab)?.focus({ preventScroll: true });
     bindTrendHover(container, history);
-    settleMotion(container); // motion.js: anillo, números y barras desde el valor que se veía
+    settleMotion(container, { fresh: offscreen && !silent }); // motion.js: anillo, números y barras desde el valor que se veía
     loadOffers(goal, goalId, { quiet: silent }); // ofertas.js: llega después, sin frenar el resto de la vista
     restoreFocus?.();
   } catch (err) {

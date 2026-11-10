@@ -86,21 +86,28 @@ function savePlan(key, plan) {
 }
 
 // key: storage del plan; plan: { week, ids }; skills: habilidades del plan por id (con el estado al día); goal:
-// título del objetivo ya traducido; busy: id que se está guardando; error/errorId: último error y su habilidad
-const semana = { key: null, plan: null, skills: new Map(), goal: "", demands: [], route: new Map(), busy: null, error: null,
-  errorId: null };
+// título del objetivo ya traducido; busy: id que se está guardando y pending, el estado que se está guardando;
+// error/errorId: último error y su habilidad
+const semana = { key: null, plan: null, skills: new Map(), goal: "", demands: [], route: new Map(), busy: null, pending: null,
+  error: null, errorId: null };
 
 // El plan guardado de esta semana o uno nuevo, completado con brechas nuevas si alguna quedó dominada. Las
 // habilidades que ya no existen salen del plan.
+// Si Mi Ruta se vuelve a pintar mientras se guarda un estado (la recarga del cambio anterior llegó tarde, con pulsaciones
+// seguidas), el guardado en curso se conserva: la fila sigue mostrando el estado elegido y, al terminar, el guardado
+// recarga Mi Ruta como siempre. Antes se perdía y la fila quedaba con el estado anterior aunque el backend tuviera el nuevo.
 function prepareSemana(gaps, catalog, goalId, goalTitle) {
   const key = `${PLAN_KEY}.${sessionUser?.id ?? "anon"}.${goalId}`;
   const skills = new Map([...gaps, ...catalog].map(s => [s.id, s]));
+  const saving = semana.key === key && semana.busy !== null && skills.has(semana.busy) ? { busy: semana.busy, pending: semana.pending } : null;
+  if (saving) skills.set(saving.busy, { ...skills.get(saving.busy), status: saving.pending });
   const week = weekKey();
   let plan = readPlan(key);
   if (!plan || plan.week !== week) plan = { week, ids: [] };
   plan.ids = fillPlan(plan.ids.filter(id => skills.has(id)), gaps, skills);
   savePlan(key, plan);
-  Object.assign(semana, { key, plan, skills, goal: escapeHtml(tGoalTitle(goalTitle)), busy: null, error: null, errorId: null });
+  Object.assign(semana, { key, plan, skills, goal: escapeHtml(tGoalTitle(goalTitle)), busy: saving?.busy ?? null,
+    pending: saving?.pending ?? null, error: null, errorId: null });
 }
 
 // ---------- Marcado ----------
@@ -197,13 +204,14 @@ function renderSemanaInner() {
   return renderSemanaBody();
 }
 
-// Repinta el contenido del plan (no la tarjeta: así no se repite su entrada) y devuelve el foco
+// Actualiza el contenido del plan en su lugar (motion.js: morphInto): la fila, su selector y el resto de la lista siguen
+// siendo los mismos nodos, así el botón elegido hace su fundido (styles.css), nada más se repinta y el foco no se pierde
 function refreshSemana(focus = semanaFocus()) {
   const card = document.getElementById("semana-card");
   if (!card || !semana.plan) return;
-  card.innerHTML = renderSemanaInner();
+  morphInto(card, renderSemanaInner());
   settleMotion(card); // motion.js: la marca de la fila que cambió late una vez
-  focus?.();
+  focus?.(); // con flechas el foco pasa a la opción elegida
 }
 
 // ---------- Foco ----------
@@ -234,14 +242,15 @@ async function setSemanaStatus(id, status, { undo = false } = {}) {
   const skill = semana.skills.get(id);
   if (!skill || !semana.plan?.ids.includes(id) || semana.busy !== null || skill.status === status) return;
   const previous = skill.status;
+  if (undo) pulseStatus(id, status); // skill-status.js: Deshacer vuelve con el mismo fundido
   semana.skills.set(id, { ...skill, status });
-  Object.assign(semana, { busy: id, errorId: null });
+  Object.assign(semana, { busy: id, pending: status, errorId: null });
   refreshSemana();
   try {
     const saved = await saveSkillStatus(id, status);
     if (semana.busy !== id) return; // cambió el usuario o se recargó la vista mientras se guardaba
-    semana.skills.set(id, { ...skill, ...saved });
-    semana.busy = null;
+    semana.skills.set(id, { ...(semana.skills.get(id) || skill), ...saved });
+    Object.assign(semana, { busy: null, pending: null });
     if (undo) {
       hideToast("semana");
       document.getElementById("ruta-live").textContent = t("habilidades.undone", { name: tSkill(saved.name), status: statusLabel(saved.status) });
@@ -257,8 +266,8 @@ async function setSemanaStatus(id, status, { undo = false } = {}) {
     document.dispatchEvent(new CustomEvent("skillmap:progress", { detail: { skill: saved, source: "semana" } }));
   } catch (err) {
     if (semana.busy !== id) return;
-    semana.skills.set(id, skill);
-    Object.assign(semana, { busy: null, error: err, errorId: id });
+    semana.skills.set(id, { ...(semana.skills.get(id) || skill), status: previous });
+    Object.assign(semana, { busy: null, pending: null, error: err, errorId: id });
     refreshSemana();
   }
 }
@@ -272,7 +281,7 @@ function initSemana() {
 }
 
 document.addEventListener("skillmap:user", () => {
-  Object.assign(semana, { key: null, plan: null, skills: new Map(), route: new Map(), busy: null, error: null, errorId: null });
+  Object.assign(semana, { key: null, plan: null, skills: new Map(), route: new Map(), busy: null, pending: null, error: null, errorId: null });
   planMemory.clear();
 });
 

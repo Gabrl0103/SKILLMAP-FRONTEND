@@ -462,14 +462,8 @@ main > #view-mapa:not(.hidden) { animation-name:view-fade; }
 
 /* Entrada: las tarjetas en orden */
 .objetivo-grid > .objetivo-item { animation:card-in var(--dur-slow) var(--ease-out) backwards; animation-delay:calc(min(var(--i, 0), 12) * 45ms + 40ms); }
-/* Tras elegir: la ruta anterior entra en el hueco de la tocada con un fundido, sin desplazarse */
-/* Cambio de objetivo: el contenido de la tarjeta del objetivo actual entra con un fundido corto y escalonado (la tarjeta
-   no se mueve); el % y la barra van desde el valor anterior (motion.js) */
-@keyframes swap-in { from { opacity:0; translate:0 4px; } }
-.objetivo-hero.is-swapping .objetivo-hero-main > *, .objetivo-hero.is-swapping .objetivo-hero-score { animation:swap-in 300ms var(--ease-out) backwards; }
-.objetivo-hero.is-swapping .objetivo-hero-main > :nth-child(2) { animation-delay:40ms; }
-.objetivo-hero.is-swapping .objetivo-hero-main > :nth-child(3), .objetivo-hero.is-swapping .objetivo-hero-score { animation-delay:80ms; }
-.objetivo-grid > .objetivo-item.is-swapped { animation:fade-in var(--dur-slow) var(--ease-out); animation-delay:0s; }
+/* Cambio de objetivo (objetivo.js, swapObjetivo): la tarjeta del objetivo actual y la del hueco se actualizan en su lugar y
+   su contenido hace un fundido corto (motion.js); el % y la barra van desde el valor anterior */
 @media (prefers-reduced-motion: reduce) {
   .objetivo-grid > .objetivo-item, .app-toast, .app-toast.is-leaving, .objetivo-bar > span { animation:none; }
   .objetivo-card--choose:hover, .objetivo-card--choose:focus-visible, .objetivo-card--choose:active { transform:none; }
@@ -1337,9 +1331,10 @@ p.analizador-history-state { font-size:.85rem; color:var(--muted); }
    entrada, conteos ni barras que se vuelven a llenar */
 .ruta-grid.is-quiet *, .ruta-grid.is-quiet *::before, .ruta-grid.is-quiet *::after { animation:none !important; }
 /* Cambio de objetivo (loadDashboard con swap): lo anterior se atenúa mientras llegan los datos, sin skeleton; lo nuevo
-   entra con un fundido corto, sin desplazamiento, escalonado 40ms por tarjeta */
+   entra con un fundido corto desde casi la misma opacidad (view-fade, .35: sin bajar a 0 y volver), sin desplazamiento,
+   escalonado 40ms por tarjeta */
 .ruta-grid.is-leaving { opacity:.45; transition:opacity var(--dur) var(--ease-out); pointer-events:none; }
-.ruta-grid.is-swap > .ruta-row > * { animation:fade-in 300ms var(--ease-out) backwards; }
+.ruta-grid.is-swap > .ruta-row > * { animation:view-fade 300ms var(--ease-out) backwards; }
 .ruta-grid.is-swap > .ruta-row > :nth-child(2) { animation-delay:40ms; }
 .ruta-grid.is-swap > .ruta-row:nth-child(2) > * { animation-delay:80ms; }
 .ruta-grid.is-swap > .ruta-row:nth-child(2) > :nth-child(2) { animation-delay:120ms; }
@@ -2097,9 +2092,10 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .user-popover:not([hidden]) { transform-origin:top right; animation:menu-in var(--dur) var(--ease-out); }
 .goal-list:not([hidden]) { transform-origin:top left; animation:menu-in var(--dur) var(--ease-out); }
 
-/* Cambio de estado de una habilidad: la opción elegida "late" una vez (también en la recarga silenciosa de Mi Ruta) */
-@keyframes state-pop { 0% { transform:scale(.9); opacity:.6; } 60% { transform:scale(1.04); opacity:1; } }
-.status-option.is-just-set, .ruta-grid.is-quiet .status-option.is-just-set { animation:state-pop var(--dur-slow) var(--ease-out) !important; }
+/* Cambio de estado de una habilidad: la opción elegida entra con un fundido (view-fade), una vez. El fondo plano y el texto
+   transicionan (regla de abajo); el degradado de Aprendiendo/Dominada no se puede transicionar, así que el fundido lo
+   suaviza. Sin escala ni rebote: el selector sigue siendo el mismo nodo (morphInto) y no se dispara dos veces. */
+.status-option.is-just-set, .ruta-grid.is-quiet .status-option.is-just-set { animation:view-fade var(--dur-slow) var(--ease-out) !important; }
 
 /* Pulsación y hover: los botones redondos, con contorno, el nav y las opciones de estado responden al tocar */
 .btn-ghost, .topbar-settings, .user-button, .nav-item, .status-option, .prep-stop-btn, .mapa-tip-close {
@@ -2129,7 +2125,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
     transition-duration:0s !important; transition-delay:0s !important; }
   .btn-ghost:hover, .topbar-settings:hover, .user-button:hover, .btn-ghost:active, .topbar-settings:active, .user-button:active, .nav-item:active,
   .status-option:active, .prep-stop-btn:active, .mapa-tip-close:active, .status-option.is-just-set { transform:none !important; }
-  .status-option.is-just-set { animation:none !important; }
+  .status-option.is-just-set, .ruta-grid.is-quiet .status-option.is-just-set { animation:none !important; }
 }
 :root[data-motion="reduced"] *:not(main > section), :root[data-motion="reduced"] *::before, :root[data-motion="reduced"] *::after {
   animation-duration:1ms !important; animation-delay:0s !important; animation-iteration-count:1 !important; transition-duration:0s !important; transition-delay:0s !important; }
@@ -2137,7 +2133,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 :root[data-motion="reduced"] .btn-ghost:active, :root[data-motion="reduced"] .topbar-settings:active, :root[data-motion="reduced"] .user-button:active,
 :root[data-motion="reduced"] .nav-item:active, :root[data-motion="reduced"] .status-option:active, :root[data-motion="reduced"] .prep-stop-btn:active,
 :root[data-motion="reduced"] .mapa-tip-close:active, :root[data-motion="reduced"] .status-option.is-just-set { transform:none !important; }
-:root[data-motion="reduced"] .status-option.is-just-set { animation:none !important; }
+:root[data-motion="reduced"] .status-option.is-just-set, :root[data-motion="reduced"] .ruta-grid.is-quiet .status-option.is-just-set { animation:none !important; }
 /* El respaldo de la Introducción (muestra la app si la comprobación tarda más de 3 s) no es movimiento: conserva su espera */
 @media (prefers-reduced-motion: reduce) { :root[data-intro="checking"] .topbar, :root[data-intro="checking"] .app-main { animation-delay:3s !important; } }
 :root[data-motion="reduced"][data-intro="checking"] .topbar, :root[data-motion="reduced"][data-intro="checking"] .app-main { animation-delay:3s !important; }
@@ -2232,7 +2228,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 /* Las filas dentro de una pestaña entran como las de la grilla (mismos keyframes y tiempos) */
 .ruta-grid:not(.ruta-skeleton) .view-tabpanel > .ruta-row > * { animation:card-in var(--dur-slow) var(--ease-out) backwards; }
 .ruta-grid:not(.ruta-skeleton) .view-tabpanel > .ruta-row > :nth-child(2) { animation-delay:60ms; }
-.ruta-grid.is-swap .view-tabpanel > .ruta-row > * { animation:fade-in 300ms var(--ease-out) backwards; }
+.ruta-grid.is-swap .view-tabpanel > .ruta-row > * { animation:view-fade 300ms var(--ease-out) backwards; }
 @media (prefers-reduced-motion: reduce) { .ruta-grid:not(.ruta-skeleton) .view-tabpanel > .ruta-row > *, .view-tab::after { animation:none; transition:none; } }
 :root[data-motion="reduced"] .ruta-grid:not(.ruta-skeleton) .view-tabpanel > .ruta-row > *, :root[data-motion="reduced"] .view-tab::after { animation:none; transition:none; }
 /* Secciones planas una al lado de la otra: arriba alineadas, sin estirarse a la altura de la vecina */
@@ -2269,7 +2265,7 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .objetivo-card.is-flat { background:transparent; background-image:none; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
 .objetivo-card--choose.is-flat:hover, .objetivo-card--choose.is-flat:focus-visible { box-shadow:0 1px 2px var(--card-border), var(--card-glow-hover), var(--card-edge); }
 .objetivo-card-cta:empty { display:none; }
-.objetivo-areas-list.is-static .objetivo-grid > .objetivo-item:not(.is-swapped) { animation:none; }
+.objetivo-areas-list.is-static .objetivo-grid > .objetivo-item { animation:none; }
 /* Preparación dentro de la tarjeta destacada: sin caja propia, separada por una línea vertical */
 .objetivo-hero-score.is-plain { padding:0 0 0 var(--space-10); border-left:1px solid var(--divider); }
 .hab-goal.is-plain { padding:0 0 0 var(--space-8); border-left:1px solid var(--divider); }

@@ -330,12 +330,15 @@ function showAnalyzerResult(kind, data) {
     error: renderAnalyzerError,
     historyError: ({ err }) => renderAnalyzerError(err, "analyzer.history.openError"),
   }[kind];
-  document.getElementById("analizador-result").innerHTML = render(data);
+  // motion.js: si el resultado es más bajo que lo que había (p. ej. un error tras el skeleton), la página no salta
+  keepScrollRoom(() => { document.getElementById("analizador-result").innerHTML = render(data); });
 }
 
-// Mientras analiza el botón queda deshabilitado (conserva su rosa) y el texto avisa de la espera.
+// Mientras analiza el botón queda deshabilitado (conserva su rosa) y el texto avisa de la espera. "Analizando…" es más
+// corto: el botón conserva su ancho mientras tanto (min-width) para no mover al de al lado.
 function setAnalyzing(isAnalyzing) {
   const button = document.getElementById("analizador-submit");
+  button.style.minWidth = isAnalyzing ? `${button.getBoundingClientRect().width}px` : "";
   analyzerBusy = isAnalyzing;
   button.disabled = isAnalyzing || missingChars() > 0;
   button.querySelector("[data-label]").textContent = t(isAnalyzing ? "analyzer.analyzing" : "analyzer.submit");
@@ -384,7 +387,7 @@ async function runAnalysis() {
   const hadFocus = document.activeElement === button || result.contains(document.activeElement);
   setAnalyzing(true);
   analyzerView = null;
-  result.innerHTML = renderAnalyzerSkeleton();
+  keepScrollRoom(() => { result.innerHTML = renderAnalyzerSkeleton(); }); // motion.js
   result.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "nearest" });
   // Sin key propia se usa la IA en la nube, que se duerme (plan gratis de Render): si tarda, se explica la espera.
   const wakeTimer = setTimeout(() => {
