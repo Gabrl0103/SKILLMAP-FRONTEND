@@ -2266,6 +2266,48 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .objetivo-card--choose.is-flat:hover, .objetivo-card--choose.is-flat:focus-visible { box-shadow:0 1px 2px var(--card-border), var(--card-glow-hover), var(--card-edge); }
 .objetivo-card-cta:empty { display:none; }
 .objetivo-areas-list.is-static .objetivo-grid > .objetivo-item { animation:none; }
+
+/* Roles propios ("Otro objetivo", js/rol-propio.js). Reutiliza la tarjeta, la marca .hab-on-goal ("Tuyo"), el botón
+   de icono y la confirmación de Perfil, el menú del usuario y los chips de Habilidades; aquí solo su colocación y el
+   fondo del diálogo, con los tokens de siempre */
+.objetivo-item--own { position:relative; }
+.objetivo-card-own { display:flex; align-items:center; min-height:var(--hit); margin-top:auto; }
+.rol-menu { position:relative; display:inline-flex; }
+.rol-menu--card { position:absolute; right:calc(var(--space-6) - var(--space-2)); bottom:calc(var(--space-6) + 1px); }
+.rol-menu-list { top:calc(100% + var(--space-1)); min-width:180px; }
+.rol-menu-danger { color:var(--pink-ink); }
+.objetivo-item.is-confirming > .objetivo-card, .objetivo-item.is-confirming > .rol-menu { display:none; }
+.objetivo-item > .rol-confirm { flex:1; }
+.objetivo-hero-tags { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2); }
+.objetivo-hero-main > .rol-confirm { margin-top:var(--space-4); }
+.objetivo-card--otro.objetivo-card--choose:not([aria-disabled="true"]) { cursor:pointer; }
+.rol-dialog { width:min(960px, calc(100vw - 32px)); max-width:none; max-height:calc(100dvh - 48px); padding:0; border:0;
+  background:transparent; color:inherit; overflow:visible; }
+.rol-dialog::backdrop { background:rgba(11,16,32,.42); }
+.rol-panel { display:flex; flex-direction:column; gap:var(--space-6); max-height:calc(100dvh - 48px); overflow:auto;
+  background:var(--glass-bg-strong); }
+.rol-head { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-4); }
+.rol-body { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-6); }
+@media (min-width:900px) {
+  .rol-body { grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); }
+  .rol-preview { position:sticky; top:0; align-self:start; }
+}
+.rol-fields { display:flex; flex-direction:column; gap:18px; min-width:0; }
+.rol-skills { min-width:0; margin:0; padding:0; border:0; }
+.rol-skills-head { display:flex; align-items:baseline; justify-content:space-between; gap:var(--space-3); width:100%; }
+.rol-skills-head .perfil-label { margin-bottom:0; }
+.rol-search { margin-top:var(--space-3); }
+.rol-groups { display:flex; flex-direction:column; gap:var(--space-4); margin-top:var(--space-4); }
+.rol-group[hidden], .rol-chips button[hidden] { display:none; }
+.rol-chips { margin-top:var(--space-2); border-radius:var(--radius-tile); }
+.rol-chips button[aria-disabled="true"] { color:var(--disabled-fg); cursor:not-allowed; }
+.rol-mastered { flex:none; color:var(--mint-ink); }
+.rol-preview { display:flex; flex-direction:column; gap:var(--space-3); padding:var(--space-5); border-radius:var(--radius-tile);
+  background:var(--surface-2); }
+#rol-preview-body { display:flex; flex-direction:column; gap:var(--space-3); }
+.rol-gps { display:flex; flex-direction:column; gap:var(--space-2); padding-left:1.2em; list-style:decimal; font-size:var(--fs-sm);
+  line-height:1.5; color:var(--text); }
+.rol-actions { justify-content:flex-end; }
 /* Preparación dentro de la tarjeta destacada: sin caja propia, separada por una línea vertical */
 .objetivo-hero-score.is-plain { padding:0 0 0 var(--space-10); border-left:1px solid var(--divider); }
 .hab-goal.is-plain { padding:0 0 0 var(--space-8); border-left:1px solid var(--divider); }

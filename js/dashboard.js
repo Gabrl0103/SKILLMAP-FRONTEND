@@ -674,6 +674,12 @@ function fetchGoals() {
   return goalsRequest;
 }
 
+// Un objetivo propio se creó, se editó o se borró (rol-propio.js): la lista y la preparación se vuelven a pedir
+function invalidateGoals() {
+  goalsRequest = null;
+  readinessRequests.clear();
+}
+
 let skillsRequest = null; // compartida entre Mapa Visual y Perfil para no pedir /api/skills dos veces
 
 function fetchSkills() {
