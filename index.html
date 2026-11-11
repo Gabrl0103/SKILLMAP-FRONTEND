@@ -487,6 +487,65 @@
   </section>
 </main>
 
+<!-- "Otro objetivo": crear o editar un rol propio (js/rol-propio.js). <dialog> con showModal: el resto de la página
+     queda inerte, Esc cierra y el foco vuelve a quien lo abrió. Campos y botones con los estilos de Perfil y Habilidades -->
+<dialog id="rol-dialog" class="rol-dialog" aria-labelledby="rol-title" aria-describedby="rol-subtitle">
+  <form id="rol-form" class="ruta-card rol-panel" novalidate>
+    <header class="rol-head">
+      <div>
+        <h2 id="rol-title" class="ruta-card-title" data-i18n="rol.title.create">Crea tu rol</h2>
+        <p id="rol-subtitle" class="ruta-card-hint" data-i18n="rol.subtitle">Ponle nombre, elige de 3 a 8 habilidades y mira qué tan cerca estás hoy.</p>
+      </div>
+      <button type="button" class="perfil-icon-btn" data-rol-close data-i18n-aria-label="rol.close" aria-label="Cerrar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="rol-body">
+      <div class="rol-fields">
+        <div>
+          <label for="rol-name" class="perfil-label" data-i18n="rol.name">Nombre del rol</label>
+          <input id="rol-name" class="perfil-input" type="text" maxlength="40" autocomplete="off" spellcheck="false"
+            aria-describedby="rol-name-count rol-name-error" data-i18n-placeholder="rol.namePlaceholder" placeholder="Ej.: Ingeniero de datos">
+          <p id="rol-name-count" class="perfil-hint"></p>
+          <p id="rol-name-error" class="perfil-error" aria-live="polite"></p>
+        </div>
+        <div>
+          <label for="rol-desc" class="perfil-label"><span data-i18n="rol.desc">Descripción corta</span> <span class="perfil-optional" data-i18n="perfil.form.optional">(opcional)</span></label>
+          <input id="rol-desc" class="perfil-input" type="text" maxlength="120" autocomplete="off"
+            aria-describedby="rol-desc-count rol-desc-error" data-i18n-placeholder="rol.descPlaceholder" placeholder="Qué haces en este rol, en una frase">
+          <p id="rol-desc-count" class="perfil-hint"></p>
+          <p id="rol-desc-error" class="perfil-error" aria-live="polite"></p>
+        </div>
+        <fieldset id="rol-skills" class="rol-skills" aria-describedby="rol-skills-hint rol-skills-error">
+          <legend class="rol-skills-head">
+            <span class="perfil-label" data-i18n="rol.skills">Habilidades</span>
+            <span id="rol-skills-count" class="perfil-count" aria-live="polite"></span>
+          </legend>
+          <p id="rol-skills-hint" class="perfil-hint" data-i18n="rol.skillsHint">Mínimo 3. Las que tienen la marca ya las dominas.</p>
+          <label class="objetivo-search rol-search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <span class="sr-only" data-i18n="rol.search">Buscar habilidad</span>
+            <input id="rol-search" type="search" autocomplete="off" data-i18n-placeholder="rol.search" placeholder="Buscar habilidad">
+          </label>
+          <p id="rol-skills-error" class="perfil-error" aria-live="polite"></p>
+          <div id="rol-skill-groups" class="rol-groups"></div>
+          <p id="rol-skills-empty" class="perfil-hint" role="status" hidden></p>
+        </fieldset>
+      </div>
+      <aside class="rol-preview" aria-labelledby="rol-preview-title">
+        <h3 id="rol-preview-title" class="ritmo-label" data-i18n="rol.preview">Vista previa</h3>
+        <div id="rol-preview-body"></div>
+        <p id="rol-preview-live" class="sr-only" aria-live="polite"></p>
+      </aside>
+    </div>
+    <p id="rol-error" class="perfil-error" role="alert"></p>
+    <footer class="perfil-form-actions rol-actions">
+      <button type="button" class="btn-ghost" data-rol-close data-i18n="rol.cancel">Cancelar</button>
+      <button type="submit" id="rol-submit" class="btn-pill"><span data-label data-i18n="rol.submitCreate">Crear y elegir</span></button>
+    </footer>
+  </form>
+</dialog>
+
 <script src="js/i18n.js"></script> <!-- primero: los demás usan t() -->
 <script src="js/theme.js"></script>
 <script src="js/motion.js"></script> <!-- anillo, números y barras que parten del valor anterior al repintar (usa theme.js) -->
@@ -501,6 +560,7 @@
 <script src="js/rachas.js"></script> <!-- "Tu ritmo" de Mi Ruta: meta semanal, rachas y mes (la pinta dashboard.js) -->
 <script src="js/mapa.js"></script>
 <script src="js/objetivo.js"></script>
+<script src="js/rol-propio.js"></script> <!-- "Otro objetivo": crear, editar y eliminar roles propios (diálogo y menú; usa objetivo.js) -->
 <script src="js/perfil.js"></script>
 <script src="js/habilidades.js"></script> <!-- vista Habilidades: resumen, filtros, demanda y estado de cada habilidad -->
 <script src="js/analizador.js"></script>

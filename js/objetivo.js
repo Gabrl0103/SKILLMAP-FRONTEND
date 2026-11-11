@@ -18,9 +18,9 @@ const GOAL_AREAS = {
   "Cloud Architect": "infrastructure",
 };
 const GOAL_AREA_ORDER = ["development", "data", "infrastructure", "other"];
-const goalArea = goal => goal.area || GOAL_AREAS[goal.title] || "other";
-// "Tus roles" (roles propios) y "Otro objetivo" quedan preparados y ocultos hasta que exista crear un rol propio
-const OWN_ROLES_ENABLED = false;
+// Los objetivos propios (custom: true en /api/goals) van en "Tus roles", primero, con la tarjeta "Otro objetivo"
+const goalArea = goal => (goal.custom ? "mine" : goal.area || GOAL_AREAS[goal.title] || "other");
+const isPendingDelete = goal => rolPendingDelete(goal.id); // rol-propio.js: borrado esperando los 3 s de "Deshacer"
 
 function normalizeText(text) {
   return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -91,7 +91,10 @@ function renderHero(goal) {
     <section class="ruta-card objetivo-hero" aria-labelledby="objetivo-current-title">
       <div class="objetivo-hero-main">
         <div class="objetivo-hero-head">
-          <span class="objetivo-chip">${t("objetivo.current")}</span>
+          <span class="objetivo-hero-tags">
+            <span class="objetivo-chip">${t("objetivo.current")}</span>
+            ${goal.custom ? `<span class="hab-on-goal">${t("rol.mine")}</span>${renderRolMenu(goal, "hero")}` : ""}
+          </span>
           <h2 id="objetivo-current-title" class="objetivo-hero-title" tabindex="-1">${goalName(goal)}</h2>
           <p class="objetivo-hero-meta">${goalMeta(goal, null)}</p>
         </div>
@@ -132,12 +135,34 @@ function renderGoalCard(goal, current, index) {
   const saving = objetivoState.saving === id;
   const label = pct == null ? t("objetivo.chooseFor", { goal: tGoalTitle(goal.title) })
     : t("objetivo.chooseForPct", { goal: tGoalTitle(goal.title), pct });
+  // Un objetivo propio lleva la marca "Tuyo" y, fuera del botón (no se anidan botones), su menú Editar / Eliminar
+  const own = goal.custom ? `<span class="objetivo-card-own"><span class="hab-on-goal">${t("rol.mine")}</span></span>` : "";
   return `
-    <li class="objetivo-item" data-goal-id="${id}" data-title="${escapeHtml(title)}" style="--i:${index};">
+    <li class="objetivo-item${goal.custom ? " objetivo-item--own" : ""}" data-goal-id="${id}" data-title="${escapeHtml(title)}" style="--i:${index};"${isPendingDelete(goal) ? " hidden data-pending" : ""}>
       <button type="button" class="objetivo-card objetivo-card--choose is-flat" data-action="choose" data-goal-id="${id}"
-        aria-label="${escapeHtml(label)}" aria-describedby="objetivo-meta-${id}"${saving ? ` aria-busy="true"` : ""}${objetivoState.busy ? ` aria-disabled="true"` : ""}>
+        aria-label="${escapeHtml(label)}${goal.custom ? ` · ${escapeHtml(t("rol.mine"))}` : ""}" aria-describedby="objetivo-meta-${id}"${saving ? ` aria-busy="true"` : ""}${objetivoState.busy ? ` aria-disabled="true"` : ""}>
         ${goalCardBody(goal, current, id)}
+        ${own}
         <span class="objetivo-card-cta" aria-hidden="true">${goalCardCta(saving && objetivoState.savingShown)}</span>
+      </button>
+      ${goal.custom ? renderRolMenu(goal, "card") : ""}
+    </li>`;
+}
+
+// "Otro objetivo": abre el diálogo para crear un rol propio (rol-propio.js). Con el máximo creado queda deshabilitada y
+// dice por qué
+function renderOtroCard() {
+  const full = ownGoalCount() >= ROL_MAX; // rol-propio.js
+  return `
+    <li class="objetivo-item objetivo-item--otro">
+      <button type="button" class="objetivo-card objetivo-card--otro objetivo-card--choose is-flat" data-rol-action="create"
+        aria-describedby="objetivo-otro-text"${full ? ` aria-disabled="true"` : ""}>
+        <span class="objetivo-card-top">
+          <span class="objetivo-card-title">${t("objetivo.other")}</span>
+          ${full ? `<span class="sample-tag">${t("rol.full")}</span>` : ""}
+        </span>
+        <span class="objetivo-card-meta" id="objetivo-otro-text">${full ? t("rol.fullText", { max: ROL_MAX }) : t("objetivo.otherText")}</span>
+        ${full ? "" : `<span class="objetivo-card-cta" aria-hidden="true">${t("objetivo.cta")}</span>`}
       </button>
     </li>`;
 }
@@ -148,22 +173,31 @@ function presentAreas(others) {
   return GOAL_AREA_ORDER.filter(area => areas.has(area));
 }
 
-// Filtros por área: Todas, cada área presente y "Tus roles" (preparado: oculto hasta que existan roles propios)
+// Filtros por área: Todas, "Tus roles" y cada área presente
 function renderAreaFilters(others) {
   const chip = (area, label) =>
     `<button type="button" data-area-filter="${area}" aria-pressed="${objetivoState.area === area}">${label}</button>`;
   return `
     <div class="hab-filters" role="group" aria-label="${escapeHtml(t("objetivo.areas"))}">
       ${chip("all", t("objetivo.area.all"))}
+      ${chip("mine", t("objetivo.area.mine"))}
       ${presentAreas(others).map(area => chip(area, t(`objetivo.area.${area}`))).join("")}
-      ${OWN_ROLES_ENABLED ? chip("mine", t("objetivo.area.mine")) : ""}
     </div>`;
 }
 
 // Rutas agrupadas por área, cada grupo con su cantidad; mosaicos planos de borde fino (toda la tarjeta es el botón).
-// "Tus roles" va primero, preparado y oculto, con la tarjeta "Otro objetivo" (todavía no disponible: borde punteado).
+// "Tus roles" va primero: los objetivos propios (menos el actual) y la tarjeta "Otro objetivo" para crear uno.
 function renderAreaGroups(others, current) {
   let index = 0;
+  const own = others.filter(g => g.custom);
+  const mine = `
+      <section class="objetivo-area" data-area="mine" aria-labelledby="objetivo-area-mine">
+        <h3 class="objetivo-area-title" id="objetivo-area-mine">
+          <span class="hab-group-title">${t("objetivo.area.mine")}</span>
+          <span class="hab-group-count" data-area-count>· ${own.filter(g => !isPendingDelete(g)).length}</span>
+        </h3>
+        <ul class="objetivo-grid">${own.map(g => renderGoalCard(g, current, index++)).join("")}${renderOtroCard()}</ul>
+      </section>`;
   const groups = presentAreas(others).map(area => {
     const items = others.filter(g => goalArea(g) === area);
     return `
@@ -175,22 +209,7 @@ function renderAreaGroups(others, current) {
         <ul class="objetivo-grid">${items.map(g => renderGoalCard(g, current, index++)).join("")}</ul>
       </section>`;
   }).join("");
-  const mine = `
-      <section class="objetivo-area" data-area="mine" aria-labelledby="objetivo-area-mine" hidden>
-        <h3 class="objetivo-area-title" id="objetivo-area-mine"><span class="hab-group-title">${t("objetivo.area.mine")}</span></h3>
-        <ul class="objetivo-grid">
-          <li class="objetivo-item objetivo-item--otro">
-            <div class="objetivo-card objetivo-card--otro" aria-disabled="true">
-              <span class="objetivo-card-top">
-                <span class="objetivo-card-title">${t("objetivo.other")}</span>
-                <span class="sample-tag">${t("common.soon")}</span>
-              </span>
-              <span class="objetivo-card-meta">${t("objetivo.otherText")}</span>
-            </div>
-          </li>
-        </ul>
-      </section>`;
-  return `${OWN_ROLES_ENABLED ? mine : ""}${groups}`;
+  return `${mine}${groups}`;
 }
 
 function renderObjetivo() {
@@ -234,17 +253,20 @@ function filterGoalCards() {
   const moving = motionRects([...document.querySelectorAll("#objetivo-content .objetivo-item[data-title], #objetivo-content .objetivo-area-title")]
     .filter(el => el.getClientRects().length));
   document.querySelectorAll("#objetivo-content .objetivo-area[data-area]").forEach(group => {
-    if (group.dataset.area === "mine") { group.hidden = !OWN_ROLES_ENABLED || (area !== "all" && area !== "mine"); return; }
+    const mine = group.dataset.area === "mine";
     const inArea = area === "all" || area === group.dataset.area;
     let shown = 0;
     group.querySelectorAll(".objetivo-item[data-title]").forEach(card => {
       const was = card.hidden;
-      card.hidden = !inArea || !card.dataset.title.includes(q);
+      // Uno que se está borrando (esperando "Deshacer") no se ve
+      card.hidden = !inArea || !card.dataset.title.includes(q) || card.hasAttribute("data-pending");
       if (!card.hidden) shown++;
       if (was && !card.hidden) back.push(card);
     });
-    if (group.hidden && shown > 0) back.push(group.querySelector(".objetivo-area-title"));
-    group.hidden = shown === 0;
+    // "Tus roles" se ve siempre en Todas y en su filtro: ahí está "Otro objetivo" para crear uno
+    const visibleGroup = mine ? inArea : shown > 0;
+    if (group.hidden && visibleGroup) back.push(group.querySelector(".objetivo-area-title"));
+    group.hidden = !visibleGroup;
     const count = group.querySelector("[data-area-count]");
     if (count) count.textContent = `· ${shown}`;
     visible += shown;
@@ -380,6 +402,32 @@ function swapObjetivo(fromId, toId) {
     showObjetivoError();
     if (refocus) (card?.querySelector("[data-action='choose']") || document.getElementById("objetivo-current-title"))?.focus({ preventScroll: true });
   });
+}
+
+// Tras crear, editar o borrar un rol propio (rol-propio.js): la vista se actualiza en su lugar, como swapObjetivo. La
+// tarjeta del objetivo actual y la lista son los mismos nodos; lo nuevo entra con un fundido corto (sin repetir la entrada
+// de las tarjetas), lo que cambia de lugar se desliza y la página no salta.
+function refreshObjetivoInPlace(focusSelector = null) {
+  const container = document.getElementById("objetivo-content");
+  const hero = container.querySelector(".objetivo-hero");
+  const list = container.querySelector(".objetivo-areas-list");
+  if (!hero || !list || !objetivoState.goals?.length) { paintObjetivo(focusSelector); return; }
+  const current = goalById(currentActiveGoalId(objetivoState.goals));
+  const others = gridOrder(objetivoState.goals, current).map(goalById);
+  keepObjetivoInPlace(() => {
+    const moving = motionRects([...list.querySelectorAll(".objetivo-item, .objetivo-area-title")].filter(el => el.getClientRects().length));
+    const sameHero = hero.querySelector(".objetivo-hero-title")?.textContent === tGoalTitle(current.title);
+    morphElement(hero, renderHero(current));
+    if (!sameHero) hero.querySelectorAll(".objetivo-hero-head, .objetivo-hero-desc").forEach(motionFade);
+    settleMotion(hero); // motion.js: el % va desde el que se veía
+    morphInto(container.querySelector(".objetivo-tools"), renderAreaFilters(others));
+    list.classList.add("is-static");
+    morphInto(list, renderAreaGroups(others, current)).forEach(el => { motionSkipEntry(el); motionFade(el); });
+    filterGoalCards();
+    motionFlip(moving);
+    showObjetivoError();
+  });
+  if (focusSelector) container.querySelector(focusSelector)?.focus({ preventScroll: true });
 }
 
 async function loadObjetivoData() {
