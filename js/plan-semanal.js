@@ -46,7 +46,8 @@ function previousWeekKey(key) {
 // del mercado. 2 h de base + 1 h por cada 25 % de demanda, redondeado hacia arriba (1–25 % → 3 h, 26–50 % → 4 h,
 // 51–75 % → 5 h, 76–100 % → 6 h); 1 h menos si ya la estás aprendiendo (el arranque ya está hecho). Entre 2 y 6 h.
 function planHours(skill) {
-  const demand = Math.max(0, Math.min(100, Number(skill.demandPercentage) || 0));
+  // Una habilidad propia no tiene demanda: cuenta como la franja más baja (3 h)
+  const demand = hasDemandData(skill) ? Math.max(0, Math.min(100, Number(skill.demandPercentage) || 0)) : 25;
   const hours = 2 + Math.ceil(demand / 25) - (skill.status === "IN_PROGRESS" ? 1 : 0);
   return Math.max(2, Math.min(6, hours));
 }
@@ -55,7 +56,7 @@ function planHours(skill) {
 // estable: con la misma demanda queda el orden de la API)
 function planOrder(gaps) {
   const learningFirst = s => (s.status === "IN_PROGRESS" ? 0 : 1);
-  return [...gaps].sort((a, b) => learningFirst(a) - learningFirst(b) || b.demandPercentage - a.demandPercentage);
+  return [...gaps].sort((a, b) => learningFirst(a) - learningFirst(b) || compareDemand(a, b)); // propias al final
 }
 
 // Completa el plan hasta PLAN_SIZE habilidades por hacer (no dominadas) con las brechas que aún no están en él. Las
@@ -136,8 +137,10 @@ function renderSemanaRow(skill) {
   const hours = planHours(skill);
   const name = escapeHtml(tSkill(skill.name));
   const pct = Math.max(0, Math.min(100, Number(skill.demandPercentage) || 0));
-  const badge = !done && semana.demands.length ? urgencyBadge(skill.demandPercentage, semana.demands) : null;
-  const meta = [t("semana.demand", { pct: skill.demandPercentage }), skill.category ? escapeHtml(tCategory(skill.category)) : ""]
+  const measured = hasDemandData(skill); // las propias: "Sin datos de demanda", sin nivel
+  const badge = measured && !done && semana.demands.length ? urgencyBadge(skill.demandPercentage, semana.demands) : null;
+  const meta = [measured ? t("semana.demand", { pct: skill.demandPercentage }) : t("demand.none"),
+    skill.category ? escapeHtml(tCategory(skill.category)) : ""]
     .filter(Boolean).join(" · ");
   const hoursCell = done
     ? `<p class="semana-hours semana-hours--done">${t("semana.doneThisWeek")}</p>`

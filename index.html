@@ -515,6 +515,18 @@
             <span id="rol-skills-count" class="perfil-count" aria-live="polite"></span>
           </legend>
           <p id="rol-skills-hint" class="perfil-hint" data-i18n="rol.skillsHint">Mínimo 3. Las que tienen la marca ya las dominas.</p>
+          <!-- Sugerir habilidades a partir del nombre del rol (js/rol-propio.js); nada se guarda hasta "Crear y elegir" -->
+          <div class="rol-suggest">
+            <button type="button" id="rol-suggest" class="btn-pill perfil-btn-outline" aria-describedby="rol-suggest-status"><span data-label data-i18n="rol.suggest">Sugerir habilidades</span></button>
+            <p id="rol-suggest-status" class="perfil-hint" role="status"></p>
+          </div>
+          <div id="rol-suggestions-box" class="rol-suggestions" hidden>
+            <div class="rol-suggestions-head">
+              <p id="rol-suggestions-title" class="ritmo-label" data-i18n="rol.suggest.title">Sugeridas para este rol</p>
+              <button type="button" id="rol-suggest-all" class="btn-ghost" data-i18n="rol.suggest.all">Usar todas</button>
+            </div>
+            <div id="rol-suggestions" class="hab-filters rol-chips" role="group" aria-labelledby="rol-suggestions-title"></div>
+          </div>
           <label class="objetivo-search rol-search">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
             <span class="sr-only" data-i18n="rol.search">Buscar habilidad</span>
@@ -523,6 +535,18 @@
           <p id="rol-skills-error" class="perfil-error" aria-live="polite"></p>
           <div id="rol-skill-groups" class="rol-groups"></div>
           <p id="rol-skills-empty" class="perfil-hint" role="status" hidden></p>
+          <!-- Habilidad propia: la escribe el usuario; sin datos de mercado (js/rol-propio.js) -->
+          <div class="rol-own">
+            <label for="rol-own-input" class="perfil-label" data-i18n="rol.own">Agregar mi propia habilidad</label>
+            <div class="rol-own-row">
+              <input id="rol-own-input" class="perfil-input" type="text" maxlength="40" autocomplete="off" spellcheck="false"
+                aria-describedby="rol-own-hint rol-own-error rol-own-note" data-i18n-placeholder="rol.own.placeholder" placeholder="Ej.: Figma">
+              <button type="button" id="rol-own-add" class="btn-pill perfil-btn-outline" data-i18n="rol.own.add">Agregar</button>
+            </div>
+            <p id="rol-own-hint" class="perfil-hint" data-i18n="rol.own.hint">De 2 a 40 caracteres. Cuenta en tu ruta, pero no tiene datos de demanda del mercado.</p>
+            <p id="rol-own-error" class="perfil-error" aria-live="polite"></p>
+            <p id="rol-own-note" class="perfil-hint" aria-live="polite"></p>
+          </div>
         </fieldset>
       </div>
       <aside class="rol-preview" aria-labelledby="rol-preview-title">

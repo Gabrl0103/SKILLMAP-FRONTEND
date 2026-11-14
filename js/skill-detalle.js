@@ -33,7 +33,9 @@ function renderSkillMeta(skill) {
   const status = SKILL_STATE_CLASS[skill.status] || "pending";
   return `
     <span class="mapa-chip mapa-chip--${status}">${statusLabel(skill.status)}</span>
-    <p class="skill-demand"><strong>${skill.demandPercentage}%</strong> ${t("skill.ofJobs")}</p>
+    ${hasDemandData(skill)
+      ? `<p class="skill-demand"><strong>${skill.demandPercentage}%</strong> ${t("skill.ofJobs")}</p>`
+      : `<p class="skill-demand">${t("demand.none")}</p>`}
     ${demandIsSample([skill]) ? sampleTag() : ""}`;
 }
 
@@ -41,14 +43,16 @@ function renderSkillMeta(skill) {
 // habilidades del objetivo
 function skillGoalText(skill) {
   const { goal, catalog } = skillDetail;
-  const demand = t("skill.why.demand", { pct: skill.demandPercentage });
+  // Habilidad propia: sin datos de mercado; su lugar en el objetivo no se mide por demanda
+  const demand = hasDemandData(skill) ? t("skill.why.demand", { pct: skill.demandPercentage }) : t("skill.why.own");
   if (!goal) return `${demand} ${t("skill.why.noGoal")}`;
   const name = escapeHtml(tGoalTitle(goal.title));
   const ids = new Set((goal.skills || []).map(s => s.skillId));
   if (!ids.has(skill.id)) return `${demand} ${t("skill.why.notInGoal", { goal: name })}`;
   const goalSkills = catalog.filter(s => ids.has(s.id));
-  const rank = goalSkills.filter(s => s.demandPercentage > skill.demandPercentage).length + 1;
-  return `${demand} ${t("skill.why.inGoal", { goal: name, rank, total: goalSkills.length })}`;
+  if (!hasDemandData(skill)) return `${demand} ${t("skill.why.inGoalOwn", { goal: name })}`;
+  const rank = withDemand(goalSkills).filter(s => s.demandPercentage > skill.demandPercentage).length + 1;
+  return `${demand} ${t("skill.why.inGoal", { goal: name, rank, total: withDemand(goalSkills).length })}`;
 }
 
 function renderSkillWhy(skill, content) {

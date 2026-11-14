@@ -2297,6 +2297,18 @@ p.ofertas-state { font-size:var(--fs-body); color:var(--text-2); }
 .rol-skills-head { display:flex; align-items:baseline; justify-content:space-between; gap:var(--space-3); width:100%; }
 .rol-skills-head .perfil-label { margin-bottom:0; }
 .rol-search { margin-top:var(--space-3); }
+/* Sugerir habilidades (botón + estado), chips sugeridas y "Agregar mi propia habilidad": mismos botones, campos y chips */
+.rol-suggest { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2) var(--space-3); margin-top:var(--space-3); }
+.rol-suggest .perfil-hint { margin-top:0; }
+.rol-suggest .perfil-hint:empty { display:none; }
+.rol-suggestions { margin-top:var(--space-3); }
+.rol-suggestions[hidden] { display:none; }
+.rol-suggestions-head { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); }
+.rol-suggestions-head .btn-ghost[hidden] { display:none; }
+.rol-own { margin-top:var(--space-5); }
+.rol-own-row { display:flex; align-items:stretch; gap:var(--space-3); }
+.rol-own-row .perfil-input { flex:1; min-width:0; }
+.rol-own .perfil-error:empty, .rol-own #rol-own-note:empty { display:none; }
 .rol-groups { display:flex; flex-direction:column; gap:var(--space-4); margin-top:var(--space-4); }
 .rol-group[hidden], .rol-chips button[hidden] { display:none; }
 .rol-chips { margin-top:var(--space-2); border-radius:var(--radius-tile); }

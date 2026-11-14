@@ -160,8 +160,10 @@ function renderHabRow(skill) {
           ${onGoal ? `<span class="hab-on-goal">${t("habilidades.onGoal")}</span>` : ""}
         </div>
         <div class="hab-demand">
-          <span class="gap-bar hab-demand-bar" aria-hidden="true"><span style="width:${pct}%"></span></span>
-          <span class="hab-demand-pct">${t("habilidades.demandPct", { pct })}</span>
+          ${hasDemandData(skill)
+            ? `<span class="gap-bar hab-demand-bar" aria-hidden="true"><span style="width:${pct}%"></span></span>
+          <span class="hab-demand-pct">${t("habilidades.demandPct", { pct })}</span>`
+            : `<span class="hab-demand-pct">${t("demand.none")}</span>`}
         </div>
       </div>
       <div class="hab-status">${renderStatusPicker(skill, busy)}</div>
@@ -172,7 +174,7 @@ function renderHabRow(skill) {
 
 // Orden de la lista: categorías en el orden de la API y, dentro, por demanda
 function habOrdered(skills) {
-  return [...groupByCategory(skills)].flatMap(([, items]) => [...items].sort((a, b) => b.demandPercentage - a.demandPercentage));
+  return [...groupByCategory(skills)].flatMap(([, items]) => [...items].sort(compareDemand));
 }
 
 // "Solo mi ruta" encendido (y con objetivo): solo las habilidades del objetivo activo

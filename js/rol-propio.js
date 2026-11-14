@@ -1,7 +1,10 @@
 // Roles propios ("Otro objetivo" en Objetivo): crear, editar, elegir y eliminar un objetivo hecho por el usuario.
 // - Diálogo accesible (<dialog> con showModal: el resto de la página queda inerte y el foco no sale; Esc cierra; al
 //   cerrar el foco vuelve a quien lo abrió): nombre con contador, descripción corta opcional, selector de habilidades
-//   por categoría con búsqueda, marca de las que ya dominas y "N de 8", y la vista previa en vivo con voz de GPS
+//   por categoría con búsqueda, marca de las que ya dominas y "N de 8", "Sugerir habilidades" a partir del nombre del rol
+//   (POST /api/goals/custom/suggestions: diccionario del backend y, si no coincide, la IA del Analizador; las sugeridas
+//   salen como chips que se aceptan una a una o todas), "Agregar mi propia habilidad" (habilidades propias del rol, sin
+//   datos de mercado: van en newSkills al guardar) y la vista previa en vivo con voz de GPS
 //   ("Tu preparación hoy: X%", "Si aprendes {habilidad}, subes a N%"). Mismas reglas que el backend (todas las
 //   habilidades pesan igual: el % es dominadas / elegidas). Validación en línea, sin alertas del navegador. Si el backend
 //   o la red fallan, el error queda en el diálogo y lo escrito se conserva.
@@ -25,8 +28,14 @@ const ROL_GAPS_SHOWN = 3;
 // editing: el rol que se edita (null al crear); opener: quién abrió el diálogo; selected: ids elegidos en su orden;
 // catalog: /api/skills; touched: campos ya tocados (sus errores se muestran en vivo); pending: rol que se está borrando
 // (esperando "Deshacer"); committing: la promesa del borrado en curso
+// added: nombres de habilidades propias nuevas (se crean al guardar); suggestions: las últimas sugeridas (null: sin pedir)
 const rol = { editing: null, opener: null, selected: [], catalog: [], query: "", touched: new Set(), busy: false,
-  pending: null, committing: null };
+  pending: null, committing: null, added: [], suggestions: null, suggesting: false, suggestRequest: 0 };
+
+const ROL_SKILL_NAME = { min: 2, max: 40 }; // habilidad propia (mismas reglas que CustomGoalFactory)
+
+// Elegidas en total: las del catálogo o propias que ya existen y las nuevas escritas
+const rolCount = () => rol.selected.length + rol.added.length;
 
 const rolDialog = () => document.getElementById("rol-dialog");
 const rolCollapse = text => (text || "").trim().replace(/\s+/g, " ");
@@ -186,6 +195,7 @@ async function commitDeleteRol() {
     forgetRolPlan(pending.id);
     if (sessionUser) sessionUser.goalId = res?.goalId ?? null;
     invalidateGoals(); // dashboard.js
+    document.dispatchEvent(new CustomEvent("skillmap:catalog")); // sus habilidades propias se borraron con él
     await loadGoals(); // dashboard.js: el selector de Mi Ruta y el objetivo activo (el que diga el backend)
     if (wasActive && getActiveGoalId()) loadDashboard(getActiveGoalId(), { swap: true });
     if (objetivoState.goals) {
@@ -232,7 +242,9 @@ async function openRolDialog(goal, opener) {
   if (!goal && ownGoalCount() >= ROL_MAX) return;
   let catalog;
   try {
-    catalog = await fetchSkills(); // dashboard.js (con caché)
+    // El catálogo y, si se edita, las habilidades propias de este rol (las de otros roles no se pueden elegir aquí)
+    const editingId = goal ? String(goal.id) : null;
+    catalog = (await fetchSkills()).filter(s => !s.custom || (editingId && String(s.goalId) === editingId)); // dashboard.js
   } catch (err) {
     objetivoState.error = err;
     keepObjetivoInPlace(showObjetivoError);
@@ -241,7 +253,9 @@ async function openRolDialog(goal, opener) {
   Object.assign(rol, {
     editing: goal || null, opener: opener || null, catalog, query: "", touched: new Set(), busy: false,
     selected: goal ? goal.skills.map(s => s.skillId).filter(id => catalog.some(c => c.id === id)) : [],
+    added: [], suggestions: null, suggesting: false,
   });
+  rol.suggestRequest++; // una sugerencia en vuelo de la vez anterior ya no cuenta
   const dialog = rolDialog();
   dialog.querySelector("#rol-title").textContent = t(goal ? "rol.title.edit" : "rol.title.create");
   dialog.querySelector("#rol-name").value = goal ? goal.title : "";
@@ -249,6 +263,11 @@ async function openRolDialog(goal, opener) {
   dialog.querySelector("#rol-search").value = "";
   dialog.querySelector("#rol-submit [data-label]").textContent = t(goal ? "rol.submitEdit" : "rol.submitCreate");
   dialog.querySelector("#rol-error").textContent = "";
+  dialog.querySelector("#rol-own-input").value = "";
+  setRolOwnMessage("");
+  dialog.querySelector("#rol-suggest-status").textContent = "";
+  setRolSuggestBusy(false);
+  renderRolSuggestions();
   renderRolSkills();
   syncRolForm();
   dialog.showModal();
@@ -265,14 +284,24 @@ function closeRolDialog() {
 // llevan la marca menta y lo dicen a los lectores de pantalla.
 function renderRolSkills() {
   const groups = new Map();
-  for (const skill of rol.catalog) {
+  for (const skill of rol.catalog.filter(s => !s.custom)) {
     const key = skill.category || "";
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(skill);
   }
   const check = `<svg class="rol-mastered" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>`;
   let index = 0;
-  document.getElementById("rol-skill-groups").innerHTML = [...groups].map(([category, skills]) => {
+  // "Tus habilidades": las propias de este rol (al editar) y las nuevas escritas, primero y sin datos de mercado
+  const own = rol.catalog.filter(s => s.custom);
+  const ownGroup = own.length || rol.added.length ? `
+      <div class="rol-group" data-rol-group>
+        <p id="rol-group-own" class="ritmo-label">${t("rol.ownGroup")}</p>
+        <div class="hab-filters rol-chips" role="group" aria-labelledby="rol-group-own">
+          ${own.map(s => `<button type="button" data-rol-skill="${s.id}" data-name="${escapeHtml(rolKey(s.name))}" aria-pressed="false">${escapeHtml(s.name)}${s.status === "MASTERED" ? `${check}<span class="sr-only">, ${t("rol.mastered")}</span>` : ""}</button>`).join("")}
+          ${rol.added.map(name => `<button type="button" data-rol-new="${escapeHtml(name)}" data-name="${escapeHtml(rolKey(name))}" aria-pressed="true">${escapeHtml(name)}<span class="sr-only">, ${t("rol.own.new")}</span></button>`).join("")}
+        </div>
+      </div>` : "";
+  document.getElementById("rol-skill-groups").innerHTML = ownGroup + [...groups].map(([category, skills]) => {
     const label = escapeHtml(category ? tCategory(category) : t("rol.otherCategory"));
     const id = `rol-group-${index++}`;
     return `
@@ -292,16 +321,23 @@ function renderRolSkills() {
 // Lo que se ve según lo elegido y lo escrito: botones marcados, contadores, filtro, vista previa y errores
 function syncRolForm() {
   const dialog = rolDialog();
-  const full = rol.selected.length >= ROL_SKILLS.max;
+  const full = rolCount() >= ROL_SKILLS.max;
   dialog.querySelectorAll("[data-rol-skill]").forEach(b => {
     const on = rol.selected.includes(Number(b.dataset.rolSkill));
     b.setAttribute("aria-pressed", String(on));
     if (full && !on) b.setAttribute("aria-disabled", "true"); else b.removeAttribute("aria-disabled");
   });
+  dialog.querySelectorAll("[data-rol-suggest]").forEach(b => {
+    const on = rolSuggestionOn(rol.suggestions?.[Number(b.dataset.rolSuggest)]);
+    b.setAttribute("aria-pressed", String(on));
+    if (full && !on) b.setAttribute("aria-disabled", "true"); else b.removeAttribute("aria-disabled");
+  });
+  const all = dialog.querySelector("#rol-suggest-all");
+  if (all) all.hidden = !rol.suggestions?.length || rol.suggestions.every(rolSuggestionOn);
   const name = rolCollapse(dialog.querySelector("#rol-name").value);
   dialog.querySelector("#rol-name-count").textContent = t("rol.count", { n: rolLength(name), max: ROL_NAME.max });
   dialog.querySelector("#rol-desc-count").textContent = t("rol.count", { n: rolLength(rolCollapse(dialog.querySelector("#rol-desc").value)), max: ROL_DESC_MAX });
-  dialog.querySelector("#rol-skills-count").textContent = t("rol.skillsCount", { n: rol.selected.length, max: ROL_SKILLS.max });
+  dialog.querySelector("#rol-skills-count").textContent = t("rol.skillsCount", { n: rolCount(), max: ROL_SKILLS.max });
   filterRolSkills();
   renderRolPreview();
   showRolErrors(false);
@@ -312,7 +348,7 @@ function filterRolSkills() {
   let shown = 0;
   rolDialog().querySelectorAll("[data-rol-group]").forEach(group => {
     let inGroup = 0;
-    group.querySelectorAll("[data-rol-skill]").forEach(b => {
+    group.querySelectorAll("[data-rol-skill], [data-rol-new]").forEach(b => {
       b.hidden = Boolean(q) && !b.dataset.name.includes(q);
       if (!b.hidden) inGroup++;
     });
@@ -327,7 +363,10 @@ function filterRolSkills() {
 // Vista previa: el % con las mismas reglas del backend (todas pesan igual) y, con voz de GPS, cuánto subirías al
 // aprender cada brecha, en orden de demanda (como la ruta)
 function renderRolPreview() {
-  const chosen = rol.selected.map(id => rol.catalog.find(s => s.id === id)).filter(Boolean);
+  // Las nuevas cuentan como pendientes y sin datos de mercado: van al final, en el orden en que se agregaron
+  const added = rol.added.map((name, i) => ({ id: Number.MAX_SAFE_INTEGER - ROL_SKILLS.max + i, name, status: "PENDING",
+    demandSource: "NONE", custom: true }));
+  const chosen = [...rol.selected.map(id => rol.catalog.find(s => s.id === id)).filter(Boolean), ...added];
   const total = chosen.length;
   const mastered = chosen.filter(s => s.status === "MASTERED").length;
   const pct = total ? Math.round((mastered * 100) / total) : 0;
@@ -337,11 +376,10 @@ function renderRolPreview() {
     document.getElementById("rol-preview-live").textContent = "";
     return;
   }
-  const gaps = chosen.filter(s => s.status !== "MASTERED")
-    .sort((a, b) => (Number(b.demandPercentage) || 0) - (Number(a.demandPercentage) || 0));
+  const gaps = chosen.filter(s => s.status !== "MASTERED").sort(compareDemand); // skill-status.js: propias al final
   const steps = gaps.slice(0, ROL_GAPS_SHOWN).map((s, i) => {
     const next = Math.round(((mastered + i + 1) * 100) / total);
-    return `<li>${escapeHtml(t("rol.previewGap", { skill: tSkill(s.name), pct: next }))}</li>`;
+    return `<li>${escapeHtml(t("rol.previewGap", { skill: s.custom ? s.name : tSkill(s.name), pct: next }))}</li>`;
   }).join("");
   const more = gaps.length - ROL_GAPS_SHOWN;
   box.innerHTML = `
@@ -364,7 +402,7 @@ function rolErrors() {
   else if (rolNameTaken(name)) errors.name = t("rol.err.duplicate");
   if (/[<>]/.test(desc)) errors.desc = t("rol.err.plain");
   else if (rolLength(desc) > ROL_DESC_MAX) errors.desc = t("rol.err.descLength", { max: ROL_DESC_MAX });
-  if (rol.selected.length < ROL_SKILLS.min) errors.skills = t("rol.err.skillsMin", { min: ROL_SKILLS.min, n: rol.selected.length });
+  if (rolCount() < ROL_SKILLS.min) errors.skills = t("rol.err.skillsMin", { min: ROL_SKILLS.min, n: rolCount() });
   return errors;
 }
 
@@ -393,12 +431,175 @@ function toggleRolSkill(button) {
   const id = Number(button.dataset.rolSkill);
   const at = rol.selected.indexOf(id);
   if (at >= 0) rol.selected.splice(at, 1);
-  else if (rol.selected.length >= ROL_SKILLS.max) {
+  else if (rolCount() >= ROL_SKILLS.max) {
     document.getElementById("rol-skills-error").textContent = t("rol.err.skillsMax", { max: ROL_SKILLS.max });
     return;
   } else rol.selected.push(id);
-  if (rol.selected.length >= ROL_SKILLS.min) rol.touched.add("skills");
+  if (rolCount() >= ROL_SKILLS.min) rol.touched.add("skills");
   syncRolForm();
+}
+
+// Quita una habilidad nueva (todavía sin guardar): desaparece de "Tus habilidades"
+function removeRolNew(button) {
+  const key = button.dataset.name;
+  rol.added = rol.added.filter(name => rolKey(name) !== key);
+  renderRolSkills();
+  syncRolForm();
+  rolDialog().querySelector("#rol-own-input").focus();
+}
+
+// ---------- Habilidades propias y sugerencias ----------
+
+// Agrega una habilidad por su nombre: si ya existe (en el catálogo o entre las propias de este rol) se marca esa; si no,
+// queda como nueva. Devuelve { error } o { note } (texto para mostrar) o {}.
+function addRolSkillByName(raw) {
+  const name = rolCollapse(raw);
+  if (rolLength(name) < ROL_SKILL_NAME.min || rolLength(name) > ROL_SKILL_NAME.max) {
+    return { error: t("rol.own.err.length", ROL_SKILL_NAME) };
+  }
+  if (/[<>]/.test(name)) return { error: t("rol.err.plain") };
+  const key = rolKey(name);
+  const existing = rol.catalog.find(s => rolKey(s.name) === key || rolKey(tSkill(s.name)) === key);
+  if (existing) {
+    if (rol.selected.includes(existing.id)) return { error: t("rol.own.err.already") };
+    if (rolCount() >= ROL_SKILLS.max) return { error: t("rol.err.skillsMax", { max: ROL_SKILLS.max }) };
+    rol.selected.push(existing.id);
+    return existing.custom ? {} : { note: t("rol.own.inCatalog", { skill: tSkill(existing.name) }) };
+  }
+  if (rol.added.some(n => rolKey(n) === key)) return { error: t("rol.own.err.already") };
+  if (rolCount() >= ROL_SKILLS.max) return { error: t("rol.err.skillsMax", { max: ROL_SKILLS.max }) };
+  rol.added.push(name);
+  return {};
+}
+
+// Mensaje bajo "Agregar mi propia habilidad": error (rojo, con aria-invalid) o aviso
+function setRolOwnMessage(error, note = "") {
+  const input = rolDialog().querySelector("#rol-own-input");
+  document.getElementById("rol-own-error").textContent = error;
+  document.getElementById("rol-own-note").textContent = error ? "" : note;
+  if (error) input.setAttribute("aria-invalid", "true"); else input.removeAttribute("aria-invalid");
+}
+
+function addRolOwn() {
+  const input = rolDialog().querySelector("#rol-own-input");
+  if (!rolCollapse(input.value)) { setRolOwnMessage(t("rol.own.err.empty")); input.focus(); return; }
+  const result = addRolSkillByName(input.value);
+  setRolOwnMessage(result.error || "", result.note || "");
+  if (result.error) { input.focus(); return; }
+  input.value = "";
+  if (rolCount() >= ROL_SKILLS.min) rol.touched.add("skills");
+  renderRolSkills();
+  syncRolForm();
+  input.focus();
+}
+
+// Una sugerencia ya elegida: la del catálogo por su id; una nueva por su nombre (entre las nuevas o las propias del rol)
+function rolSuggestionOn(item) {
+  if (!item) return false;
+  if (item.skillId != null) return rol.selected.includes(item.skillId);
+  const key = rolKey(item.name);
+  return rol.added.some(n => rolKey(n) === key)
+    || rol.catalog.some(s => s.custom && rolKey(s.name) === key && rol.selected.includes(s.id));
+}
+
+function setRolSuggestion(item, on) {
+  if (rolSuggestionOn(item) === on) return true;
+  if (!on) {
+    if (item.skillId != null) rol.selected = rol.selected.filter(id => id !== item.skillId);
+    else {
+      const key = rolKey(item.name);
+      rol.added = rol.added.filter(n => rolKey(n) !== key);
+      rol.selected = rol.selected.filter(id => !rol.catalog.some(s => s.id === id && s.custom && rolKey(s.name) === key));
+    }
+    return true;
+  }
+  if (rolCount() >= ROL_SKILLS.max) return false;
+  if (item.skillId != null) {
+    if (rol.catalog.some(s => s.id === item.skillId)) rol.selected.push(item.skillId);
+    return true;
+  }
+  return !addRolSkillByName(item.name).error;
+}
+
+function toggleRolSuggestion(button) {
+  const item = rol.suggestions?.[Number(button.dataset.rolSuggest)];
+  if (!item) return;
+  if (!setRolSuggestion(item, !rolSuggestionOn(item))) {
+    document.getElementById("rol-skills-error").textContent = t("rol.err.skillsMax", { max: ROL_SKILLS.max });
+    return;
+  }
+  if (rolCount() >= ROL_SKILLS.min) rol.touched.add("skills");
+  renderRolSkills();
+  syncRolForm();
+}
+
+// "Usar todas": las que falten, hasta el máximo de 8
+function useAllRolSuggestions() {
+  const missing = (rol.suggestions || []).filter(item => !rolSuggestionOn(item));
+  const accepted = missing.filter(item => setRolSuggestion(item, true)).length;
+  if (accepted < missing.length) {
+    document.getElementById("rol-skills-error").textContent = t("rol.err.skillsMax", { max: ROL_SKILLS.max });
+  }
+  if (rolCount() >= ROL_SKILLS.min) rol.touched.add("skills");
+  renderRolSkills();
+  syncRolForm();
+  document.getElementById("rol-suggestions").querySelector("[data-rol-suggest]")?.focus();
+}
+
+// Chips de las sugeridas (marcadas si ya están elegidas); se ocultan sin sugerencias
+function renderRolSuggestions() {
+  const box = document.getElementById("rol-suggestions-box");
+  const items = rol.suggestions || [];
+  box.hidden = !items.length;
+  document.getElementById("rol-suggestions").innerHTML = items.map((item, i) => {
+    const name = item.skillId != null ? tSkill(item.name) : item.name;
+    const extra = item.skillId == null ? `<span class="sr-only">, ${t("rol.suggest.newSr")}</span>` : "";
+    return `<button type="button" data-rol-suggest="${i}" aria-pressed="false">${escapeHtml(name)}${extra}</button>`;
+  }).join("");
+}
+
+function setRolSuggestBusy(busy) {
+  rol.suggesting = busy;
+  const button = rolDialog().querySelector("#rol-suggest");
+  if (busy) button.setAttribute("aria-busy", "true"); else button.removeAttribute("aria-busy");
+  button.querySelector("[data-label]").textContent = t(busy ? "rol.suggest.busy" : "rol.suggest");
+}
+
+// "Sugerir habilidades": pide sugerencias para el nombre escrito. Nada se guarda hasta "Crear y elegir".
+async function suggestRolSkills() {
+  if (rol.suggesting) return;
+  const dialog = rolDialog();
+  const nameInput = dialog.querySelector("#rol-name");
+  const name = rolCollapse(nameInput.value);
+  const status = dialog.querySelector("#rol-suggest-status");
+  if (rolLength(name) < ROL_NAME.min || rolLength(name) > ROL_NAME.max || /[<>]/.test(name)) {
+    status.textContent = t("rol.suggest.needName");
+    rol.touched.add("name");
+    showRolErrors(false);
+    nameInput.focus();
+    return;
+  }
+  const request = ++rol.suggestRequest;
+  setRolSuggestBusy(true);
+  status.textContent = t("rol.suggest.searching");
+  let text;
+  try {
+    const res = await apiJson("/api/goals/custom/suggestions", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: name }),
+    });
+    if (request !== rol.suggestRequest || !dialog.open) return;
+    rol.suggestions = Array.isArray(res?.skills) ? res.skills : [];
+    text = rol.suggestions.length
+      ? `${tn("rol.suggest.found", rol.suggestions.length, { role: name })}${res.source === "ai" ? ` ${t("rol.suggest.fromAi")}` : ""}`
+      : t("rol.suggest.none");
+  } catch (err) {
+    if (request !== rol.suggestRequest || !dialog.open) return;
+    text = t("rol.suggest.error", { error: friendlyError(err) });
+  }
+  setRolSuggestBusy(false);
+  renderRolSuggestions();
+  syncRolForm();
+  status.textContent = text; // texto plano (el nombre del rol va con textContent)
 }
 
 async function submitRol(e) {
@@ -417,6 +618,7 @@ async function submitRol(e) {
     name: rolCollapse(dialog.querySelector("#rol-name").value),
     description: rolCollapse(dialog.querySelector("#rol-desc").value) || null,
     skillIds: [...rol.selected],
+    newSkills: [...rol.added], // habilidades propias nuevas (sin datos de mercado)
   };
   const submit = dialog.querySelector("#rol-submit");
   rol.busy = true;
@@ -439,6 +641,8 @@ async function submitRol(e) {
     return;
   }
   invalidateGoals(); // dashboard.js
+  // Las habilidades propias pudieron cambiar: Mapa, Habilidades, Perfil y Mi Ruta vuelven a pedir /api/skills
+  document.dispatchEvent(new CustomEvent("skillmap:catalog"));
   let chosen = true;
   try {
     await loadGoals(); // el selector de Mi Ruta con el rol nuevo o con su nombre nuevo
@@ -510,11 +714,23 @@ function initRolPropio() {
   dialog.addEventListener("click", e => {
     if (e.target.closest("[data-rol-close]")) { closeRolDialog(); return; }
     const skill = e.target.closest("[data-rol-skill]");
-    if (skill) toggleRolSkill(skill);
+    if (skill) { toggleRolSkill(skill); return; }
+    const added = e.target.closest("[data-rol-new]");
+    if (added) { removeRolNew(added); return; }
+    const suggestion = e.target.closest("[data-rol-suggest]");
+    if (suggestion) { toggleRolSuggestion(suggestion); return; }
+    if (e.target.closest("#rol-suggest")) { suggestRolSkills(); return; }
+    if (e.target.closest("#rol-suggest-all")) { useAllRolSuggestions(); return; }
+    if (e.target.closest("#rol-own-add")) addRolOwn();
   });
   dialog.addEventListener("input", e => {
     if (e.target.id === "rol-search") rol.query = e.target.value;
+    if (e.target.id === "rol-own-input") { setRolOwnMessage(""); return; }
     syncRolForm();
+  });
+  // Enter en "Agregar mi propia habilidad" agrega (no envía el formulario)
+  dialog.addEventListener("keydown", e => {
+    if (e.key === "Enter" && e.target.id === "rol-own-input") { e.preventDefault(); addRolOwn(); }
   });
   dialog.addEventListener("focusout", e => {
     if (e.target.id === "rol-name") rol.touched.add("name");
@@ -540,7 +756,8 @@ function initRolPropio() {
 document.addEventListener("skillmap:user", () => {
   closeRolDialog();
   Object.assign(rol, { editing: null, opener: null, selected: [], catalog: [], query: "", touched: new Set(), busy: false,
-    pending: null, committing: null });
+    pending: null, committing: null, added: [], suggestions: null, suggesting: false });
+  rol.suggestRequest++;
 });
 
 // Cambio de idioma con el diálogo abierto: categorías, nombres y textos en el idioma nuevo, conservando lo elegido
@@ -549,6 +766,8 @@ document.addEventListener("skillmap:language", () => {
   if (!dialog?.open) return;
   dialog.querySelector("#rol-title").textContent = t(rol.editing ? "rol.title.edit" : "rol.title.create");
   dialog.querySelector("#rol-submit [data-label]").textContent = t(rol.editing ? "rol.submitEdit" : "rol.submitCreate");
+  setRolSuggestBusy(rol.suggesting);
+  renderRolSuggestions();
   renderRolSkills();
   syncRolForm();
 });

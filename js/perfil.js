@@ -1059,6 +1059,8 @@ document.addEventListener("skillmap:user", () => {
   document.getElementById("perfil-content").replaceChildren();
   renderAjustesSecurity(); // otra cuenta: formularios vacíos y el borrado cerrado
 });
+// Habilidades propias creadas o borradas (rol-propio.js): las habilidades del perfil se vuelven a pedir
+document.addEventListener("skillmap:catalog", resetPerfilSkills);
 document.addEventListener("skillmap:progress", () => {
   resetPerfilSkills();
   if (!document.getElementById("view-perfil").classList.contains("hidden")) loadPerfilData(); // abierto mientras se guardaba

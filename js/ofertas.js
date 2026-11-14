@@ -11,7 +11,8 @@ const OFFERS_VISIBLE = 5;  // los que se ven de entrada; "Ver más" muestra el r
 
 // items: null = cargando; error: el fallo al cargar. expanded: "Ver más" pulsado. busyId: la oferta cuyo texto se está
 // pidiendo para el Analizador; analyzeError: { id, err } si eso falló.
-const offersState = { items: null, error: null, expanded: false, goal: "", goalId: null, busyId: null, analyzeError: null };
+const offersState = { items: null, error: null, expanded: false, goal: "", goalId: null, busyId: null, analyzeError: null,
+  comparable: true };
 let offersRequest = 0;
 let offersEnterFrom = Infinity;
 
@@ -116,7 +117,7 @@ function renderOffersBody({ enterFrom = Infinity } = {}) {
     body.innerHTML = `
       <div class="route-state ofertas-state">
         ${routeDraw()}
-        <p class="text-sm text-muted">${t("ruta.offers.empty", { goal: offersState.goal })}</p>
+        <p class="text-sm text-muted">${t(offersState.comparable ? "ruta.offers.empty" : "ruta.offers.noComparable", { goal: offersState.goal })}</p>
       </div>`;
     return;
   }
@@ -135,8 +136,10 @@ function renderOffersBody({ enterFrom = Infinity } = {}) {
 // manda siempre porque en cuentas antiguas puede venir del navegador y no coincidir con el guardado en el backend.
 // quiet: recarga silenciosa de Mi Ruta (mismo objetivo): las ofertas de antes siguen a la vista, con "Ver más" como
 // estaba, hasta que llegan las nuevas, y entran sin animación.
-async function loadOffers(goal, goalId, { quiet = false } = {}) {
+// comparable: false si el objetivo solo tiene habilidades propias (sin ofertas con las que compararlo)
+async function loadOffers(goal, goalId, { quiet = false, comparable = offersState.comparable } = {}) {
   const requestId = ++offersRequest;
+  offersState.comparable = comparable;
   const keep = quiet && offersState.items && String(offersState.goalId) === String(goalId);
   if (keep) Object.assign(offersState, { goal, busyId: null, analyzeError: null });
   else Object.assign(offersState, { items: null, error: null, expanded: false, goal, goalId, busyId: null, analyzeError: null });

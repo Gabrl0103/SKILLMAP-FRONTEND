@@ -97,7 +97,7 @@ let analyzerDemand = new Map();
 
 function loadAnalyzerDemand() {
   fetchSkills() // dashboard.js (en caché)
-    .then(list => { analyzerDemand = new Map(list.map(s => [s.name, s.demandPercentage])); })
+    .then(list => { analyzerDemand = new Map(withDemand(list).map(s => [s.name, s.demandPercentage])); }) // propias: sin %
     .catch(() => { /* sin demanda: los chips van sin el % */ });
 }
 
