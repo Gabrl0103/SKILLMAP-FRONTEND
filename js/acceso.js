@@ -1,9 +1,8 @@
 // Pantalla de Acceso: iniciar sesión o crear cuenta (#acceso, a pantalla completa y sin barra superior).
 // Usa apiFetch, apiError, friendlyError, storeSessionToken, startSession y setAppInert (session.js), hideIntro y
-// openIntro (intro.js), t (i18n.js) y setBrandSearchFound (brand.js). La contraseña solo vive en su campo hasta enviar: se limpia al enviar, salga bien o mal, y
+// openIntro (intro.js), t (i18n.js), setBrandSearchFound (brand.js) y las reglas de reglas-cuenta.js (passwordChecks,
+// passwordProblem, nameProblem). La contraseña solo vive en su campo hasta enviar: se limpia al enviar, salga bien o mal, y
 // nunca se guarda ni se registra.
-
-const ACCESO_MIN_PASSWORD = 8; // mismo mínimo que el backend (UserFactory)
 // Textos en i18n.js: acceso.<modo>.title, .subtitle, .submit y .busy
 const ACCESO_MODES = {
   login: { path: "/api/auth/login", emailAutocomplete: "username", passwordAutocomplete: "current-password" },
@@ -48,12 +47,14 @@ function emailProblem(value) {
   return "";
 }
 
-// Requisito de la contraseña al crear cuenta: se marca mientras se escribe
+// Requisitos de la contraseña al crear cuenta (8 a 64 caracteres; letra y número): se marcan mientras se escribe
 function renderPasswordRule() {
-  const rule = document.getElementById("acceso-password-hint");
-  const met = Array.from(acceso.field("password").value).length >= ACCESO_MIN_PASSWORD;
-  rule.dataset.met = String(met);
-  rule.querySelector("[data-acceso-rule-state]").textContent = t(met ? "acceso.ruleMet" : "acceso.ruleUnmet");
+  const checks = passwordChecks(acceso.field("password").value); // reglas-cuenta.js
+  [["acceso-password-hint", checks.length], ["acceso-password-mix", checks.mix]].forEach(([id, met]) => {
+    const rule = document.getElementById(id);
+    rule.dataset.met = String(met);
+    rule.querySelector("[data-acceso-rule-state]").textContent = t(met ? "acceso.ruleMet" : "acceso.ruleUnmet");
+  });
 }
 
 // Bloq Mayús: aviso bajo la contraseña mientras el campo tiene el foco
@@ -92,6 +93,7 @@ function setAccesoMode(mode) {
   renderAccesoTexts();
   document.getElementById("acceso-name-field").hidden = !register;
   document.getElementById("acceso-password-hint").hidden = !register;
+  document.getElementById("acceso-password-mix").hidden = !register;
   acceso.field("email").autocomplete = m.emailAutocomplete;
   acceso.field("password").autocomplete = m.passwordAutocomplete;
   acceso.field("password").value = "";
@@ -112,25 +114,30 @@ function setAccesoBusy(busy) {
   setBrandSearchFound(document.getElementById("acceso"), busy); // la estrella deja de buscar mientras se envía (brand.js)
 }
 
-// Validación mínima antes de enviar (el backend vuelve a validar todo). Devuelve [campo, mensaje] o null.
+// Validación antes de enviar, con las mismas reglas que el backend (que vuelve a validar todo). Al iniciar sesión solo se
+// pide que haya correo y contraseña: una cuenta antigua puede tener una contraseña que hoy no pasaría. Devuelve
+// [campo, mensaje] o null.
 function accesoInvalid(register) {
   const name = acceso.field("name"), email = acceso.field("email"), password = acceso.field("password");
   if (register && !name.value.trim()) return [name, t("acceso.missingName")];
+  if (register && nameProblem(name.value)) return [name, accountRuleText(nameProblem(name.value))];
   if (!email.value.trim()) return [email, t("acceso.missingEmail")];
   if (emailProblem(email.value)) return [email, emailProblem(email.value)];
   if (!password.value) return [password, t("acceso.missingPassword")];
-  if (register && Array.from(password.value).length < ACCESO_MIN_PASSWORD) {
-    return [password, t("acceso.shortPassword", { min: ACCESO_MIN_PASSWORD })];
+  if (register) {
+    const problem = passwordProblem(password.value, { email: email.value, name: name.value });
+    if (problem) return [password, accountRuleText(problem)];
   }
   return null;
 }
 
-// Campo al que apunta un error del backend (su mensaje original, en español): correo repetido o inválido, nombre
-// inválido o contraseña inválida. null si no es de un solo campo (credenciales incorrectas, servidor): va sobre el botón.
+// Campo al que apunta un error del backend (su mensaje original, en español): contraseña inválida (primero: su mensaje
+// puede nombrar el correo), nombre inválido o correo repetido o inválido. null si no es de un solo campo (credenciales
+// incorrectas, demasiados intentos, servidor): va sobre el botón.
 function accesoErrorField(status, message) {
-  if (status === 409 || (status === 400 && /correo/i.test(message))) return acceso.field("email");
-  if (status === 400 && /nombre/i.test(message)) return acceso.field("name");
   if (status === 400 && /contraseña/i.test(message)) return acceso.field("password");
+  if (status === 400 && /nombre/i.test(message)) return acceso.field("name");
+  if (status === 409 || (status === 400 && /correo/i.test(message))) return acceso.field("email");
   return null;
 }
 
@@ -146,7 +153,7 @@ async function submitAcceso(e) {
   }
   const password = acceso.field("password");
   const body = JSON.stringify({
-    ...(register ? { name: acceso.field("name").value.trim() } : {}),
+    ...(register ? { name: normalizeName(acceso.field("name").value) } : {}),
     email: acceso.field("email").value.trim(),
     password: password.value,
   });
@@ -246,10 +253,25 @@ function initAcceso() {
   email.addEventListener("input", () => {
     if (email.getAttribute("aria-invalid") === "true" && !emailProblem(email.value)) setFieldError(email, "");
   });
-  // Nombre y contraseña: el error de "falta" se quita al escribir
+  // Nombre y contraseña: el error de "falta" se quita al escribir. Al crear cuenta, al salir del campo se revisan sus
+  // reglas (vacío no: eso se avisa al enviar) y, si tenía error, se quita en cuanto quedan bien
+  const registerProblem = {
+    name: () => accountRuleText(nameProblem(acceso.field("name").value)),
+    password: () => accountRuleText(passwordProblem(acceso.field("password").value,
+      { email: acceso.field("email").value, name: acceso.field("name").value })),
+  };
   ["name", "password"].forEach(name => {
     const field = acceso.field(name);
-    field.addEventListener("input", () => { if (field.value) setFieldError(field, ""); });
+    field.addEventListener("input", () => {
+      if (!field.value) return;
+      if (field.getAttribute("aria-invalid") !== "true" || acceso.mode !== "register" || !registerProblem[name]()) {
+        setFieldError(field, "");
+      }
+    });
+    field.addEventListener("blur", () => {
+      if (acceso.busy || acceso.mode !== "register" || !field.value) return;
+      setFieldError(field, registerProblem[name]());
+    });
   });
   const password = acceso.field("password");
   password.addEventListener("input", renderPasswordRule);

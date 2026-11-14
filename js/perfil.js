@@ -63,7 +63,7 @@ function perfilExternalLink(url, className, text) {
 
 const PERFIL_MAX_NAME = 60;
 const PERFIL_MAX_HEADLINE = 80;
-const PERFIL_MIN_PASSWORD = 8;
+const PERFIL_MAX_CURRENT_PASSWORD = 72; // la actual puede ser de antes de la regla de 64 (entonces se aceptaban 72)
 const PERFIL_LIMITS = { label: 40, name: 60, description: 240, tags: 5, tag: 30, url: 2048 };
 
 // Enlaces y proyectos comparten tarjeta, formulario y confirmación de borrado; cambia lo que dice esta tabla
@@ -611,25 +611,30 @@ function setPerfilPasswordRule(rule, met) {
   rule.querySelector("[data-rule-state]").textContent = t(met ? "acceso.ruleMet" : "acceso.ruleUnmet");
 }
 
-// Cambiar contraseña: largo mínimo de la nueva y que la repetición coincida, mientras se escribe
+// Cambiar contraseña: requisitos de la nueva (8 a 64 caracteres; letra y número, reglas-cuenta.js) y que la repetición
+// coincida, mientras se escribe
 function updatePasswordRules() {
   const next = document.getElementById("perfil-password-new");
   const confirm = document.getElementById("perfil-password-confirm");
   if (!next || !confirm) return;
-  setPerfilPasswordRule(document.getElementById("perfil-password-new-hint"), codePoints(next.value) >= PERFIL_MIN_PASSWORD);
+  const checks = passwordChecks(next.value);
+  setPerfilPasswordRule(document.getElementById("perfil-password-new-hint"), checks.length);
+  setPerfilPasswordRule(document.getElementById("perfil-password-new-mix"), checks.mix);
   setPerfilPasswordRule(document.getElementById("perfil-password-confirm-hint"), Boolean(confirm.value) && confirm.value === next.value);
 }
 
-// Campo de contraseña con su etiqueta. describedBy: ids del aviso y del error de su formulario; ruleText opcional: el
-// requisito del campo, a la vista y marcado al cumplirse.
-function renderPasswordField(id, labelKey, autocomplete, describedBy, ruleText = "") {
-  const hint = ruleText ? renderPerfilPasswordRule(`${id}-hint`, ruleText) : "";
+// Campo de contraseña con su etiqueta. describedBy: ids del aviso y del error de su formulario; rules opcional: los
+// requisitos del campo ([sufijo del id, texto]), a la vista y marcados al cumplirse. maxlength: 64 para una nueva; la
+// actual admite 72 (cuentas de antes de la regla de 64).
+function renderPasswordField(id, labelKey, autocomplete, describedBy, rules = [], maxlength = PERFIL_MAX_CURRENT_PASSWORD) {
+  const hints = rules.map(([suffix, text]) => renderPerfilPasswordRule(`${id}-${suffix}`, text)).join("");
+  const ruleIds = rules.map(([suffix]) => `${id}-${suffix} `).join("");
   return `
     <div>
       <label for="${id}" class="perfil-label">${t(labelKey)}</label>
-      <input id="${id}" type="password" class="perfil-input" autocomplete="${autocomplete}" maxlength="72" required
-        autocapitalize="off" spellcheck="false" aria-describedby="${ruleText ? `${id}-hint ` : ""}${describedBy}">
-      ${hint}
+      <input id="${id}" type="password" class="perfil-input" autocomplete="${autocomplete}" maxlength="${maxlength}" required
+        autocapitalize="off" spellcheck="false" aria-describedby="${ruleIds}${describedBy}">
+      ${hints}
     </div>`;
 }
 
@@ -650,8 +655,10 @@ function renderSecurityCard() {
       </div>
       <form id="perfil-password-form" class="perfil-form ajustes-row-body" data-form="password" aria-labelledby="perfil-password-title" novalidate hidden>
         ${renderPasswordField("perfil-password-current", "perfil.password.current", "current-password", "perfil-password-error")}
-        ${renderPasswordField("perfil-password-new", "perfil.password.new", "new-password", "perfil-password-error", t("perfil.password.hint", { min: PERFIL_MIN_PASSWORD }))}
-        ${renderPasswordField("perfil-password-confirm", "perfil.password.confirm", "new-password", "perfil-password-error", t("perfil.password.matchRule"))}
+        ${renderPasswordField("perfil-password-new", "perfil.password.new", "new-password", "perfil-password-error",
+          [["hint", t("perfil.password.hint", { min: PASSWORD_MIN, max: PASSWORD_MAX })], ["mix", t("acceso.passwordMix")]], PASSWORD_MAX)}
+        ${renderPasswordField("perfil-password-confirm", "perfil.password.confirm", "new-password", "perfil-password-error",
+          [["hint", t("perfil.password.matchRule")]], PASSWORD_MAX)}
         <p id="perfil-password-error" class="perfil-error" aria-live="assertive" aria-atomic="true"></p>
         <p class="perfil-success" role="status"></p>
         <div class="perfil-form-actions">
@@ -837,6 +844,9 @@ async function submitProfile(form) {
   if (codePoints(name.value.trim()) > PERFIL_MAX_NAME) {
     return setPerfilFormError(form, t("perfil.form.longName", { max: PERFIL_MAX_NAME }), name);
   }
+  // Mismas reglas que el backend (reglas-cuenta.js), solo si el nombre cambió: una cuenta antigua puede conservar el suyo
+  const nameChanged = normalizeName(name.value) !== sessionUser?.name;
+  if (nameChanged && nameProblem(name.value)) return setPerfilFormError(form, accountRuleText(nameProblem(name.value)), name);
   if (codePoints(headline.value.trim()) > PERFIL_MAX_HEADLINE) {
     return setPerfilFormError(form, t("perfil.form.longHeadline", { max: PERFIL_MAX_HEADLINE }), headline);
   }
@@ -846,7 +856,7 @@ async function submitProfile(form) {
     const user = await apiJson("/api/auth/me", {
       method: "PATCH",
       headers: PERFIL_JSON,
-      body: JSON.stringify({ name: name.value.trim(), headline: headline.value.trim() }),
+      body: JSON.stringify({ name: nameChanged ? normalizeName(name.value) : sessionUser.name, headline: headline.value.trim() }),
     });
     sessionUser = { ...sessionUser, ...user };
     renderUserMenu(); // nombre e inicial del menú de usuario, sin recargar
@@ -981,9 +991,9 @@ async function submitPassword(form) {
   const success = form.querySelector(".perfil-success");
   success.textContent = "";
   if (!current.value) return setPerfilFormError(form, t("perfil.password.missingCurrent"), current);
-  if (codePoints(next.value) < PERFIL_MIN_PASSWORD) {
-    return setPerfilFormError(form, t("perfil.password.short", { min: PERFIL_MIN_PASSWORD }), next);
-  }
+  // Mismas reglas que el backend (reglas-cuenta.js): la nueva no puede ser igual al correo ni al nombre de la cuenta
+  const problem = passwordProblem(next.value, { email: sessionUser?.email, name: sessionUser?.name });
+  if (problem) return setPerfilFormError(form, accountRuleText(problem), next);
   if (next.value !== confirm.value) return setPerfilFormError(form, t("perfil.password.mismatch"), confirm);
   const body = JSON.stringify({ currentPassword: current.value, newPassword: next.value });
   [current, next, confirm].forEach(input => { input.value = ""; }); // tras enviar no quedan en los campos
@@ -996,7 +1006,7 @@ async function submitPassword(form) {
     success.textContent = t("perfil.password.done");
   } catch (err) {
     setPerfilFormBusy(form, false);
-    // Actual incorrecta, demasiados intentos o sin conexión: el foco va a la actual; si no (longitud), a la nueva
+    // Actual incorrecta, demasiados intentos o sin conexión: el foco va a la actual; si no (reglas de la nueva), a la nueva
     const onCurrent = err instanceof TypeError || /actual|intentos/i.test(err.message);
     setPerfilFormError(form, friendlyError(err), onCurrent ? current : next);
   }

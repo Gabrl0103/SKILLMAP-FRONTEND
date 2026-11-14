@@ -5,21 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cenit</title>
 <link rel="icon" type="image/svg+xml" href="assets/cenit-star.svg"> <!-- misma estrella que js/brand.js -->
-<!-- Copia local de tema, animaciones e idioma antes del primer pintado (sin parpadeo). El backend manda: js/theme.js la
-     corrige si difiere. Mismas claves que js/theme.js y js/i18n.js -->
-<script>
-  try {
-    var savedTheme = localStorage.getItem("skillmap-theme");
-    if (savedTheme === "light" || savedTheme === "dark") document.documentElement.setAttribute("data-theme", savedTheme);
-    if (localStorage.getItem("skillmap-motion") === "reduced") document.documentElement.setAttribute("data-motion", "reduced");
-    if (localStorage.getItem("skillmap-lang") === "en") document.documentElement.lang = "en"; // textos: js/i18n.js
-  } catch (e) {}
-  // Introducción (js/intro.js): sin sesión guardada o con ?intro=1 se abre ya; con sesión guardada la app queda oculta
-  // mientras js/session.js valida el token. Misma clave que js/session.js
-  var hasSession = false;
-  try { hasSession = Boolean(localStorage.getItem("skillmap.session")); } catch (e) {}
-  document.documentElement.setAttribute("data-intro", !hasSession || /[?&]intro=1(&|$)/.test(location.search) ? "open" : "checking");
-</script>
+<!-- Tema, animaciones e idioma guardados antes del primer pintado (sin parpadeo); externo por la CSP -->
+<script src="js/boot.js"></script>
 <script src="vendor/tailwind.js"></script> <!-- Tailwind Play CDN 3.4.17, copia local -->
 <script src="js/tailwind.config.js"></script> <!-- tokens semánticos -> variables CSS -->
 <link rel="stylesheet" href="css/styles.css">
@@ -153,16 +140,22 @@
           <label for="acceso-password" class="acceso-label" data-i18n="acceso.password">Contraseña</label>
           <div class="acceso-password">
             <input id="acceso-password" name="password" type="password" class="acceso-input" autocomplete="current-password"
-              maxlength="72" aria-describedby="acceso-password-hint acceso-capslock acceso-password-error" required>
+              maxlength="64" autocapitalize="off" spellcheck="false"
+              aria-describedby="acceso-password-hint acceso-password-mix acceso-capslock acceso-password-error" required>
             <button type="button" id="acceso-reveal" class="acceso-reveal" aria-pressed="false" aria-controls="acceso-password" aria-label="Mostrar contraseña" data-i18n-aria-label="acceso.showPassword">
               <svg class="acceso-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
               <svg class="acceso-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.9 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
             </button>
           </div>
-          <!-- Requisito a la vista desde el inicio (solo al crear cuenta); se marca mientras se escribe (js/acceso.js) -->
+          <!-- Requisitos a la vista desde el inicio (solo al crear cuenta); se marcan mientras se escribe (js/acceso.js) -->
           <p id="acceso-password-hint" class="acceso-rule" data-met="false" hidden>
             <svg class="acceso-rule-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path class="acceso-rule-check" d="M8 12.5l2.7 2.7L16 9.8"/></svg>
-            <span data-i18n="acceso.passwordHint">Al menos 8 caracteres</span>
+            <span data-i18n="acceso.passwordHint">De 8 a 64 caracteres</span>
+            <span class="sr-only" data-acceso-rule-state></span>
+          </p>
+          <p id="acceso-password-mix" class="acceso-rule" data-met="false" hidden>
+            <svg class="acceso-rule-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path class="acceso-rule-check" d="M8 12.5l2.7 2.7L16 9.8"/></svg>
+            <span data-i18n="acceso.passwordMix">Al menos una letra y un número</span>
             <span class="sr-only" data-acceso-rule-state></span>
           </p>
           <p id="acceso-capslock" class="acceso-capslock" hidden data-i18n="acceso.capsLock">Bloq Mayús está activado.</p>
@@ -492,7 +485,8 @@
 <script src="js/motion.js"></script> <!-- anillo, números y barras que parten del valor anterior al repintar (usa theme.js) -->
 <script src="js/fondo.js"></script> <!-- halo del fondo con patrón que sigue al cursor (usa prefersReducedMotion de theme.js) -->
 <script src="js/brand.js"></script> <!-- logo de estrella: pinta las marcas de esta página -->
-<script src="js/toast.js"></script> <!-- aviso breve con "Deshacer" (Objetivo, Habilidades y Mi Ruta) -->
+<script src="js/toast.js"></script>
+<script src="js/reglas-cuenta.js"></script> <!-- reglas de contraseña y nombre (Acceso y Ajustes), las mismas del backend --> <!-- aviso breve con "Deshacer" (Objetivo, Habilidades y Mi Ruta) -->
 <script src="js/skill-status.js"></script> <!-- selector Pendiente / Aprendiendo / Dominada (Mapa, detalle y Habilidades) -->
 <script src="js/route-motif.js"></script> <!-- Motivo de Ruta: riel, divisor y línea que se dibuja (usa skill-status.js) -->
 <script src="js/dashboard.js"></script>
