@@ -6,6 +6,19 @@
 // Usa apiJson (session.js), escapeHtml (mapa.js) y t, statusLabel y tSkill (i18n.js).
 
 const SKILL_STATES = ["PENDING", "IN_PROGRESS", "MASTERED"];
+
+// Habilidades propias del usuario (custom, de un rol propio): no tienen datos de mercado (demandSource "NONE"). Su
+// demanda nunca se muestra como un porcentaje: "Sin datos de demanda" (demand.none).
+const hasDemandData = skill => Boolean(skill) && skill.demandSource !== "NONE";
+const withDemand = skills => skills.filter(hasDemandData);
+
+// Orden por demanda: primero las que tienen datos, de más a menos; al final las propias, en el orden en que se agregaron
+// (id). Con la misma demanda devuelve 0 (decide quien llama).
+function compareDemand(a, b) {
+  const da = hasDemandData(a), db = hasDemandData(b);
+  if (da !== db) return da ? -1 : 1;
+  return da ? b.demandPercentage - a.demandPercentage : Number(a.id) - Number(b.id);
+}
 const SKILL_STATE_CLASS = { MASTERED: "mastered", IN_PROGRESS: "progress", PENDING: "pending" };
 
 // Último estado elegido: la opción nueva entra con un fundido corto (.is-just-set, styles.css) en los repintados de los

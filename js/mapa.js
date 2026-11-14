@@ -112,7 +112,7 @@ function labelBox(label) {
 // Layout automático: clusters compactos alrededor del centro y habilidades en círculo alrededor de su cluster.
 function layoutGraph(skills) {
   const clusters = [...groupByCategory(skills)].map(([category, items]) => {
-    const sorted = [...items].sort((a, b) => b.demandPercentage - a.demandPercentage);
+    const sorted = [...items].sort(compareDemand);
     const radius = sorted.length === 2
       ? (NODE_SIZE + NODE_GAP) / 2
       : ringRadius(sorted.length, NODE_SIZE + NODE_GAP);
@@ -161,13 +161,17 @@ const STATUS_CLASS = { MASTERED: "mastered", IN_PROGRESS: "progress", PENDING: "
 // Solo el primer nodo entra en el orden de tabulación; las flechas mueven el foco entre nodos (tabindex móvil).
 // Clic o Enter/Espacio seleccionan el nodo y llenan el panel de detalle.
 function mapaNodeLabel(skill, category) {
-  return t("mapa.node.label", { name: tSkill(skill.name), category: tCategory(category), status: statusLabel(skill.status),
-    pct: skill.demandPercentage }) + (demandIsSample([skill]) ? t("mapa.node.sample") : "");
+  const params = { name: tSkill(skill.name), category: tCategory(category), status: statusLabel(skill.status),
+    pct: skill.demandPercentage };
+  if (!hasDemandData(skill)) return t("mapa.node.labelNoData", params); // habilidad propia: sin %
+  return t("mapa.node.label", params) + (demandIsSample([skill]) ? t("mapa.node.sample") : "");
 }
 
 function renderNode({ skill, category, x, y }, index) {
   const status = STATUS_CLASS[skill.status] || "pending";
-  const tooltip = t("mapa.node.tooltip", { name: tSkill(skill.name), pct: skill.demandPercentage });
+  const tooltip = hasDemandData(skill)
+    ? t("mapa.node.tooltip", { name: tSkill(skill.name), pct: skill.demandPercentage })
+    : t("mapa.node.tooltipNoData", { name: tSkill(skill.name) });
   return `
     <div class="mapa-node mapa-node--${status}" tabindex="${index === 0 ? 0 : -1}" role="button" aria-pressed="false"
       style="left:${x - NODE_SIZE / 2}px; top:${y - NODE_SIZE / 2}px; width:${NODE_SIZE}px; height:${NODE_SIZE}px; --i:${index};"
@@ -284,7 +288,9 @@ function renderMapaPanel(skill) {
       <span class="mapa-chip mapa-chip--${status}">${statusLabel(skill.status)}</span>
     </div>
     <h2 class="mapa-panel-name">${escapeHtml(tSkill(skill.name))}</h2>
-    <p class="mapa-panel-demand"><span class="mapa-panel-pct">${skill.demandPercentage}</span><span class="mapa-panel-pct-label">${t("mapa.pctOfJobs")}</span></p>
+    ${hasDemandData(skill)
+      ? `<p class="mapa-panel-demand"><span class="mapa-panel-pct">${skill.demandPercentage}</span><span class="mapa-panel-pct-label">${t("mapa.pctOfJobs")}</span></p>`
+      : `<p class="mapa-panel-demand"><span class="mapa-panel-pct-label">${t("demand.none")}</span></p>`}
     <p class="mapa-panel-text">${mapaSkillText(skill)}</p>
     <div class="mapa-panel-actions">
       ${renderStatusPicker(skill, mapaMark.id === skill.id)}
@@ -701,6 +707,15 @@ document.addEventListener("skillmap:progress", e => {
 });
 
 let mapaRequest = null; // se reutiliza para no volver a pedir /api/skills en cada apertura
+
+// Habilidades propias creadas o borradas (rol-propio.js): el mapa se vuelve a pedir y dibujar (ya, si está a la vista)
+document.addEventListener("skillmap:catalog", () => {
+  mapaRequest = null;
+  mapaRoute.goalId = null;
+  if (!document.getElementById("view-mapa")?.classList.contains("hidden")) {
+    loadMapa().then(() => { applyMapaTransform(); updateMapaRoute(); });
+  }
+});
 
 // Cambio de usuario: el mapa se vuelve a pedir y dibujar la próxima vez que se abra
 document.addEventListener("skillmap:user", () => {

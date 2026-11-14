@@ -42,7 +42,7 @@ function sampleTag() {
 // el valor sembrado (SEEDED), Mi Ruta, Mapa Visual y Perfil la etiquetan como datos de ejemplo (demand.sample).
 
 function demandIsSample(skills) {
-  return skills.some(s => s.demandSource !== "JOB_POSTINGS");
+  return skills.some(s => hasDemandData(s) && s.demandSource !== "JOB_POSTINGS"); // las propias no tienen demanda
 }
 
 // Nota "Datos de ejemplo" + aviso de demanda, envuelta en un <p> con la clase dada. Vacía si la demanda es real.
@@ -63,8 +63,10 @@ function jobStatsText(stats, key = "jobs.basedOn") {
 // del objetivo a todo el ancho; fila 2, Tu semana con las brechas prioritarias + Tu ritmo; fila 3, tendencia + Mercado
 // laboral con la comparación; fila 4, Ofertas para ti; al final, Siguiente giro a todo el ancho.
 
-// Nivel de la demanda del objetivo frente al catálogo: null sin datos
-function marketLevel(goalSkills, catalog) {
+// Nivel de la demanda del objetivo frente al catálogo: null sin datos. Solo cuentan las habilidades con datos de mercado
+// (las propias no: skill-status.js)
+function marketLevel(allGoalSkills, allCatalog) {
+  const goalSkills = withDemand(allGoalSkills), catalog = withDemand(allCatalog);
   const marketAvg = catalog.length ? averageDemandOf(catalog) : 0;
   if (!goalSkills.length || marketAvg === 0) return null;
   const goalAvg = averageDemandOf(goalSkills);
@@ -97,13 +99,18 @@ function renderMarketDemand(goalSkills, catalog) {
 // de cuántas ofertas y fuentes sale la demanda (atribución a Remotive y Arbeitnow).
 const MARKET_TOP = 5;
 
-function renderMarketCard(goalSkills, catalog, goalTitle, jobStats = null) {
-  const level = marketLevel(goalSkills, catalog);
+function renderMarketCard(allGoalSkills, catalog, goalTitle, jobStats = null) {
+  const level = marketLevel(allGoalSkills, catalog);
+  // Las habilidades propias no tienen datos de mercado: no cuentan y se dice cuántas quedan fuera
+  const goalSkills = withDemand(allGoalSkills);
+  const own = allGoalSkills.length - goalSkills.length;
   if (!level) {
+    // Un objetivo hecho solo de habilidades propias no se compara con el mercado (no es que falten datos todavía)
+    const text = own && !goalSkills.length ? t("ruta.market.noData") : t("ruta.market.empty");
     return `
       <section class="ruta-card ruta-market is-flat" aria-labelledby="market-title">
         <h2 id="market-title" class="ruta-card-title">${t("ruta.market")}</h2>
-        <div class="route-state">${routeDraw()}<p class="text-sm text-muted">${t("ruta.market.empty")}</p></div>
+        <div class="route-state">${routeDraw()}<p class="text-sm text-muted">${text}</p></div>
       </section>`;
   }
   const bar = (pct, kind) => `<span class="market-bar" aria-hidden="true"><span class="market-bar-fill market-bar-fill--${kind}" style="width:${Math.max(0, Math.min(100, pct))}%"></span></span>`;
@@ -129,6 +136,7 @@ function renderMarketCard(goalSkills, catalog, goalTitle, jobStats = null) {
         ${row(t("ruta.market.catalog"), level.numbers.market, "catalog")}
       </div>
       <p class="market-text">${t("ruta.market.note", level.numbers)}</p>
+      ${own ? `<p class="market-text">${tn("ruta.market.ownNote", own)}</p>` : ""}
       ${topList}
       ${sampleDemandNote("ruta-sample-note", goalSkills) || (statsText ? `<p class="ruta-sample-note">${statsText}</p>` : "")}
     </section>`;
@@ -208,7 +216,7 @@ function routeSkills(r, goalSkills) {
   const done = goalSkills.filter(s => !gapIds.has(s.id));
   const order = new Map(goalSkills.map((s, i) => [s.id, i]));
   const rank = s => order.get(s.id) ?? goalSkills.length;
-  return [...r.gaps, ...done].sort((a, b) => b.demandPercentage - a.demandPercentage || rank(a) - rank(b));
+  return [...r.gaps, ...done].sort((a, b) => compareDemand(a, b) || rank(a) - rank(b)); // propias al final (skill-status.js)
 }
 
 // Con más de ROUTE_MAX_STOPS paradas la ruta se ve por tramos: ROUTE_SHOWN paradas, las dominadas más recientes (hasta
@@ -343,7 +351,8 @@ function renderGauge(r, stops = r.gaps) {
 // Fila de una brecha fuera del plan de la semana (se ven con "Ver más"): estado, nombre que abre el detalle, demanda y
 // su nivel frente a las demás habilidades del objetivo
 function renderGapRow(s, demands, i) {
-  const badge = urgencyBadge(s.demandPercentage, demands);
+  // Habilidad propia: sin demanda ni nivel (no hay ofertas con las que compararla)
+  const badge = hasDemandData(s) ? urgencyBadge(s.demandPercentage, demands) : null;
   const state = SKILL_STATE_CLASS[s.status] || "pending";
   return `
     <li class="gap-row" style="--i:${i};" data-extra hidden>
@@ -352,8 +361,8 @@ function renderGapRow(s, demands, i) {
         ${escapeHtml(tSkill(s.name))}
       </button>
       <span class="sr-only">${statusLabel(s.status)}.</span>
-      <span class="gap-demand">${t("ruta.gaps.demand", { pct: s.demandPercentage })}</span>
-      <span class="gap-badge gap-badge--${badge.tone}">${badge.label}</span>
+      <span class="gap-demand">${hasDemandData(s) ? t("ruta.gaps.demand", { pct: s.demandPercentage }) : t("demand.none")}</span>
+      ${badge ? `<span class="gap-badge gap-badge--${badge.tone}">${badge.label}</span>` : ""}
     </li>`;
 }
 
@@ -363,7 +372,7 @@ function renderGapRow(s, demands, i) {
 // el aviso de datos de ejemplo.
 function renderBrechas(r, reference, jobStats, catalog, goalId, stops = r.gaps) {
   const gaps = r.gaps;
-  const demands = reference.map(s => s.demandPercentage);
+  const demands = withDemand(reference).map(s => s.demandPercentage);
   const semana = renderSemanaCard(gaps, catalog, goalId, r.goalTitle, demands, stops.map(s => s.id));
   const planIds = new Set(semanaPlanIds());
   const rest = gaps.filter(s => !planIds.has(s.id));
@@ -398,7 +407,9 @@ function renderNextAction(topGap, goalTitle) {
           ${demandIsSample([topGap]) ? sampleTag() : ""}
         </div>
         <h2 id="next-title" class="ruta-action-title">${t(titleKey, { skill: escapeHtml(tSkill(topGap.name)) })}</h2>
-        <p class="ruta-action-text">${t("ruta.next.text", { pct: topGap.demandPercentage, goal: escapeHtml(tGoalTitle(goalTitle)) })}</p>
+        <p class="ruta-action-text">${hasDemandData(topGap)
+          ? t("ruta.next.text", { pct: topGap.demandPercentage, goal: escapeHtml(tGoalTitle(goalTitle)) })
+          : t("ruta.next.textOwn", { goal: escapeHtml(tGoalTitle(goalTitle)) })}</p>
       </div>
       <!-- La acción principal de Mi Ruta: abre la habilidad (qué es, cómo aprenderla y su estado) -->
       <button type="button" class="btn-pill btn-pill--light" data-context="${topGap.id}">
@@ -950,7 +961,9 @@ async function loadDashboard(goalId, { quiet = false, swap = false } = {}) {
     if (focusedTab) document.getElementById(focusedTab)?.focus({ preventScroll: true });
     bindTrendHover(container, history);
     settleMotion(container, { fresh: offscreen && !silent }); // motion.js: anillo, números y barras desde el valor que se veía
-    loadOffers(goal, goalId, { quiet: silent }); // ofertas.js: llega después, sin frenar el resto de la vista
+    // Un objetivo sin ninguna habilidad del catálogo (solo propias) no tiene ofertas comparables (ofertas.js lo dice)
+    const comparable = !demand.goalSkills.length || demand.goalSkills.some(hasDemandData);
+    loadOffers(goal, goalId, { quiet: silent, comparable }); // ofertas.js: llega después, sin frenar el resto de la vista
     restoreFocus?.();
   } catch (err) {
     if (requestId !== latestRequest) return;
@@ -1034,6 +1047,14 @@ document.addEventListener("skillmap:language", () => {
   if (sessionUser) { loadRuta(); return; }
   setGoalTitle(t("common.loading"));
   document.getElementById("app-content").innerHTML = renderRutaSkeleton();
+});
+
+// Habilidades propias creadas o borradas al guardar o borrar un rol propio (rol-propio.js): /api/skills y la preparación
+// se vuelven a pedir (rol-propio.js recarga Mi Ruta si hace falta)
+document.addEventListener("skillmap:catalog", () => {
+  skillsRequest = null;
+  readinessRequests.clear();
+  rutaStale = true;
 });
 
 // Progreso cambiado (habilidad marcada o quitada): habilidades y preparación se vuelven a pedir. Si Mi Ruta está a la
