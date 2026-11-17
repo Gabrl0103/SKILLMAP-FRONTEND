@@ -257,6 +257,7 @@ function setRitmoGoal(goal) {
   updateRitmoWeeks(data, ritmo.skills);
   refreshRitmo();
   document.getElementById("ruta-live").textContent = tn("ritmo.goal.changed", next);
+  notifyReminderChange(); // recordatorios.js: la meta de los avisos de escritorio cambió
 }
 
 function initRitmo() {
