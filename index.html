@@ -374,6 +374,9 @@
         <button type="button" class="ajustes-nav-item" data-ajustes-cat="apariencia" aria-controls="ajustes-panel-apariencia" data-i18n="ajustes.appearance">Apariencia</button>
         <button type="button" class="ajustes-nav-item" data-ajustes-cat="idioma" aria-controls="ajustes-panel-idioma" data-i18n="ajustes.language">Idioma</button>
         <button type="button" class="ajustes-nav-item" data-ajustes-cat="cuenta" aria-controls="ajustes-panel-cuenta" data-i18n="ajustes.account">Datos y cuenta</button>
+        <!-- Solo en la app de escritorio (js/recordatorios.js las muestra si existe cenitDesktop.desktop) -->
+        <button type="button" class="ajustes-nav-item" data-ajustes-cat="recordatorios" aria-controls="ajustes-panel-recordatorios" data-i18n="ajustes.reminders" hidden>Recordatorios</button>
+        <button type="button" class="ajustes-nav-item" data-ajustes-cat="sistema" aria-controls="ajustes-panel-sistema" data-i18n="ajustes.system" hidden>Sistema</button>
         <button type="button" class="ajustes-nav-item" data-ajustes-cat="acerca" aria-controls="ajustes-panel-acerca" data-i18n="ajustes.about">Acerca de</button>
       </nav>
       <div class="ajustes-panels">
@@ -454,6 +457,55 @@
           </div>
           <div id="ajustes-security" class="ajustes-security-rows"></div>
         </div>
+      </section>
+      <!-- Recordatorios (solo escritorio, js/recordatorios.js): avisos de Windows por cuenta, guardados por main.js -->
+      <section id="ajustes-panel-recordatorios" class="ruta-card ajustes-card ajustes-panel" data-ajustes-panel="recordatorios" aria-labelledby="ajustes-recordatorios-title" hidden>
+        <h2 id="ajustes-recordatorios-title" class="ajustes-card-title" tabindex="-1" data-i18n="ajustes.reminders">Recordatorios</h2>
+        <p class="ajustes-panel-text" data-i18n="ajustes.remindersText">Avisos de escritorio para no perder tu meta semanal ni tu racha.</p>
+        <div class="ajustes-rows flat-rows">
+          <div class="ajustes-toggle">
+            <div>
+              <p id="ajustes-reminders-label" class="ajustes-toggle-title" data-i18n="ajustes.remindersEnabled">Notificaciones</p>
+              <p id="ajustes-reminders-desc" class="ajustes-toggle-desc" data-i18n="ajustes.remindersEnabledDesc">Te avisa si te falta poco para tu meta de la semana o si tu racha está en riesgo.</p>
+            </div>
+            <button type="button" class="ajustes-switch" role="switch" aria-checked="false" data-desktop="reminders.enabled"
+              aria-labelledby="ajustes-reminders-label" aria-describedby="ajustes-reminders-desc"></button>
+          </div>
+          <div class="ajustes-toggle">
+            <div>
+              <label for="ajustes-reminder-time" class="ajustes-toggle-title" data-i18n="ajustes.reminderTime">Hora del recordatorio</label>
+              <p id="ajustes-reminder-time-desc" class="ajustes-toggle-desc" data-i18n="ajustes.reminderTimeDesc">Los sábados para tu meta semanal y los domingos si tu racha está en riesgo.</p>
+            </div>
+            <div class="ajustes-row-actions">
+              <select id="ajustes-reminder-time" class="perfil-input" aria-describedby="ajustes-reminder-time-desc"></select>
+            </div>
+          </div>
+        </div>
+        <p id="ajustes-recordatorios-status" class="ajustes-status" role="status"></p>
+      </section>
+      <!-- Sistema (solo escritorio, js/recordatorios.js): bandeja e inicio con Windows, del equipo y no de la cuenta -->
+      <section id="ajustes-panel-sistema" class="ruta-card ajustes-card ajustes-panel" data-ajustes-panel="sistema" aria-labelledby="ajustes-sistema-title" hidden>
+        <h2 id="ajustes-sistema-title" class="ajustes-card-title" tabindex="-1" data-i18n="ajustes.system">Sistema</h2>
+        <p class="ajustes-panel-text" data-i18n="ajustes.systemText">Cómo se comporta Cenit en Windows. Vale para todas las cuentas de este equipo.</p>
+        <div class="ajustes-rows flat-rows">
+          <div class="ajustes-toggle">
+            <div>
+              <p id="ajustes-login-label" class="ajustes-toggle-title" data-i18n="ajustes.openAtLogin">Iniciar con Windows</p>
+              <p id="ajustes-login-desc" class="ajustes-toggle-desc" data-i18n="ajustes.openAtLoginDesc">Cenit se abre en la bandeja al iniciar sesión en Windows, lista para avisarte.</p>
+            </div>
+            <button type="button" class="ajustes-switch" role="switch" aria-checked="false" data-desktop="system.openAtLogin"
+              aria-labelledby="ajustes-login-label" aria-describedby="ajustes-login-desc"></button>
+          </div>
+          <div class="ajustes-toggle">
+            <div>
+              <p id="ajustes-tray-label" class="ajustes-toggle-title" data-i18n="ajustes.background">Minimizar a la bandeja</p>
+              <p id="ajustes-tray-desc" class="ajustes-toggle-desc" data-i18n="ajustes.backgroundDesc">Al cerrar la ventana, Cenit sigue en la bandeja del sistema para enviarte recordatorios.</p>
+            </div>
+            <button type="button" class="ajustes-switch" role="switch" aria-checked="false" data-desktop="system.background"
+              aria-labelledby="ajustes-tray-label" aria-describedby="ajustes-tray-desc"></button>
+          </div>
+        </div>
+        <p id="ajustes-sistema-status" class="ajustes-status" role="status"></p>
       </section>
       <!-- Acerca de: versión (la da la app de escritorio), fuentes de ofertas y privacidad -->
       <section id="ajustes-panel-acerca" class="ruta-card ajustes-card ajustes-panel" data-ajustes-panel="acerca" aria-labelledby="ajustes-acerca-title" hidden>
@@ -559,6 +611,7 @@
 <script src="js/habilidades.js"></script> <!-- vista Habilidades: resumen, filtros, demanda y estado de cada habilidad -->
 <script src="js/analizador.js"></script>
 <script src="js/ajustes.js"></script>
+<script src="js/recordatorios.js"></script> <!-- solo escritorio: Ajustes > Recordatorios y Sistema y el estado de "Tu ritmo" para los avisos -->
 <script src="js/skill-faq-data.js"></script> <!-- contenido estático del detalle de habilidad (es / en) -->
 <script src="js/skill-detalle.js"></script>
 <script src="js/intro-glifos.js"></script> <!-- mapa de glifos de la Introducción (canvas 2D) -->

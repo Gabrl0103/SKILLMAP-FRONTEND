@@ -1,5 +1,6 @@
 // Vista "Ajustes" por categorías: Apariencia, Idioma, Datos y cuenta (exportar, cerrar sesión y, desde perfil.js,
-// contraseña y eliminar cuenta) y Acerca de. Usa también apiJson y logout (session.js), RITMO_KEY (rachas.js) y PLAN_KEY
+// contraseña y eliminar cuenta), Recordatorios y Sistema (solo escritorio: js/recordatorios.js) y Acerca de. Usa
+// loadDesktopSettings (recordatorios.js), también apiJson y logout (session.js), RITMO_KEY (rachas.js) y PLAN_KEY
 // (plan-semanal.js). Las ofertas de empleo ya no se ven ni se recalculan aquí:
 // el backend actualiza Arbeitnow y Remotive solo al abrir la app, y Mi Ruta y el Mapa citan las fuentes. Usa
 // loadSettings, setTheme, setReduceMotion, setLanguage, getTheme y getReduceMotion (theme.js); friendlyError
@@ -166,6 +167,7 @@ function openAjustes() {
   selectAjustesCat(ajustesCat);
   showAppVersion();
   syncApariencia();
+  loadDesktopSettings(); // recordatorios.js: Recordatorios y Sistema (solo escritorio; en el navegador no hace nada)
   loadSettings({ fresh: true })
     .then(() => setStatus("ajustes-apariencia-status", ""))
     .catch(err => setStatus("ajustes-apariencia-status", t("ajustes.readError", { error: friendlyError(err) }), "warning"))
